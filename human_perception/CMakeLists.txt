@@ -9,6 +9,7 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(visualization_msgs REQUIRED)
+find_package(geometry_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(soloco_interfaces REQUIRED)
 find_package(zed_interfaces REQUIRED)
@@ -20,17 +21,39 @@ add_executable(human_track_publisher src/human_track_publisher.cpp)
 ament_target_dependencies(human_track_publisher
         rclcpp
         visualization_msgs
+        geometry_msgs
         nav_msgs
         soloco_interfaces
         zed_interfaces
         tf2_ros
-        tf2_sensor_msgs
+        tf2_sensor_msgs 
         tf2_geometry_msgs)
-target_include_directories(human_track_publisher PUBLIC
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-  $<INSTALL_INTERFACE:include>)
-target_compile_features(human_track_publisher PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
-install(TARGETS human_track_publisher
+        
+add_executable(robot_track_publisher src/robot_track_publisher.cpp)
+ament_target_dependencies(robot_track_publisher
+        rclcpp
+        visualization_msgs
+        geometry_msgs
+        nav_msgs
+        soloco_interfaces
+        zed_interfaces
+        tf2_ros
+        tf2_sensor_msgs 
+        tf2_geometry_msgs)
+                
+add_executable(ego_trajectory_visualizer src/ego_trajectory_visualizer.cpp)
+ament_target_dependencies(ego_trajectory_visualizer
+        rclcpp
+        visualization_msgs
+        geometry_msgs
+        nav_msgs
+        soloco_interfaces
+        zed_interfaces
+        tf2_ros
+        tf2_sensor_msgs 
+        tf2_geometry_msgs)
+                
+install(TARGETS human_track_publisher robot_track_publisher ego_trajectory_visualizer
   DESTINATION lib/${PROJECT_NAME})
 
 if(BUILD_TESTING)

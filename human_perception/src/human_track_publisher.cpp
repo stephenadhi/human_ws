@@ -21,21 +21,35 @@
 
 #include <experimental/optional>
 
+using namespace std::chrono_literals;
+
 class HumanTrackPublisher : public rclcpp::Node {
 public:    
     HumanTrackPublisher()
         : Node("human_track_publisher") {
+        // QoS settings
         rclcpp::QoS qos(10);
         qos.keep_last(10);
         qos.reliable();
         qos.durability_volatile();
-        // Create zed human pose subscriber
+        // Declare parameters
+        std::string human_track_topic, detected_obj_topic;
+        this->declare_parameter<std::string>("detected_obj_topic", "/zed2/zed_node/obj_det/objects");
+        this->declare_parameter<std::string>("human_track_topic", "/human/track");
+        this->declare_parameter<std::string>("pub_frame_id", "map");
+        this->declare_parameter<double>("pub_frame_rate", 15.0);
+        this->declare_parameter<int64_t>("max_history_length", 12);
+        this->declare_parameter<double>("delay_tolerance", 10.1);
+        this->get_parameter("detected_obj_topic", detected_obj_topic);
+        this->get_parameter("human_track_topic", human_track_topic);
+
+        // Create zed detected objects subscriber
         m_zed_sub = this->create_subscription<zed_interfaces::msg::ObjectsStamped>(
-                    "/zed2/zed_node/obj_det/objects", qos,
+                    detected_obj_topic, qos,
                     std::bind(&HumanTrackPublisher::zedCallback, this, std::placeholders::_1) );
-        // Create path publisher
+        // Create human track publisher
         m_human_track_interpolated_pub = this->create_publisher<soloco_interfaces::msg::TrackedPersons>(
-                        "/human/interpolated_track", qos);
+                    human_track_topic, qos);
         // Create tf buffer and transform listener   
         m_tf_buffer = std::make_unique<tf2_ros::Buffer>(this->get_clock());
         m_transform_listener = std::make_shared<tf2_ros::TransformListener>(*m_tf_buffer);
@@ -43,58 +57,81 @@ public:
 
 private:
     void zedCallback(const zed_interfaces::msg::ObjectsStamped::SharedPtr msg) {
+        // Initialize new_object to true
         bool new_object = true;
+        // get ros parameters
+        this->get_parameter("pub_frame_id", pub_frame_id);
+        this->get_parameter("pub_frame_rate", pub_frame_rate);
+        this->get_parameter("delay_tolerance", delay_tolerance);
+        this->get_parameter("max_history_length", max_history_length);
+        double tolerance = 1/pub_frame_rate + delay_tolerance;
+        
+        // variable to save transformed pose in the pub_frame_id space
         geometry_msgs::msg::PoseStamped pose_out;
-        // Do for all detected humans
+        // Loop all detected objects
         for(long unsigned int count=0; count < msg->objects.size(); count++){
-            // Position in camera frame
-            double tx = msg->objects[count].position[0];
-            double ty = msg->objects[count].position[1];
-            double tz = msg->objects[count].position[2];
-            // Save to current poseStamped message format
-            geometry_msgs::msg::PoseStamped currPose;
-            currPose.header = msg->header;
-            currPose.pose.position.x = tx;
-            currPose.pose.position.y = ty;
-            currPose.pose.position.z = tz;
-            // If tf transform exists, convert current pose to world space
-            pose_out = pose_transform(currPose, msg->header.frame_id, pub_frame_id);
-            
-            // If we already know the person id
-            for(long unsigned int k=0; k < people.tracks.size(); k++){
-                if(people.tracks[k].track_id == msg->objects[count].label_id){
-                    people.tracks[k].track.poses.push_back(pose_out);
+            // Get the person id and tracking state
+            soloco_interfaces::msg::TrackedPerson tracked_person;
+            tracked_person.track_id = msg->objects[count].label_id;
+            tracked_person.tracking_state = 1; //msg->objects[count].tracking_state;
+            // Only consider valid tracking
+            if(tracked_person.tracking_state == 1 && msg->objects[count].label == "Person"){
+                // Position in camera frame
+                double tx = msg->objects[count].position[0];
+                double ty = msg->objects[count].position[1];
+                // Save to current poseStamped message format
+                geometry_msgs::msg::PoseStamped currPose;
+                currPose.header = msg->header;
+                currPose.pose.position.x = tx;
+                currPose.pose.position.y = ty;
+                currPose.pose.position.z = 0.0;
+                currPose.pose.orientation.x = 0.0;
+                currPose.pose.orientation.y = 0.0;
+                currPose.pose.orientation.z = 0.0;
+                currPose.pose.orientation.w = 1.0;
+                // If tf transform exists, convert current pose to world space
+                pose_out = pose_transform(currPose, pub_frame_id, msg->header.frame_id);
+
+                for(long unsigned int k=0; k < people.tracks.size(); k++){
+                    // Check whether person is known by id
+                    if(people.tracks[k].track_id == msg->objects[count].label_id){
+                        RCLCPP_INFO(this->get_logger(), "Matched person ID %li.", people.tracks[k].track_id);
+                        // Add person to people vector
+                        people.tracks[k].track.poses.push_back(pose_out);  
+                        // stamp the time of update
+                        people.tracks[k].header.stamp = now();
+                        new_object = false;
+                    }
                     // If tracked_person track length is bigger than max_history-length, remove oldest pose
                     if(people.tracks[k].track.poses.size()>max_history_length){
                         people.tracks[k].track.poses.erase(people.tracks[k].track.poses.begin());
                     }
-                    new_object = false;
-                    break;
+                    // Delete older person object longer than tolerance time
+                    rclcpp::Time det_time(people.tracks[k].header.stamp);
+                    double time_diff = now().seconds() - det_time.seconds();
+                    if (time_diff > tolerance){
+                        people.tracks.erase(people.tracks.begin() + k);
+                        RCLCPP_INFO(this->get_logger(), "Erased old data from %f seconds ago.", time_diff);
+                    }
+                }
+                if(new_object){
+                    RCLCPP_INFO(this->get_logger(), "New person detected! I heard there are %li people", people.tracks.size());
+                    // Push curent pose to history vector;
+                    tracked_person.track.poses.push_back(pose_out);
+                    // Save current pose
+                    tracked_person.current_pose.pose = pose_out.pose;
+                    // Save to people vector
+                    people.tracks.push_back(tracked_person);
                 }
             }
-            // Add to people vector if the person is new
-            if(new_object){
-                // create a new person object;
-                soloco_interfaces::msg::TrackedPerson tracked_person;
-                tracked_person.track_id = msg->objects[count].label_id;
-                tracked_person.tracking_state = msg->objects[count].tracking_state;
-                tracked_person.track.poses.push_back(pose_out);
-                // Save current pose
-                tracked_person.pose.pose = pose_out.pose;
-                //tracked_person.pose.covariance = msg->objects[count].position_covariance;
-                // Save to people vector
-                people.tracks.push_back(tracked_person);
-            }
-        }
-        
         // publish track history for all persons in one ROS message
         people.header.frame_id = pub_frame_id;
         people.header.stamp = now();
         m_human_track_interpolated_pub->publish(people);
+        }
     }
     
-    geometry_msgs::msg::PoseStamped pose_transform(const geometry_msgs::msg::PoseStamped & obj, const std::string & output_frame, const std::string & input_frame)
-    {   using namespace std::chrono_literals;
+    geometry_msgs::msg::PoseStamped pose_transform(const geometry_msgs::msg::PoseStamped & obj, const std::string & output_frame, const std::string & input_frame){   
         geometry_msgs::msg::PoseStamped transformed_obj;
         try {
             // rclcpp::Time now = this->get_clock()->now();
@@ -108,6 +145,10 @@ private:
     }
 
 private:
+    // Declare variables
+    std::string pub_frame_id;
+    double pub_frame_rate, delay_tolerance;
+    long unsigned int max_history_length;
     // tf buffer and transform listener
     std::shared_ptr<tf2_ros::Buffer> m_tf_buffer;
     std::shared_ptr<tf2_ros::TransformListener> m_transform_listener {nullptr};
@@ -117,9 +158,6 @@ private:
     rclcpp::Publisher<soloco_interfaces::msg::TrackedPersons>::SharedPtr m_human_track_interpolated_pub;
     // people vector as cache for detected humans
     soloco_interfaces::msg::TrackedPersons people;
-    // initialize variables
-    long unsigned int max_history_length = 12;
-    std::string pub_frame_id = "map";
 };  
 
 int main(int argc, char ** argv)
