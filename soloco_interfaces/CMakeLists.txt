@@ -15,6 +15,7 @@ find_package(std_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
 
 set(msg_files
+  "msg/EgoTrajectory.msg"
   "msg/TrackedPerson.msg"
   "msg/TrackedPersons.msg"
   DEPENDENCIES builtin_interfaces zed_interfaces geometry_msgs std_msgs nav_msgs
