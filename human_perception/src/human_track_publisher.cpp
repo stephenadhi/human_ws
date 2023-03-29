@@ -30,7 +30,7 @@ public:
         // QoS settings
         rclcpp::QoS qos(10);
         qos.keep_last(10);
-        qos.reliable();
+        qos.best_effort();
         qos.durability_volatile();
         // Declare parameters
         std::string human_track_topic, detected_obj_topic;
@@ -39,7 +39,7 @@ public:
         this->declare_parameter<std::string>("pub_frame_id", "map");
         this->declare_parameter<double>("pub_frame_rate", 15.0);
         this->declare_parameter<int64_t>("max_history_length", 12);
-        this->declare_parameter<double>("delay_tolerance", 10.1);
+        this->declare_parameter<double>("delay_tolerance", 3.0);
         this->get_parameter("detected_obj_topic", detected_obj_topic);
         this->get_parameter("human_track_topic", human_track_topic);
 
@@ -91,37 +91,42 @@ private:
                 currPose.pose.orientation.w = 1.0;
                 // If tf transform exists, convert current pose to world space
                 pose_out = pose_transform(currPose, pub_frame_id, msg->header.frame_id);
-
-                for(long unsigned int k=0; k < people.tracks.size(); k++){
-                    // Check whether person is known by id
-                    if(people.tracks[k].track_id == msg->objects[count].label_id){
-                        RCLCPP_INFO(this->get_logger(), "Matched person ID %li.", people.tracks[k].track_id);
+                long unsigned int people_count = people.tracks.size();
+                for(long unsigned int person_idx=0; person_idx < people_count; person_idx++){
+                // Get last detection time for person k in people vector
+                rclcpp::Time det_time(people.tracks[person_idx].header.stamp);
+                        // Check whether person is known by id
+                        if(people.tracks[person_idx].track_id == msg->objects[count].label_id){
+                        // RCLCPP_INFO(this->get_logger(), "Matched person ID %i.", people.tracks[person_idx].track_id);
                         // Add person to people vector
-                        people.tracks[k].track.poses.push_back(pose_out);  
+                        people.tracks[person_idx].track.poses.push_back(pose_out);  
                         // stamp the time of update
-                        people.tracks[k].header.stamp = now();
+                        people.tracks[person_idx].header.stamp = now();
                         new_object = false;
                     }
                     // If tracked_person track length is bigger than max_history-length, remove oldest pose
-                    if(people.tracks[k].track.poses.size()>max_history_length){
-                        people.tracks[k].track.poses.erase(people.tracks[k].track.poses.begin());
+                    if(people.tracks[person_idx].track.poses.size()>max_history_length){
+                        people.tracks[person_idx].track.poses.erase(people.tracks[person_idx].track.poses.begin());
+                        // RCLCPP_INFO(this->get_logger(), "Track too long, removing oldest pose");
                     }
                     // Delete older person object longer than tolerance time
-                    rclcpp::Time det_time(people.tracks[k].header.stamp);
                     double time_diff = now().seconds() - det_time.seconds();
                     if (time_diff > tolerance){
-                        people.tracks.erase(people.tracks.begin() + k);
+                        people.tracks.erase(people.tracks.begin() + person_idx);
+                        person_idx--;
+                        people_count--;
                         RCLCPP_INFO(this->get_logger(), "Erased old data from %f seconds ago.", time_diff);
                     }
                 }
                 if(new_object){
-                    RCLCPP_INFO(this->get_logger(), "New person detected! I heard there are %li people", people.tracks.size());
                     // Push curent pose to history vector;
                     tracked_person.track.poses.push_back(pose_out);
                     // Save current pose
                     tracked_person.current_pose.pose = pose_out.pose;
                     // Save to people vector
                     people.tracks.push_back(tracked_person);
+                    people.tracks.back().header.stamp = now();
+                    RCLCPP_INFO(this->get_logger(), "New person detected! I heard there are %li people", people.tracks.size());
                 }
             }
         // publish track history for all persons in one ROS message
