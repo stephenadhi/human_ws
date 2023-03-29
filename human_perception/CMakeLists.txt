@@ -56,6 +56,12 @@ ament_target_dependencies(ego_trajectory_visualizer
 install(TARGETS human_track_publisher robot_track_publisher ego_trajectory_visualizer
   DESTINATION lib/${PROJECT_NAME})
 
+# Install launch files and directories.
+install(DIRECTORY
+        src launch include config
+        DESTINATION share/${PROJECT_NAME}
+        )
+
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
   set(ament_cmake_copyright_FOUND TRUE)
