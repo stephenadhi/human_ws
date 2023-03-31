@@ -140,7 +140,7 @@ class NeuralMotionPlanner(Node):
             self.r_state[3] = np.sqrt(odom_msg.twist.twist.linear.x**2 + odom_msg.twist.twist.linear.y**2)
             self.r_state[4] = odom_msg.twist.twist.angular.z
             # Update robot track
-            self.ego_tracker_obj = EgoTrack(robot_msg)
+            self.ego_tracker_obj = EgoTrack(robot_msg, self.max_history_length)
             self.ego_tracker_obj.interpolated_poses_cb(robot_msg)
             self.npArray_markerarray_publisher.publish([self.ego_tracker_obj.marker])
             # update pedestrians state
