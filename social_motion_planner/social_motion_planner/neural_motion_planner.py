@@ -27,9 +27,9 @@ from models.DWA import DWA
 from models.uti
 from models.CEM_policy_IAR import CEM_IAR
 from datetime import datetime, timedelta
-from occupancy_grid_python import OccupancyGridManager
 
 from occupancy_grid_manager import OccupancyGridManager
+from ego_tracker import EgoTrack
 
 class NeuralMotionPlanner(Node):
     def __init__(self):
@@ -53,6 +53,7 @@ class NeuralMotionPlanner(Node):
         self.declare_parameter('goal_pose_topic', '/goal_pose')
         self.declare_parameter('costmap_topic', '/local_costmap/costmap_raw')
         self.declare_parameter('cmd_vel_topic', '/cmd_vel')
+        self.declare_parameter('interpolated_hist_topic', '/locobot/interpolated_history')
         # Device to use: 'gpu' or 'cpu'
         self.declare_parameter('device', 'gpu') 
         # Define neural model
@@ -98,7 +99,8 @@ class NeuralMotionPlanner(Node):
         # Initialize current position of all pedestrians and goal pose
         self.ped_pos_xy_cem = np.ones((self.max_history_length + 1, self.max_num_agents + 1, 2)) #* (500)
         self.goal_pose = None
-
+        self.ego_tracker_obj = None
+        
     def switch_case_model(self, model_name):
         if model_name == 'CEM_IAR':
             return CEM_IAR(self.robot_params_dict, 0.4, hist=self.max_history_length, max_num_agents=5, device=self.device)
@@ -111,8 +113,10 @@ class NeuralMotionPlanner(Node):
         goal_pose_topic = self.get_parameter('goal_pose_topic').get_parameter_value().string_value
         costmap_topic = self.get_parameter('costmap_topic').get_parameter_value().string_value
         cmd_vel_topic = self.get_parameter('cmd_vel_topic').get_parameter_value().string_value
+        interpolated_hist_topic = self.get_parameter('interpolated_hist_topic').get_parameter_value().string_value
         # Publishers
         self.cmd_vel_publisher = self.create_publisher(Twist, cmd_vel_topic, self.pose_qos)
+        self.npArray_markerarray_publisher = self.create_publisher(interpolated_hist_topic, MarkerArray, self.pose_qos)
         # Subscriber for goal pose
         self.goal_pose_sub = self.create_subscription(Goal, goal_topic, self.goal_callback, self.pose_qos)
         # Subscriber for synced update
@@ -135,13 +139,16 @@ class NeuralMotionPlanner(Node):
             self.r_state[2] = np.arctan2(odom_msg.twist.twist.linear.y, odom_msg.twist.twist.linear.x)
             self.r_state[3] = np.sqrt(odom_msg.twist.twist.linear.x**2 + odom_msg.twist.twist.linear.y**2)
             self.r_state[4] = odom_msg.twist.twist.angular.z
+            # Update robot track
+            self.ego_tracker_obj = EgoTrack(robot_msg)
+            self.ego_tracker_obj.interpolated_poses_cb(robot_msg)
+            self.npArray_markerarray_publisher.publish([self.ego_tracker_obj.marker])
             # update pedestrians state
-            # TODO: get robot track here
-            interpoints =  
+            interpoints = self.ego_tracker_obj.arr_interp_padded
             self.ped_pos_xy_cem[:, 0] = interpoints[::-1] 
             # Send costmap to occupancy grid manager
             self.ogm = OccupancyGridManager(costmap_msg, subscribe_to_updates=False)
-            # Concatenate information about robot track, robot state, and goal
+            # Concatenate information about pedestrian track, robot state, and goal
             x = np.concatenate([self.ped_pos_xy_cem.flatten(), self.neigh_matrix.flatten(), self.r_state, self.goal_pose])
             
             if self.goal_pose is not None:
