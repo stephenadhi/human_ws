@@ -38,6 +38,7 @@ from launch_ros.actions import Node
 default_config_common = os.path.join(
     get_package_share_directory('human_perception'),
     'config',
+    'zed',
     'common.yaml'
 )
 
@@ -84,6 +85,7 @@ def launch_setup(context, *args, **kwargs):
     config_camera_path = os.path.join(
         get_package_share_directory('human_perception'),
         'config',
+        'zed',
         camera_model_val + '.yaml'
     )
     config_rviz2 = os.path.join(

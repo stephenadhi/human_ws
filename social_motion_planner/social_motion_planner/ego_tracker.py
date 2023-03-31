@@ -6,9 +6,8 @@ from nav_msgs.msg import Odometry
 from nav_msgs.msg import Path
 from geometry_msgs.msg import PoseStamped
 from visualization_msgs.msg import Marker
-from geometry_msgs.msg import Point
+from geometry_msgs.msg import Point, Twist, PoseWithCovarianceStamped
 
-from geometry_msgs.msg import Twist, PoseWithCovarianceStamped
 from std_srvs.srv import Empty, EmptyRequest
 import time
 import math
