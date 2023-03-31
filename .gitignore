@@ -3,4 +3,3 @@ install/
 log/
 social_motion_planner/social_motion_planner/data/*
 social_motion_planner/social_motion_planner/models/__pycache__*
-zed*/
