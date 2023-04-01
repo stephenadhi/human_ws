@@ -5,7 +5,7 @@ social_motion_planner:
     goal_pose_topic: "/goal_pose"
     costmap_topic: "/local_costmap/costmap_raw"
     cmd_vel_topic: "/cmd_vel"
-    human_topic: "/human/interpolated_history"
+    human__track_topic: "/human/interpolated_history"
     # device
     device: "gpu"           # Options: 'gpu' or 'cpu'
     # Model to use

@@ -53,7 +53,7 @@ class NeuralMotionPlanner(Node):
         self.declare_parameter('goal_pose_topic', '/goal_pose')
         self.declare_parameter('costmap_topic', '/local_costmap/costmap_raw')
         self.declare_parameter('cmd_vel_topic', '/cmd_vel')
-        self.declare_parameter('human_topic', '/human/interpolated_history')
+        self.declare_parameter('human_track_topic', '/human/interpolated_history')
         # Device to use: 'gpu' or 'cpu'
         self.declare_parameter('device', 'gpu') 
         # Define neural model
@@ -113,14 +113,14 @@ class NeuralMotionPlanner(Node):
         goal_pose_topic = self.get_parameter('goal_pose_topic').get_parameter_value().string_value
         costmap_topic = self.get_parameter('costmap_topic').get_parameter_value().string_value
         cmd_vel_topic = self.get_parameter('cmd_vel_topic').get_parameter_value().string_value
-        human_topic = self.get_parameter('human_topic').get_parameter_value().string_value
+        human_track_topic = self.get_parameter('human_track_topic').get_parameter_value().string_value
         # Publishers
         self.cmd_vel_publisher = self.create_publisher(Twist, cmd_vel_topic, self.pose_qos)
         # Subscriber for goal pose
         self.goal_pose_sub = self.create_subscription(Goal, goal_topic, self.goal_callback, self.pose_qos)
         # Subscriber for synced update
         self.ego_sub = Subscriber(self, Odometry, odom_topic)
-        self.human_sub = Subscriber(self, TrackedPersons, human_topic)
+        self.human_sub = Subscriber(self, TrackedPersons, human_track_topic)
         self.costmap_sub = Subscriber(self, OccupancyGrid, costmap_topic)
 
         # Sync messages with slop (max delay) = 0.1 seconds
