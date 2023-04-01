@@ -1,0 +1,21 @@
+social_motion_planner:
+  ros__parameters:
+    # Topic parameters
+    odom_topic: "/zed3/zed_node/odom"
+    goal_pose_topic: "/goal_pose"
+    costmap_topic: "/local_costmap/costmap_raw"
+    cmd_vel_topic: "/cmd_vel"
+    human_topic: "/human/interpolated_history"
+    # device
+    device: "gpu"
+    # Model to use
+    model_name: 'CEM_IAR'
+    use_robot_model: "True"
+    # Robot parameters
+    max_speed: "0.5"
+    min_speed: "-0.1"
+    max_yaw_rate: "1.0"
+    max_accel: "-0.5"
+    collision_dist: "0.2"
+    max_num_agents: "5"
+    max_history_length: "12"
