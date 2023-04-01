@@ -16,6 +16,10 @@ find_package(zed_interfaces REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(tf2_sensor_msgs REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
+find_package(eigen3_cmake_module REQUIRED)
+find_package(Eigen3)
+
+include_directories(${GSL_INCLUDE_DIRS})
 
 add_executable(human_track_publisher src/human_track_publisher.cpp)
 ament_target_dependencies(human_track_publisher
@@ -27,7 +31,8 @@ ament_target_dependencies(human_track_publisher
         zed_interfaces
         tf2_ros
         tf2_sensor_msgs 
-        tf2_geometry_msgs)
+        tf2_geometry_msgs
+        Eigen3)
         
 add_executable(robot_track_publisher src/robot_track_publisher.cpp)
 ament_target_dependencies(robot_track_publisher
