@@ -9,6 +9,8 @@
 #include <nav_msgs/msg/path.hpp>
 #include <geometry_msgs/msg/pose.hpp>
 #include <geometry_msgs/msg/pose_stamped.hpp>
+#include <visualization_msgs/msg/marker.hpp>
+#include <visualization_msgs/msg/marker_array.hpp>
 #include <zed_interfaces/msg/objects_stamped.hpp>
 #include <soloco_interfaces/msg/tracked_person.hpp>
 #include <soloco_interfaces/msg/tracked_persons.hpp>
@@ -52,6 +54,7 @@ public:
         // Create human track publisher
         m_human_track_interpolated_pub = this->create_publisher<soloco_interfaces::msg::TrackedPersons>(
                     human_track_topic, qos);
+        marker_pub = this->create_publisher<visualization_msgs::msg::MarkerArray>("human_markers", 10);
         // Create tf buffer and transform listener   
         m_tf_buffer = std::make_unique<tf2_ros::Buffer>(this->get_clock());
         m_transform_listener = std::make_shared<tf2_ros::TransformListener>(*m_tf_buffer);
@@ -61,6 +64,8 @@ private:
     void zedCallback(const zed_interfaces::msg::ObjectsStamped::SharedPtr msg) {
         // Initialize new_object to true
         bool new_object = true;
+        // Visualization marker array
+        visualization_msgs::msg::MarkerArray markers;
         // get ros parameters
         this->get_parameter("pub_frame_id", pub_frame_id);
         this->get_parameter("pub_frame_rate", pub_frame_rate);
@@ -110,7 +115,7 @@ private:
                                 // RCLCPP_INFO(this->get_logger(), "Track too long, removing oldest pose");
                             }
                             // Interpolate person historical poses for exact time diff between poses
-                            interpolate_person_pos(person, now().seconds(), det_time.seconds(), max_interp_interval);
+                            interpolate_person_pos(person, now().seconds(), det_time.seconds(), max_interp_interval, markers);
                             // stamp the time of person track update
                             person.header.stamp = now();
                             new_object = false;
@@ -140,6 +145,7 @@ private:
         people.header.frame_id = pub_frame_id;
         people.header.stamp = now();
         m_human_track_interpolated_pub->publish(people);
+        marker_pub->publish(markers);
         }
     }
     
@@ -163,7 +169,15 @@ private:
             soloco_interfaces::msg::TrackedPerson person,
             double curr_time, 
             double det_time, 
-            double max_interp_interval) {
+            double max_interp_interval,
+            visualization_msgs::msg::MarkerArray markers) {
+        // Setup marker for visualization
+        visualization_msgs::msg::Marker marker;
+        marker.header.frame_id = person.header.frame_id;
+        marker.header.stamp = this->now();
+        marker.ns = "human_trajectory";
+        marker.id = person.track_id;
+        marker.type = visualization_msgs::msg::Marker::SPHERE;
         // get number of steps depending on interpolation frequency, maximum size is history length
         int num_t_quan_steps = int((curr_time - det_time) / max_interp_interval);
         if(num_t_quan_steps > int(max_history_length)){
@@ -191,7 +205,19 @@ private:
             double y_interp = y[j] * (1 - alpha) + y[j + 1] * alpha;
             person.track.poses[i].pose.position.x = x_interp;
             person.track.poses[i].pose.position.y = y_interp;
-            
+            // Visualize using markers
+            marker.action = visualization_msgs::msg::Marker::ADD;
+            marker.pose.position.x = x_interp;
+            marker.pose.position.y = y_interp;      
+            marker.pose.position.z = 0.0;
+            marker.scale.x = 0.1;
+            marker.scale.y = 0.1;
+            marker.scale.z = 0.1;
+            marker.color.r = 1.0;
+            marker.color.g = 0.0;
+            marker.color.b = 0.0;
+            marker.color.a = 1.0;
+            markers.markers.push_back(marker);
             }
         }
     }
@@ -208,6 +234,7 @@ private:
     rclcpp::Subscription<zed_interfaces::msg::ObjectsStamped>::SharedPtr m_zed_sub;
     // Human track publisher
     rclcpp::Publisher<soloco_interfaces::msg::TrackedPersons>::SharedPtr m_human_track_interpolated_pub;
+    rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr marker_pub;    
     // people vector as cache for detected humans
     soloco_interfaces::msg::TrackedPersons people;
 };  
