@@ -53,7 +53,7 @@ class NeuralMotionPlanner(Node):
         self.declare_parameter('goal_pose_topic', '/goal_pose')
         self.declare_parameter('costmap_topic', '/local_costmap/costmap_raw')
         self.declare_parameter('cmd_vel_topic', '/cmd_vel')
-        self.declare_parameter('interpolated_hist_topic', '/locobot/interpolated_history')
+        self.declare_parameter('human_topic', '/human/interpolated_history')
         # Device to use: 'gpu' or 'cpu'
         self.declare_parameter('device', 'gpu') 
         # Define neural model
@@ -113,10 +113,9 @@ class NeuralMotionPlanner(Node):
         goal_pose_topic = self.get_parameter('goal_pose_topic').get_parameter_value().string_value
         costmap_topic = self.get_parameter('costmap_topic').get_parameter_value().string_value
         cmd_vel_topic = self.get_parameter('cmd_vel_topic').get_parameter_value().string_value
-        interpolated_hist_topic = self.get_parameter('interpolated_hist_topic').get_parameter_value().string_value
+        human_topic = self.get_parameter('human_topic').get_parameter_value().string_value
         # Publishers
         self.cmd_vel_publisher = self.create_publisher(Twist, cmd_vel_topic, self.pose_qos)
-        self.npArray_markerarray_publisher = self.create_publisher(interpolated_hist_topic, MarkerArray, self.pose_qos)
         # Subscriber for goal pose
         self.goal_pose_sub = self.create_subscription(Goal, goal_topic, self.goal_callback, self.pose_qos)
         # Subscriber for synced update
@@ -139,13 +138,10 @@ class NeuralMotionPlanner(Node):
             self.r_state[2] = np.arctan2(odom_msg.twist.twist.linear.y, odom_msg.twist.twist.linear.x)
             self.r_state[3] = np.sqrt(odom_msg.twist.twist.linear.x**2 + odom_msg.twist.twist.linear.y**2)
             self.r_state[4] = odom_msg.twist.twist.angular.z
-            # Update robot track
-            self.ego_tracker_obj = EgoTrack(robot_msg, self.max_history_length)
-            self.ego_tracker_obj.interpolated_poses_cb(robot_msg)
-            self.npArray_markerarray_publisher.publish([self.ego_tracker_obj.marker])
-            # update pedestrians state
-            interpoints = self.ego_tracker_obj.arr_interp_padded
-            self.ped_pos_xy_cem[:, 0] = interpoints[::-1] 
+            # update people state
+            for person_idx, person in enumerate(human_msg.tracks):
+                for pos_idx, past_pos in enumerate(person.track):
+                    self.ped_pos_xy_cem[pos_idx, person_idx, :] = past_pos.position.x, past_pos.position.y
             # Send costmap to occupancy grid manager
             self.ogm = OccupancyGridManager(costmap_msg, subscribe_to_updates=False)
             # Concatenate information about pedestrian track, robot state, and goal
