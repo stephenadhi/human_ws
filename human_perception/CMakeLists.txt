@@ -47,26 +47,15 @@ ament_target_dependencies(robot_track_publisher
         zed_interfaces
         tf2_ros
         tf2_sensor_msgs 
-        tf2_geometry_msgs)
+        tf2_geometry_msgs
+        Eigen3)
                 
-add_executable(ego_trajectory_visualizer src/ego_trajectory_visualizer.cpp)
-ament_target_dependencies(ego_trajectory_visualizer
-        rclcpp
-        visualization_msgs
-        geometry_msgs
-        nav_msgs
-        soloco_interfaces
-        zed_interfaces
-        tf2_ros
-        tf2_sensor_msgs 
-        tf2_geometry_msgs)
-                
-install(TARGETS human_track_publisher robot_track_publisher ego_trajectory_visualizer
+install(TARGETS human_track_publisher robot_track_publisher
   DESTINATION lib/${PROJECT_NAME})
 
 # Install launch files and directories.
 install(DIRECTORY
-        src launch include config
+        src launch include config rviz
         DESTINATION share/${PROJECT_NAME}
         )
 

@@ -89,8 +89,8 @@ def launch_setup(context, *args, **kwargs):
         camera_model_val + '.yaml'
     )
     config_rviz2 = os.path.join(
-        get_package_share_directory('zed_display_rviz2'),
-        'rviz2',
+        get_package_share_directory('human_perception'),
+        'rviz',
         camera_name_val + '.rviz'
     )
     
