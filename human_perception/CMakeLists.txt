@@ -12,12 +12,15 @@ find_package(visualization_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(soloco_interfaces REQUIRED)
-find_package(zed_interfaces REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(tf2_sensor_msgs REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
 find_package(eigen3_cmake_module REQUIRED)
 find_package(Eigen3 REQUIRED)
+# ZED camera packages
+find_package(zed_ros2 REQUIRED)
+find_package(zed_wrapper REQUIRED)
+find_package(zed_interfaces REQUIRED)
 
 include_directories(${GSL_INCLUDE_DIRS})
 
