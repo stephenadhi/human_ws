@@ -12,8 +12,8 @@ def generate_launch_description():
         'multi_tracker.yaml'
     )
     with open(human_tracker_file, 'r') as file:
-        human_tracker_config = yaml.safe_load(file)['human_perception']['human_tracker']['ros__parameters']
-        robot_tracker_config = yaml.safe_load(file)['human_perception']['robot_tracker']['ros__parameters']
+        human_tracker_config = yaml.safe_load(file)['human_perception']['ros__parameters']['human_tracker']
+        robot_tracker_config = yaml.safe_load(file)['human_perception']['ros__parameters']['robot_tracker']
     human_track_publisher_cmd = Node(
         package='human_perception',
         executable='human_track_publisher',
