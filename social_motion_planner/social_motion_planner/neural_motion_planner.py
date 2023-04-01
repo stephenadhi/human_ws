@@ -68,9 +68,9 @@ class NeuralMotionPlanner(Node):
         self.declare_parameter('max_accel', '-0.5')         # [m]
         self.declare_parameter('collision_dist', '0.2')     # [m]
         # Declare maximum number of agents        
-        self.declare_parameter('max_num_agents', '5')     # [maximum number of pedestrians]
+        self.declare_parameter('max_num_agents', '5')     # [maximum number of people]
         # Declare maximum history length
-        self.declare_parameter('max_history_length', '12')     # [maximum number of pedestrians]
+        self.declare_parameter('max_history_length', '12')     # [maximum number of human past poses]
     
     def initialize_node(self):
         # Device to use
@@ -96,7 +96,7 @@ class NeuralMotionPlanner(Node):
         np.fill_diagonal(self.neigh_matrix, 0)
         # Initialize current robot state
         self.r_state = np.zeros(5)  # v_x, v_y, yaw, v_t, omega_t
-        # Initialize current position of all pedestrians and goal pose
+        # Initialize current position of all people and goal pose
         self.ped_pos_xy_cem = np.ones((self.max_history_length + 1, self.max_num_agents + 1, 2)) #* (500)
         self.goal_pose = None
         self.ego_tracker_obj = None
@@ -144,7 +144,7 @@ class NeuralMotionPlanner(Node):
                     self.ped_pos_xy_cem[pos_idx, person_idx, :] = past_pos.position.x, past_pos.position.y
             # Send costmap to occupancy grid manager
             self.ogm = OccupancyGridManager(costmap_msg, subscribe_to_updates=False)
-            # Concatenate information about pedestrian track, robot state, and goal
+            # Concatenate information about people track, robot state, and goal
             x = np.concatenate([self.ped_pos_xy_cem.flatten(), self.neigh_matrix.flatten(), self.r_state, self.goal_pose])
             
             if self.goal_pose is not None:
