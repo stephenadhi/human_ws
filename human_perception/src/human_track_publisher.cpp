@@ -33,7 +33,7 @@ public:
         // QoS settings
         rclcpp::QoS qos(10);
         qos.keep_last(10);
-        qos.best_effort();
+        qos.reliable();
         qos.durability_volatile();
         // Declare parameters
         std::string human_track_topic, detected_obj_topic;
@@ -183,6 +183,7 @@ private:
         if(num_t_quan_steps > int(max_history_length)){
             num_t_quan_steps = int(max_history_length); 
         }
+        // RCLCPP_INFO(this->get_logger(), "num_t_quan_steps %i.", num_t_quan_steps);
         // get interpolated time points
         Eigen::VectorXd inter_time_points = Eigen::VectorXd::LinSpaced(num_t_quan_steps, 0.0, max_interp_interval*num_t_quan_steps);
         // Get the current number of poses inside path message
