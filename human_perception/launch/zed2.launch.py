@@ -74,7 +74,8 @@ def launch_setup(context, *args, **kwargs):
     publish_tf = LaunchConfiguration('publish_tf')
     publish_map_tf = LaunchConfiguration('publish_map_tf')
     xacro_path = LaunchConfiguration('xacro_path')
-
+    gnss_frame = LaunchConfiguration('gnss_frame')
+    
     camera_name_val = camera_name.perform(context)
     camera_model_val = camera_model.perform(context)
 
@@ -113,6 +114,7 @@ def launch_setup(context, *args, **kwargs):
                     'camera_name:=', camera_name_val, ' ',
                     'camera_model:=', camera_model_val, ' ',
                     'base_frame:=', base_frame, ' ',
+                    'gnss_frame:=', gnss_frame, ' ',
                     'cam_pos_x:=', cam_pose_array[0], ' ',
                     'cam_pos_y:=', cam_pose_array[1], ' ',
                     'cam_pos_z:=', cam_pose_array[2], ' ',
@@ -153,7 +155,7 @@ def launch_setup(context, *args, **kwargs):
 
     # Rviz2 node
     rviz2_node = TimerAction(
-        period='8',
+        period=7.0,
         actions=[
             Node(
             package='rviz2',
@@ -225,6 +227,10 @@ def generate_launch_description():
                 'base_frame',
                 default_value='base_link',
                 description='Name of the base link.'),
+            DeclareLaunchArgument(
+                'gnss_frame',
+                default_value='',
+                description='Name of the GNSS link frame. Leave empty if not used. Remember to set the transform `base_link` -> `gnss_frame` in the URDF file.'),
             DeclareLaunchArgument(
                 'cam_pose',
                 default_value='[0.0,0.0,0.0,0.0,0.0,0.0]',

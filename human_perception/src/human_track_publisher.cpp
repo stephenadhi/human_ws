@@ -33,7 +33,7 @@ public:
         // QoS settings
         rclcpp::QoS qos(10);
         qos.keep_last(10);
-        qos.best_effort();
+        qos.reliable();
         qos.durability_volatile();
         // Declare parameters
         std::string human_track_topic, detected_obj_topic;
@@ -130,11 +130,12 @@ private:
                         }
                     }
                     if(new_object){
-                        // Push curent pose to history vector;
+                        // Push curent pose to history vector and stamp detection time
                         tracked_person.track.poses.push_back(pose_world);
+                        tracked_person.track.poses.back().header.stamp = now();
                         // Save current pose
                         tracked_person.current_pose.pose = pose_world.pose;
-                        // Save to people vector
+                        // Save to people vector and stamp time of person track
                         people.tracks.push_back(tracked_person);
                         people.tracks.back().header.stamp = now();
                         RCLCPP_INFO(this->get_logger(), "New person detected! I heard there are %li people", people.tracks.size());
@@ -183,8 +184,9 @@ private:
         if(num_t_quan_steps > int(max_history_length)){
             num_t_quan_steps = int(max_history_length); 
         }
+        RCLCPP_INFO(this->get_logger(), "num_t_quan_steps %i.", num_t_quan_steps);
         // get interpolated time points
-        Eigen::VectorXd inter_time_points = Eigen::VectorXd::LinSpaced(num_t_quan_steps, 0.0, max_interp_interval*num_t_quan_steps);
+        Eigen::VectorXd inter_time_points = Eigen::VectorXd::LinSpaced(num_t_quan_steps + 1, 0.0, max_interp_interval*num_t_quan_steps);
         // Get the current number of poses inside path message
         int num_poses = person.track.poses.size();
         // Vector for saving person historical track and recorded time
