@@ -6,14 +6,22 @@ import yaml
 
 def generate_launch_description():
     # get config file path and loading it
-    tracker_config_file = os.path.join(
+    human_config_file = os.path.join(
         get_package_share_directory('human_perception'),
         'config',
-        'multi_tracker.yaml'
+        'human_tracker.yaml'
     )
-    with open(human_tracker_file, 'r') as file:
-        human_tracker_config = yaml.safe_load(file)['human_perception']['ros__parameters']['human_tracker']
-        robot_tracker_config = yaml.safe_load(file)['human_perception']['ros__parameters']['robot_tracker']
+    robot_config_file = os.path.join(
+        get_package_share_directory('human_perception'),
+        'config',
+        'robot_tracker.yaml'
+    )
+    with open(human_config_file, 'r') as file:
+        human_tracker_config = yaml.safe_load(file)['human_perception']['human_tracker']['ros_parameters']
+
+    with open(robot_config_file, 'r') as file:
+        robot_tracker_config = yaml.safe_load(file)['human_perception']['robot_tracker']['ros_parameters']
+
     human_track_publisher_cmd = Node(
         package='human_perception',
         executable='human_track_publisher',
