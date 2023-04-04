@@ -44,6 +44,7 @@ public:
         this->declare_parameter<double>("max_interp_interval", 0.4);
         this->declare_parameter<int64_t>("max_history_length", 12);
         this->declare_parameter<double>("delay_tolerance", 3.0);
+        this->declare_parameter<bool>("visualize_bbox", true);
         this->get_parameter("detected_obj_topic", detected_obj_topic);
         this->get_parameter("human_track_topic", human_track_topic);
 
@@ -70,6 +71,7 @@ private:
         this->get_parameter("max_interp_interval", max_interp_interval);
         this->get_parameter("delay_tolerance", delay_tolerance);
         this->get_parameter("max_history_length", max_history_length);
+        this->get_parameter("visualize_bbox", visualize_bbox);
         double tolerance = 1/pub_frame_rate + delay_tolerance;
         
         // Loop through all detected objects
@@ -242,14 +244,18 @@ private:
     std::string pub_frame_id;
     double pub_frame_rate, delay_tolerance, max_interp_interval;
     long unsigned int max_history_length;
+    bool visualize_bbox;
+    
     // tf buffer and transform listener
     std::shared_ptr<tf2_ros::Buffer> m_tf_buffer;
     std::shared_ptr<tf2_ros::TransformListener> m_transform_listener {nullptr};
+    
     // Human pose subscriber
     rclcpp::Subscription<zed_interfaces::msg::ObjectsStamped>::SharedPtr m_zed_sub;
     // Human track publisher
     rclcpp::Publisher<soloco_interfaces::msg::TrackedPersons>::SharedPtr m_human_track_interpolated_pub;
-    rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr marker_pub;    
+    rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr marker_pub;  
+    
     // people vector as cache for detected humans
     soloco_interfaces::msg::TrackedPersons people;
 };  
