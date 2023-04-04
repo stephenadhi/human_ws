@@ -62,8 +62,6 @@ public:
 
 private:
     void zedCallback(const zed_interfaces::msg::ObjectsStamped::SharedPtr msg) {
-        // Initialize new_object to true
-        bool new_object = true;
         // Visualization marker array
         visualization_msgs::msg::MarkerArray markers;
         // get ros parameters
@@ -95,40 +93,15 @@ private:
                 currPose.pose.orientation.y = 0.0;
                 currPose.pose.orientation.z = 0.0;
                 currPose.pose.orientation.w = 1.0;
+                
                 // If tf transform exists, convert current pose to world space
                 if (auto pose_out = pose_transform(currPose, pub_frame_id, msg->header.frame_id)){
                     // variable to save transformed pose in the pub_frame_id space
                     geometry_msgs::msg::PoseStamped pose_world = pose_out.value();
                     long unsigned int people_count = people.tracks.size();
-                    for(long unsigned int person_idx=0; person_idx < people_count; person_idx++){
-                        soloco_interfaces::msg::TrackedPerson person = people.tracks[person_idx];
-                        // Get first detection time for person k in people vector
-                        rclcpp::Time det_time(person.track.poses[0].header.stamp);
-                        // Check whether person is known by id
-                        if(person.track_id == msg->objects[count].label_id){
-                            // RCLCPP_INFO(this->get_logger(), "Matched person ID %i.", people.tracks[person_idx].track_id);
-                            // Add person pose to person track
-                            person.track.poses.push_back(pose_world);  
-                            // If tracked_person track length is bigger than max_history-length, remove oldest pose
-                            if(person.track.poses.size()>max_history_length){
-                                person.track.poses.erase(person.track.poses.begin());
-                                // RCLCPP_INFO(this->get_logger(), "Track too long, removing oldest pose");
-                            }
-                            // Interpolate person historical poses for exact time diff between poses
-                            interpolate_person_pos(person, now().seconds(), det_time.seconds(), max_interp_interval, markers);
-                            // stamp the time of person track update
-                            person.header.stamp = now();
-                            new_object = false;
-                        }
-                        // Delete older person object longer than tolerance time
-                        double time_diff = now().seconds() - det_time.seconds();
-                        if (time_diff > tolerance){
-                            people.tracks.erase(people.tracks.begin() + person_idx);
-                            person_idx--;
-                            people_count--;
-                            RCLCPP_INFO(this->get_logger(), "Erased old data from %f seconds ago.", time_diff);
-                        }
-                    }
+
+                    bool new_object = check_and_update_people_vector(tracked_person, pose_world, people_count, tolerance, markers);
+
                     if(new_object){
                         // Push curent pose to history vector and stamp detection time
                         tracked_person.track.poses.push_back(pose_world);
@@ -197,7 +170,7 @@ private:
             y[k] = person.track.poses[k].pose.position.y;
             t[k] = rec_time.seconds();
         }
-        // 
+        // Rewrite person historical track and recorded time
         for (int i = 0; i <= num_t_quan_steps; i++){
             int j = 0;
             while (j < t.size() - 1 && t[j + 1] < inter_time_points[i]){
@@ -222,6 +195,46 @@ private:
             markers.markers.push_back(marker);
             }
         }
+    }
+    
+    bool check_and_update_people_vector(
+            soloco_interfaces::msg::TrackedPerson tracked_person,
+            geometry_msgs::msg::PoseStamped pose_world,
+            long unsigned int people_count,
+            double tolerance,
+            visualization_msgs::msg::MarkerArray markers) {
+        // initialize new object to true
+        bool new_object = true; 
+        // Loop through all person in people vector
+        for(long unsigned int person_idx=0; person_idx < people_count; person_idx++){
+            soloco_interfaces::msg::TrackedPerson person = people.tracks[person_idx];
+            // Get first detection time for person k in people vector
+            rclcpp::Time det_time(person.track.poses[0].header.stamp);
+            // Check whether person is known by id. MATCHED ID --> Add person pose to person track
+            if(person.track_id == tracked_person.track_id){
+                // RCLCPP_INFO(this->get_logger(), "Matched person ID %i.", people.tracks[person_idx].track_id);
+                person.track.poses.push_back(pose_world);  
+                // If tracked_person track length is bigger than max_history-length, remove oldest pose
+                if(person.track.poses.size()>max_history_length){
+                    person.track.poses.erase(person.track.poses.begin());
+                    // RCLCPP_INFO(this->get_logger(), "Track too long, removing oldest pose");
+                }
+                // Interpolate person historical poses for exact time diff between poses
+                interpolate_person_pos(person, now().seconds(), det_time.seconds(), max_interp_interval, markers);
+                // stamp the time of person track update
+                person.header.stamp = now();
+                new_object = false;
+            }
+            // PRUNE: Delete older person object longer than tolerance time
+            double time_diff = now().seconds() - det_time.seconds();
+            if (time_diff > tolerance){
+                people.tracks.erase(people.tracks.begin() + person_idx);
+                person_idx--;
+                people_count--;
+                RCLCPP_INFO(this->get_logger(), "Erased old data from %f seconds ago.", time_diff);
+            }
+        }
+        return new_object;    
     }
 
 private:
