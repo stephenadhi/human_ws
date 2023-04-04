@@ -37,10 +37,21 @@ def generate_launch_description():
         output='screen',
         parameters=[robot_tracker_config],
     )
+
+    multi_tracking_rviz2_cmd = Node(
+            package='rviz2',
+            namespace=camera_name,
+            executable='rviz2',
+            name=camera_name_val+'_rviz2',
+            output='screen',
+            arguments=[["-d"], [config_rviz2]],
+    )        
+        
     
     ld = LaunchDescription()
     
     ld.add_action(human_track_publisher_cmd)
     ld.add_action(robot_track_publisher_cmd)
+    ld.add_action(multi_tracking_rviz2_cmd)
     
     return ld
