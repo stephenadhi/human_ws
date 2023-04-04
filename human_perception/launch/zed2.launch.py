@@ -75,6 +75,8 @@ def launch_setup(context, *args, **kwargs):
     publish_map_tf = LaunchConfiguration('publish_map_tf')
     xacro_path = LaunchConfiguration('xacro_path')
     gnss_frame = LaunchConfiguration('gnss_frame')
+
+    use_rviz = LaunchConfiguration('use_rviz')
     
     camera_name_val = camera_name.perform(context)
     camera_model_val = camera_model.perform(context)
@@ -158,6 +160,7 @@ def launch_setup(context, *args, **kwargs):
         period=7.0,
         actions=[
             Node(
+            condition=IfCondition(use_rviz),
             package='rviz2',
             namespace=camera_name,
             executable='rviz2',
@@ -171,7 +174,7 @@ def launch_setup(context, *args, **kwargs):
     return [
         rsp_node,
         zed_wrapper_node,
-        # zed_rviz2_node
+        zed_rviz2_node
     ]
 
 
@@ -235,6 +238,12 @@ def generate_launch_description():
                 'cam_pose',
                 default_value='[0.0,0.0,0.0,0.0,0.0,0.0]',
                 description='Pose of the camera with respect to the base frame (i.e. `base_link`): [x,y,z,r,p,y]. Note: Orientation in rad.)'),
-            OpaqueFunction(function=launch_setup)
+            DeclareLaunchArgument(
+                'use_rviz',
+                default_value='false',
+                choices=('true', 'false'),
+                description='launches RViz if set to `true`.',
+            ),
+            OpaqueFunction(function=launch_setup),
         ]
     )
