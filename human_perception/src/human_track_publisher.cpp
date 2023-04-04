@@ -56,6 +56,7 @@ public:
         m_human_track_interpolated_pub = this->create_publisher<soloco_interfaces::msg::TrackedPersons>(
                     human_track_topic, qos);
         marker_pub = this->create_publisher<visualization_msgs::msg::MarkerArray>("human_markers", 10);
+        bbox_pub = this->create_publisher<visualization_msgs::msg::MarkerArray>("human_bounding_boxes", 10);
         // Create tf buffer and transform listener   
         m_tf_buffer = std::make_unique<tf2_ros::Buffer>(this->get_clock());
         m_transform_listener = std::make_shared<tf2_ros::TransformListener>(*m_tf_buffer);
@@ -63,8 +64,6 @@ public:
 
 private:
     void zedCallback(const zed_interfaces::msg::ObjectsStamped::SharedPtr msg) {
-        // Visualization marker array
-        visualization_msgs::msg::MarkerArray markers;
         // get ros parameters
         this->get_parameter("pub_frame_id", pub_frame_id);
         this->get_parameter("pub_frame_rate", pub_frame_rate);
@@ -73,6 +72,10 @@ private:
         this->get_parameter("max_history_length", max_history_length);
         this->get_parameter("visualize_bbox", visualize_bbox);
         double tolerance = 1/pub_frame_rate + delay_tolerance;
+
+        // Setup new visualization marker arrays
+        visualization_msgs::msg::MarkerArray human_markers;
+        visualization_msgs::msg::MarkerArray human_bboxes;
         
         // Loop through all detected objects
         for(long unsigned int count=0; count < msg->objects.size(); count++){
@@ -83,26 +86,33 @@ private:
             // Only consider valid tracking
             if(tracked_person.tracking_state == 1 && msg->objects[count].label == "Person"){
                 // Position in camera frame
-                double tx = msg->objects[count].position[0];
-                double ty = msg->objects[count].position[1];
+                double person_x_pos = msg->objects[count].position[0];
+                double person_y_pos = msg->objects[count].position[1];
                 // Save to current poseStamped message format
                 geometry_msgs::msg::PoseStamped currPose;
                 currPose.header = msg->header;
-                currPose.pose.position.x = tx;
-                currPose.pose.position.y = ty;
+                currPose.pose.position.x = person_x_pos;
+                currPose.pose.position.y = person_y_pos;
                 currPose.pose.position.z = 0.0;
                 currPose.pose.orientation.x = 0.0;
                 currPose.pose.orientation.y = 0.0;
                 currPose.pose.orientation.z = 0.0;
                 currPose.pose.orientation.w = 1.0;
                 
+                // Get bounding box dimensions
+                tracked_person.bbox_x_length = msg->objects[count].dimensions_3d[0];
+                tracked_person.bbox_y_length = msg->objects[count].dimensions_3d[1];
+                //tracked_person.bbox_z_length = msg->objects[count].dimensions_3d[2];
+                
                 // If tf transform exists, convert current pose to world space
                 if (auto pose_out = pose_transform(currPose, pub_frame_id, msg->header.frame_id)){
                     // variable to save transformed pose in the pub_frame_id space
                     geometry_msgs::msg::PoseStamped pose_world = pose_out.value();
+                    
+                    if (visualize_bbox){ visualize_person_bbox(tracked_person, pose_world, human_bboxes); }
+                    
                     long unsigned int people_count = people.tracks.size();
-
-                    bool new_object = check_and_update_people_vector(tracked_person, pose_world, people_count, tolerance, markers);
+                    bool new_object = check_and_update_people_vector(tracked_person, pose_world, people_count, tolerance, human_markers);
 
                     if(new_object){
                         // Push curent pose to history vector and stamp detection time
@@ -121,7 +131,9 @@ private:
         people.header.frame_id = pub_frame_id;
         people.header.stamp = now();
         m_human_track_interpolated_pub->publish(people);
-        marker_pub->publish(markers);
+        
+        marker_pub->publish(human_markers);
+        bbox_pub->publish(human_bboxes);
         }
     }
     
@@ -204,7 +216,7 @@ private:
             geometry_msgs::msg::PoseStamped pose_world,
             long unsigned int people_count,
             double tolerance,
-            visualization_msgs::msg::MarkerArray markers) {
+            visualization_msgs::msg::MarkerArray human_markers) {
         // initialize new object to true
         bool new_object = true; 
         // Loop through all person in people vector
@@ -222,7 +234,7 @@ private:
                     // RCLCPP_INFO(this->get_logger(), "Track too long, removing oldest pose");
                 }
                 // Interpolate person historical poses for exact time diff between poses
-                interpolate_person_pos(person, now().seconds(), det_time.seconds(), max_interp_interval, markers);
+                interpolate_person_pos(person, now().seconds(), det_time.seconds(), max_interp_interval, human_markers);
                 // stamp the time of person track update
                 person.header.stamp = now();
                 new_object = false;
@@ -237,6 +249,31 @@ private:
             }
         }
         return new_object;    
+    }
+    
+    void visualize_person_bbox(
+            soloco_interfaces::msg::TrackedPerson tracked_person, 
+            geometry_msgs::msg::PoseStamped pose_world,
+            visualization_msgs::msg::MarkerArray human_bboxes){
+        // Setup box marker center point
+        visualization_msgs::msg::Marker marker;
+        marker.header.frame_id = pose_world.header.frame_id;
+        marker.header.stamp = this->now();
+        marker.ns = "human_boxes";
+        marker.id = 0;
+        marker.type = visualization_msgs::msg::Marker::CUBE;
+        marker.action = visualization_msgs::msg::Marker::ADD;
+        marker.pose.position.x = pose_world.pose.position.x;
+        marker.pose.position.y = pose_world.pose.position.y;
+        marker.pose.position.z = 1.80 / 2.0;
+        marker.scale.x = tracked_person.bbox_x_length;
+        marker.scale.y = tracked_person.bbox_y_length;
+        marker.scale.z = 1.80;
+        marker.color.a = 1.0;
+        marker.color.r = 1.0;
+        marker.color.g = 0.0;
+        marker.color.b = 0.0;
+        human_bboxes.markers.push_back(marker);
     }
 
 private:
@@ -255,6 +292,7 @@ private:
     // Human track publisher
     rclcpp::Publisher<soloco_interfaces::msg::TrackedPersons>::SharedPtr m_human_track_interpolated_pub;
     rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr marker_pub;  
+    rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr bbox_pub;  
     
     // people vector as cache for detected humans
     soloco_interfaces::msg::TrackedPersons people;
