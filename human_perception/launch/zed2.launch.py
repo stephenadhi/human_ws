@@ -154,7 +154,7 @@ def launch_setup(context, *args, **kwargs):
     )
 
     # Rviz2 node
-    rviz2_node = TimerAction(
+    zed_rviz2_node = TimerAction(
         period=7.0,
         actions=[
             Node(
@@ -171,7 +171,7 @@ def launch_setup(context, *args, **kwargs):
     return [
         rsp_node,
         zed_wrapper_node,
-        rviz2_node
+        # zed_rviz2_node
     ]
 
 
