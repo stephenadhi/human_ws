@@ -5,6 +5,11 @@ import os
 import yaml
 
 def generate_launch_description():
+    config_rviz2 = os.path.join(
+        get_package_share_directory('human_perception'),
+        'rviz',
+        'multi_tracking.rviz'
+    )
     # get config file path and loading it
     human_config_file = os.path.join(
         get_package_share_directory('human_perception'),
@@ -39,12 +44,11 @@ def generate_launch_description():
     )
 
     multi_tracking_rviz2_cmd = Node(
-            package='rviz2',
-            namespace=camera_name,
-            executable='rviz2',
-            name=camera_name_val+'_rviz2',
-            output='screen',
-            arguments=[["-d"], [config_rviz2]],
+        package='rviz2',
+        executable='rviz2',
+        name='multitracking_rviz',
+        output='screen',
+        arguments=[["-d"], [config_rviz2]],
     )        
         
     
