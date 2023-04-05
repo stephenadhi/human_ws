@@ -171,7 +171,7 @@ private:
         if(num_t_quan_steps > int(max_history_length)){
             num_t_quan_steps = int(max_history_length); 
         }
-        RCLCPP_INFO(this->get_logger(), "num_t_quan_steps %i.", num_t_quan_steps);
+        RCLCPP_INFO(this->get_logger(), "num_t_quan_steps %i.", num_t_quan_steps + 1);
         // get interpolated time points
         Eigen::VectorXd inter_time_points = Eigen::VectorXd::LinSpaced(num_t_quan_steps + 1, 0.0, max_interp_interval*num_t_quan_steps);
         // Get the current number of poses inside path message
@@ -234,7 +234,9 @@ private:
                     // RCLCPP_INFO(this->get_logger(), "Track too long, removing oldest pose");
                 }
                 // Interpolate person historical poses for exact time diff between poses
-                interpolate_person_pos(person, now().seconds(), det_time.seconds(), max_interp_interval, human_markers);
+                if (person.track.poses.size() > 1){
+                    interpolate_person_pos(person, now().seconds(), det_time.seconds(), max_interp_interval, human_markers);
+                }
                 // stamp the time of person track update
                 person.header.stamp = now();
                 new_object = false;
