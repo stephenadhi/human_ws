@@ -20,7 +20,7 @@ import time
 
 
 class Robot_track:
-    def __init__(self, max_history_length=7):
+    def __init__(self, max_history_length):
         self.max_history_length = max_history_length
     #    self.interpolated_poses = Path()
     #    self.interpolated_poses.header.frame_id = "locobot/odom"

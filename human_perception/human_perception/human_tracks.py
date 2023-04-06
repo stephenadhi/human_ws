@@ -1,145 +1,129 @@
-#!/usr/bin/env python3
+import rclpy
+from rclpy.node import Node
+from rclpy.qos import QoSProfile, DurabilityPolicy
+from nav_msgs.msg import Odometry, Path
+from geometry_msgs.msg import Pose, PoseStamped
+from visualization_msgs.msg import Marker, MarkerArray
+from zed_interfaces.msg import ObjectsStamped
+from soloco_interfaces.msg import TrackedPerson, TrackedPersons
+from tf2_geometry_msgs import do_transform_pose
+from tf2_ros import Buffer, TransformListener
 
-
-import pyzed.sl as sl
-from collections import deque
 import numpy as np
-import copy
+import math
+from collections import deque
 
-import rospy
-from visualization_msgs.msg import Marker
-from visualization_msgs.msg import MarkerArray
-from geometry_msgs.msg import Point
-from nav_msgs.msg import Odometry
-from nav_msgs.msg import Path
-import tf2_ros
-import tf_conversions
 from robot_track import Robot_track
 
-import time
-
-#from scipy import interpolate
-
-class people:
+class HumanTrackPublisher(Node):
     def __init__(self):
+        super().__init__('human_track_publisher')
+        # QoS settings
+        qos = QoSProfile(
+            depth=10,
+            reliability=QoSProfile.ReliabilityPolicy.RELIABLE,
+            durability=DurabilityPolicy.VOLATILE)
 
-        # init camera
+        # Declare parameters
+        self.declare_parameter('odom_topic', '/locobot/odom')
+        self.declare_parameter('detected_obj_topic', '/zed2/zed_node/obj_det/objects')
+        self.declare_parameter('human_track_topic', '/human/track')
+        self.declare_parameter('pub_frame_id', 'map')
+        self.declare_parameter('pub_frame_rate', 15.0)
+        self.declare_parameter('max_interp_interval', 0.4)
+        self.declare_parameter('max_history_length', 12)
+        self.declare_parameter('delay_tolerance', 3.0)
+        self.declare_parameter('visualize_bbox', True)
 
-        zed = sl.Camera()
+        # Get parameter values
+        odom_topic = self.get_parameter('odom_topic').get_parameter_value().string_value
+        detected_obj_topic = self.get_parameter('detected_obj_topic').get_parameter_value().string_value
+        human_track_topic = self.get_parameter('human_track_topic').get_parameter_value().string_value
+        self.pub_frame_id = self.get_parameter("pub_frame_id").get_parameter_value().string_value
+        self.pub_frame_rate = self.get_parameter("pub_frame_rate").get_parameter_value().integer_value
+        self.max_interp_interval = self.get_parameter("max_interp_interval").get_parameter_value().double_value
+        self.delay_tolerance = self.get_parameter("delay_tolerance").get_parameter_value().double_value
+        self.max_history_length = self.get_parameter("max_history_length").get_parameter_value().integer_value
+        self.visualize_bbox = self.get_parameter("visualize_bbox").get_parameter_value().bool_value
+        
+        # Create zed detected objects subscriber
+        self.zed_sub = self.create_subscription(ObjectsStamped, detected_obj_topic, self.zed_callback, qos)
+        # Create odom subscriber
+        self.odom_sub = self.create_subscription(Goal, odom_topic, self.odom_callback, qos) 
+        # Create human track publisher
+        self.human_track_interpolated_pub = self.create_publisher(TrackedPersons, human_track_topic, qos)
+        self.marker_pub = self.create_publisher(MarkerArray, 'human_markers', 10)
+        self.bbox_pub = self.create_publisher(MarkerArray, 'human_bounding_boxes', 10)
 
-        # Set configuration parameters
-        init_params = sl.InitParameters()
-        init_params.camera_resolution = sl.RESOLUTION.VGA
-        init_params.camera_fps = 100
-        init_params.coordinate_system = sl.COORDINATE_SYSTEM.RIGHT_HANDED_Z_UP_X_FWD  # Use a right-handed Z-up x forward for ROS
-        init_params.coordinate_units = sl.UNIT.METER  # Set units in meters
-        init_params.depth_mode = sl.DEPTH_MODE.ULTRA  # ULTRA
-        init_params.sdk_verbose = True
+        # Create tf buffer and transform listener   
+        self.tf_buffer = Buffer()
+        self.transform_listener = TransformListener(self.tf_buffer, self)
 
-        # Open the camera
-        err = zed.open(init_params)
-        if (err != sl.ERROR_CODE.SUCCESS):
-            print("camera initialization failed")
-            exit()
-        print("camera initialization finished")
-        # ---------------------------------------------------------------------
-
-        # -------------configurating object detection initialization and runtime parameter---------------------#
-        # models can be found on https://github.com/stereolabs/zed-python-api/blob/master/src/pyzed/sl.pyx
-        self.obj_param = sl.ObjectDetectionParameters()
-        self.obj_param.detection_model = sl.DETECTION_MODEL.HUMAN_BODY_FAST
-        self.obj_param.image_sync = True
-        self.obj_param.enable_tracking = True
-        self.obj_param.enable_body_fitting = False#True
-        self.obj_param.prediction_timeout_s = 2.
-        self.obj_param.batch_parameters.enable = True
-        self.obj_param.allow_reduced_precision_inference = True
-        # If you want to have object tracking you need to enable positional tracking first
-        if self.obj_param.enable_tracking:
-            positional_tracking_param = sl.PositionalTrackingParameters()
-            initial_position = sl.Transform()
-            initial_translation = sl.Translation()
-            initial_translation.init_vector(0, 0, 0)  # in meter
-            initial_position.set_translation(initial_translation)
-            positional_tracking_param.set_initial_world_transform(initial_position)
-            zed.enable_positional_tracking(positional_tracking_param)
-
-        print("Object Detection: Loading Module...")
-        err = zed.enable_object_detection(self.obj_param)
-        if err != sl.ERROR_CODE.SUCCESS:
-            print(repr(err))
-            zed.close()
-            exit(1)
-        print("finished")
-
-        self.obj_runtime_param = sl.ObjectDetectionRuntimeParameters()
-        self.obj_runtime_param.detection_confidence_threshold = 40
-        # ----------------------------------------------------------------------------------------------------#
-
-        # --------------------preparing zed objects--------------------------#
-        self.objects = sl.Objects()  # preparing the zed objects variable
-        self.runtime_parameters = sl.RuntimeParameters()
-        # runtime_parameters.measure3D_reference_frame = sl.REFERENCE_FRAME.WORLD
-        self.runtime_parameters.measure3D_reference_frame = sl.REFERENCE_FRAME.WORLD
-
-        zed_pose = sl.Pose()
-        self.zed_pose = zed_pose
-        self.zed = zed
-        self.sl = sl
-
-        # -------------------------------------------------------------------#
-
-        print("creating node...")
-        rospy.init_node("human_pose_publisher", anonymous=False)
-        self.rate = rospy.Rate(60)
-        # -------------------------------------------------------------------#
-
+        # People vector as cache for detected humans
+        self.people = TrackedPersons()
+        
         self.person = []
-        self.markerArray = MarkerArray()
-        self.camera_pose = sl.Pose()
-        self.robot_pose = Odometry()
 
-     #   self.markerArray_corrected = MarkerArray()
+    def odom_callback(self, msg):
+        # In an ideal case, where the robot motion and sensors are perfectly accurate and precise, 
+        # the transform between "odom" and "map" frames would be zero. However, in reality, there are always 
+        # errors and uncertainties in robot motion and sensor readings, which can accumulate over time.
+        # This results in drift between the "odom" and "map" frames. Therefore, it is important to use 
+        # localization and mapping algorithms that can account for these errors and correct for drift 
+        # in order to maintain accurate estimates of the robot position and orientation.
+        
+        # Get current robot pose in publishing frame (default: 'map')
+        robot_in_map_frame = self.pose_transform(msg.pose.pose, self.pub_frame_id, msg.header.frame_id)
+        self.robot_track.interpolated_pose(robot_in_map_frame, self.max_history_length)
+        # Append current robot position to marker array
+        marker_array = MarkerArray()
+        marker_array.markers.append(self.robot_track.marker)
+        # Append people to marker array
+        if len(self.person) != 0:
+            for pers in self.person:
+                track = []
+                for i in range(self.max_history_length + 1):
+                    point = Point()
+                    point.x = person.track.poses[i].position.x
+                    point.y = person.track.poses[i].position.y
+                    
+                    track.append(point)
+                    pers.marker.points = track
+                    marker_array.markers.append(pers.marker)
+        
+        self.markerarray_publisher.publish(marker_array.markers)
 
-        self.markerarray_publisher = rospy.Publisher("/interpolated_history_position", MarkerArray,
-                                                     queue_size=5)
+    def zed_callback(self, msg):
+        # Loop through all detected objects,
+        # Only consider valid tracking
+        if msg.objects[count].tracking_state == 1 and msg.objects[count].label == "Person":
+            for count in range(len(msg.objects)):
+                # Get the person id and tracking state
+                tracked_person = soloco_interfaces.msg.TrackedPerson()
+                tracked_person.track_id = "Person"
+                tracked_person.tracking_state = 1
+                # Position in camera frame
+                person_x_pos = msg.objects[count].position[0]
+                person_y_pos = msg.objects[count].position[1]
+                # Save to current poseStamped message format
+                currPose = geometry_msgs.msg.PoseStamped()
+                currPose.header = msg.header
+                currPose.pose.position.x = person_x_pos
+                currPose.pose.position.y = person_y_pos
+                currPose.pose.position.z = 0.0
+                currPose.pose.orientation.x = 0.0
+                currPose.pose.orientation.y = 0.0
+                currPose.pose.orientation.z = 0.0
+                currPose.pose.orientation.w = 1.0
 
-        self.tfBuffer = tf2_ros.Buffer()
-        self.listener = tf2_ros.TransformListener(self.tfBuffer,)
-        #rospy.sleep(2)
+                # First add new points and remove the ones that are too old
+                current_timestamp = self.get_clock().now()
+                self.generate_from_objects(self.objects, current_timestamp)
+        
+                # Delete old entries of interpolated points
+                self.prune_old_interpolated_points(
+                    current_timestamp)  
 
-        robot_sub = rospy.Subscriber("/locobot/mobile_base/odom", Odometry, self.test, queue_size=1)
-        self.robot_track = Robot_track()
-        print('Init done!')
-        self.zed_perception_loop()
-
-
-
-    def zed_perception_loop(self):
-
-        while not rospy.is_shutdown():
-
-
-            t1 = time.time()
-
-            # odom = rospy.wait_for_message("/locobot/mobile_base/odom", Odometry, timeout=None)
-            # Locobot.update_interpolated_poses(odom)
-
-            if self.zed.grab(self.runtime_parameters) == sl.ERROR_CODE.SUCCESS:  # Grab new frames and detect objects
-                returned_state = self.zed.retrieve_objects(self.objects, self.obj_runtime_param)  # retrieve objects
-
-                if (returned_state == sl.ERROR_CODE.SUCCESS and self.objects.is_new):
-                    obj_array = self.objects.object_list
-                    if (self.obj_param.enable_tracking) == True:
-                        # First add new points and remove the ones that are too old
-                        current_timestamp = time.time()
-                        self.generate_from_objects(self.objects, current_timestamp)
-                        self.prune_old_interpolated_points(
-                            current_timestamp)  # here we delete old entries of interpolated points
-
-            self.rate.sleep()  # wichtig! otherwise your program will not exit ctrl + c
-
-            t2 = time.time()
 
     def transform_array(self, transform):
         # Create a homogeneous transformation matrix from the transform
@@ -153,71 +137,18 @@ class people:
         matrix = tf_conversions.transformations.quaternion_matrix(rotation)
         matrix[:3, 3] = translation
         return matrix
-        # Apply the transformation matrix to the array
-      #  print(array)
-       # homogeneous_array = np.concatenate([array, np.ones((array.shape[0], 1))], axis=1).T
-      #  print(array.shape)
-      #  print(matrix)
-        #transformed_array = np.dot(matrix, array)
-
-    def test(self, robot_pose):
-        self.robot_track.interpolated_pose(robot_pose)
-        marker_array = MarkerArray()
-        marker_array.markers.append(self.robot_track.marker)
-        if len(self.person) != 0:
-            state = self.zed.get_position(self.zed_pose, self.sl.REFERENCE_FRAME.WORLD)
-            #py_translation = self.sl.Translation()
-            #rotation = self.zed_pose.get_rotation_vector()
-            cam_pos_m = self.zed_pose.pose_data(self.sl.Transform()).m
-            inv_Twc = np.linalg.inv(cam_pos_m)
-            trans = self.tfBuffer.lookup_transform('locobot/odom', 'locobot/base_link', rospy.Time())
-
-            robot_to_map_matrix = self.transform_array(trans)
-            for pers in self.person:
-                tranformed_to_cam_frame_points = (inv_Twc @ pers.arr_interp_padded.T).T
-                tranformed_to_map_frame_points = (robot_to_map_matrix @ tranformed_to_cam_frame_points.T).T
-
-
-                tranformed_to_cam_frame_list = []
-                for i in range(pers.max_history_length + 1):
-                    point = Point()
-                    point.x = tranformed_to_map_frame_points[i, 0]
-                    point.y = tranformed_to_map_frame_points[i, 1]
-                    tranformed_to_cam_frame_list.append(point)
-                pers.marker.points = tranformed_to_cam_frame_list
-                marker_array.markers.append(pers.marker)
-        self.markerarray_publisher.publish(marker_array.markers)
-        self.rate.sleep()
 
     def generate_from_objects(self, objects, current_timestamp):
-        t1 = time.time()
-
         for obj in objects.object_list:
-           # print(obj.tracking_state)
-            if ((obj.tracking_state != sl.OBJECT_TRACKING_STATE.OK) or (not np.isfinite(obj.position[0])) or (obj.id < 0)):
-                if obj.tracking_state == sl.OBJECT_TRACKING_STATE.SEARCHING:
-                    pass
-                else:
-                    continue
-
             new_object = True
             for i in range(len(self.person)):
                 if self.person[i].id == obj.id:
                     new_object = False
-                    self.person[i].add_interpolated_point(obj, current_timestamp)  # ---------------------------------here we add a new position to the created interpolatedTracklets
-
+                    self.person[i].add_interpolated_point(obj, current_timestamp)  
             # In case this object does not belong to existing tracks
             if (new_object):
-                self.person.append(interpolatedTracklet(obj, current_timestamp))  # ----------------------here we create a new object of interpolatedTracklets
-             #   self.fill_marker_array()
-
-        t2 = time.time()
-      #  print("one loop for generate_from_objects takes ", t2 - t1, " seconds")
-
-    def fill_marker_array(self):
-        for p in self.person:
-            self.markerArray.markers.append(p.marker)
-
+                # Create a new object of interpolatedTracklets
+                self.person.append(interpolatedTracklet(obj, current_timestamp))
 
     def prune_old_interpolated_points(self, ts):
         track_to_delete = []
@@ -228,6 +159,16 @@ class people:
 
         for it in track_to_delete:
             self.person.remove(it)
+
+    def pose_transform(obj, output_frame, input_frame):
+        transformed_obj = PoseStamped()
+        try:
+            tf = m_tf_buffer.lookup_transform(output_frame, input_frame, self.get_clock().now())
+            transformed_obj = tf2_geometry_msgs.do_transform_pose(obj, tf)
+        except tf2_ros.TransformException as ex:
+            self.get_logger().error('%s', ex)
+
+        return transformed_obj if transformed_obj else None
 
 #---------------------------------custom class made by krisna-----------------------------------------------#
 
@@ -261,12 +202,7 @@ class interpolatedTracklet:
 
         self.add_interpolated_point(obj_, timestamp_)
 
-    def add_interpolated_point(self, obj_, timestamp_):
-        self.curr_time = timestamp_
-
-        current_pos = obj_.position # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< THIS MAKES THE POINT AS IT IS
-        self.odoms.append([current_pos[0], current_pos[1], timestamp_])
-
+    def add_interpolated_point(se
         num_t_quan_steps = int((self.curr_time - self.odoms[0][2]) / self.interp_point)
         num_t_quan_steps = self.max_history_length if num_t_quan_steps > self.max_history_length else num_t_quan_steps
         np_odoms = np.array(self.odoms)
@@ -282,12 +218,16 @@ class interpolatedTracklet:
         self.last_timestamp = timestamp_
 
 
+def main(args=None):
+    rclpy.init(args=args)
+    human_track_publisher = HumanTrackPublisher()
+    rclpy.spin(human_track_publisher)
+    human_track_publisher.destroy_node()
+    rclpy.shutdown()
 
-
-#
 if __name__ == '__main__':
+    main()
 
-    People = people()
 
 
 
