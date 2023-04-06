@@ -29,7 +29,6 @@ from models.CEM_policy_IAR import CEM_IAR
 from datetime import datetime, timedelta
 
 from occupancy_grid_manager import OccupancyGridManager
-from ego_tracker import EgoTrack
 
 class NeuralMotionPlanner(Node):
     def __init__(self):
@@ -70,8 +69,8 @@ class NeuralMotionPlanner(Node):
         # Declare maximum number of agents        
         self.declare_parameter('max_num_agents', '5')     # [maximum number of people]
         # Declare maximum history length
-        self.declare_parameter('max_history_length', '12')     # [maximum number of human past poses]
-    
+        self.declare_parameter('max_history_length', '8') # [maximum history length]
+
     def initialize_node(self):
         # Device to use
         self.device= self.get_parameter('device').get_parameter_value().string_value
@@ -97,7 +96,7 @@ class NeuralMotionPlanner(Node):
         # Initialize current robot state
         self.r_state = np.zeros(5)  # v_x, v_y, yaw, v_t, omega_t
         # Initialize current position of all people and goal pose
-        self.ped_pos_xy_cem = np.ones((self.max_history_length + 1, self.max_num_agents + 1, 2)) #* (500)
+        self.ped_pos_xy_cem = np.ones((self.max_history_length + 1, self.max_num_agents + 1, 2)) * 500 # placeholder value
         self.goal_pose = None
         self.ego_tracker_obj = None
         
@@ -107,22 +106,26 @@ class NeuralMotionPlanner(Node):
         else:
             raise Exception('An error occurred')
             
-     def setup_publishers_and_subscribers(self):
+    def setup_publishers_and_subscribers(self):
         # Get ROS parameters
         odom_topic = self.get_parameter('odom_topic').get_parameter_value().string_value
         goal_pose_topic = self.get_parameter('goal_pose_topic').get_parameter_value().string_value
         costmap_topic = self.get_parameter('costmap_topic').get_parameter_value().string_value
         cmd_vel_topic = self.get_parameter('cmd_vel_topic').get_parameter_value().string_value
         human_track_topic = self.get_parameter('human_track_topic').get_parameter_value().string_value
+
         # Publishers
         self.cmd_vel_publisher = self.create_publisher(Twist, cmd_vel_topic, self.pose_qos)
-        # Subscriber for goal pose
-        self.goal_pose_sub = self.create_subscription(Goal, goal_topic, self.goal_callback, self.pose_qos)
+        
+        # Subscribers
+        self.goal_pose_sub = self.create_subscription(Goal, goal_topic, self.goal_callback, self.pose_qos) 
+        self.human_sub = self.create_subscription(TrackedPersons, human_track_topic, self.marker_callback, self.pose_qos)
+        self.marker_sub = self.create_subscription(MarkerArray, 'interpolated_history_position', self.marker_callback, self.pose_qos)
+        
         # Subscriber for synced update
         self.ego_sub = Subscriber(self, Odometry, odom_topic)
-        self.human_sub = Subscriber(self, TrackedPersons, human_track_topic)
         self.costmap_sub = Subscriber(self, OccupancyGrid, costmap_topic)
-
+        
         # Sync messages with slop (max delay) = 0.1 seconds
         time_sync = ApproximateTimeSynchronizer([self.ego_sub, self.human_sub, self.costmap_sub, self.goal_pose_sub], queue_size=10, slop=0.1)
         time_sync.registerCallback(self.common_callback)
@@ -130,31 +133,40 @@ class NeuralMotionPlanner(Node):
     def goal_callback(self, goal_msg):
         goal = [goal_msg.pose.position.x, goal_msg.pose.position.y]
         self.goal_pose = np.array(goal)
+
+    def marker_callback(self, marker_msg):
+        self.ped_pos_xy_cem = np.ones((hist + 1, 5 + 1, 2)) * 99
+        for i, ped in enumerate(marker_msg.markers):
+            coords_array = np.array([[e.x, e.y] for e in ped.points])
+            self.ped_pos_xy_cem[:, i] = coords_array[::-1]
+
+    def human_callback(self, human_msg):
+        # update people state
+        for person_idx, person in enumerate(human_msg.tracks):
+            for pos_idx, past_pos in enumerate(person.track):
+                self.ped_pos_xy_cem[pos_idx, person_idx, :] = past_pos.position.x, past_pos.position.y
+    
+    def common_callback(self, odom_msg, costmap_msg):
+        # update robot state
+        self.r_state[0] = odom_msg.twist.twist.linear.x
+        self.r_state[1] = odom_msg.twist.twist.linear.y
+        self.r_state[2] = np.arctan2(odom_msg.twist.twist.linear.y, odom_msg.twist.twist.linear.x)
+        self.r_state[3] = np.sqrt(odom_msg.twist.twist.linear.x**2 + odom_msg.twist.twist.linear.y**2)
+        self.r_state[4] = odom_msg.twist.twist.angular.z
         
-    def common_callback(self, odom_msg, human_msg, costmap_msg):
-            # update robot state
-            self.r_state[0] = odom_msg.twist.twist.linear.x
-            self.r_state[1] = odom_msg.twist.twist.linear.y
-            self.r_state[2] = np.arctan2(odom_msg.twist.twist.linear.y, odom_msg.twist.twist.linear.x)
-            self.r_state[3] = np.sqrt(odom_msg.twist.twist.linear.x**2 + odom_msg.twist.twist.linear.y**2)
-            self.r_state[4] = odom_msg.twist.twist.angular.z
-            # update people state
-            for person_idx, person in enumerate(human_msg.tracks):
-                for pos_idx, past_pos in enumerate(person.track):
-                    self.ped_pos_xy_cem[pos_idx, person_idx, :] = past_pos.position.x, past_pos.position.y
-            # Send costmap to occupancy grid manager
-            self.ogm = OccupancyGridManager(costmap_msg, subscribe_to_updates=False)
-            # Concatenate information about people track, robot state, and goal
-            x = np.concatenate([self.ped_pos_xy_cem.flatten(), self.neigh_matrix.flatten(), self.r_state, self.goal_pose])
-            
-            if self.goal_pose is not None:
-                # Get command from neural model forward pass, given costmap object
-                u = self.model.predict(x, costmap_obj=self.ogm)
-                # Publish resulting twist to cmd_vel topic
-                cmd_vel = Twist()
-                cmd_vel.linear.x = u[0]
-                cmd_vel.angular.z = u[1]
-                self.cmd_vel_publisher.publish(cmd_vel)
+        # Send costmap to occupancy grid manager
+        self.ogm = OccupancyGridManager(costmap_msg, subscribe_to_updates=False)
+        # Concatenate information about people track, robot state, and goal
+        x = np.concatenate([self.ped_pos_xy_cem.flatten(), self.neigh_matrix.flatten(), self.r_state, self.goal_pose])
+        
+        if self.goal_pose is not None:
+            # Get command from neural model forward pass, given costmap object
+            u = self.model.predict(x, costmap_obj=self.ogm)
+            # Publish resulting twist to cmd_vel topic
+            cmd_vel = Twist()
+            cmd_vel.linear.x = u[0]
+            cmd_vel.angular.z = u[1]
+            self.cmd_vel_publisher.publish(cmd_vel)
 
 def main(args=None):
     try:
