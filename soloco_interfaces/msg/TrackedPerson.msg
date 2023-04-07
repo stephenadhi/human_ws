@@ -1,5 +1,5 @@
 # Message defining a tracked person
-std_msgs/Header header
+
 # unique identifier of the target, consistent over time
 int16 track_id        
 
@@ -10,7 +10,7 @@ int8 tracking_state
 # 2 -> SEARCHING (occlusion occurred, trajectory is estimated)
 
 # The following fields are extracted from the Kalman state x and its covariance C
-geometry_msgs/PoseWithCovariance  current_pose      # current pose of the track 
+geometry_msgs/PoseStamped  current_pose      # current pose of the track 
 
 # Bounding box dimensions
 float32 bbox_x_length
