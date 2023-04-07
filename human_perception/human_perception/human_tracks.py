@@ -137,10 +137,10 @@ class HumanTrackPublisher(Node):
                         # Create a new person and append currebt map pose
                         person = TrackedPerson()
                         person.current_pose = curr_pose_map
-                        person.track.header.stamp = now()
+                        person.track.header.stamp = curr_timestamp
                         person.track.poses.append(curr_pose_map)
             # Delete entries of interpolated points older than 
-            self.prune_old_interpolated_points(timestamp_)
+            self.prune_old_interpolated_points(curr_timestamp)
 
     def pose_transform(self, curr_pose, output_frame, input_frame):
         transformed_pose = PoseStamped()
