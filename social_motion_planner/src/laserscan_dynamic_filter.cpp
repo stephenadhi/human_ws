@@ -1,6 +1,7 @@
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/laser_scan.hpp>
-#include <zed_interfaces/msg/bounding_box3_d.hpp>
+#include <zed_interfaces/msg/bounding_box_3d.hpp>
+#include <zed_interfaces/msg/objects_stamped.hpp>
 #include <algorithm>
 #include <array>
 
@@ -20,21 +21,29 @@ private:
     void laserScanCallback(const sensor_msgs::msg::LaserScan::SharedPtr msg){{
         auto filtered_scan = *msg; // make a copy of the original scan
         // Filter the laser scan points that are inside the bounding box
-        for (size_t i = 0; i < msg->ranges.size(); ++i){
+        for (size_t i = 0; i <= msg->ranges.size(); i++){
             float angle = msg->angle_min + i * msg->angle_increment;
             float x = msg->ranges[i] * cos(angle);
             float y = msg->ranges[i] * sin(angle);
-            if (isPointInsideBoundingBox(x, y, bounding_box_)){
-                filtered_scan.ranges[i] = std::numeric_limits<float>::quiet_NaN();
+            for (size_t k = 0; k <= bounding_box_.size(0); k++) {
+                if (isPointInsideBoundingBox(x, y, bounding_box_[k])){
+                    filtered_scan.ranges[i] = std::numeric_limits<float>::quiet_NaN();
+                }
             }
         }
         filtered_scan_pub_->publish(filtered_scan);
     }
 
-    void boundingBoxCallback(const zed_interfaces::msg::BoundingBox3D::SharedPtr msg){
+    void zedObjectsCallback(const zed_interfaces::msg::ObjectsStamped::SharedPtr msg){
     // Store the 2D bounding box information for use in filtering the laserscan
-        for (size_t i = 0; i < 8; ++i){
-            bounding_box_[i] = msg->points[i];
+        for (int k = 0; k <= msg->objects.size(); k++) {
+            // Save bounding box if object is moving
+            if (msg->objects.action_state == 2) {
+                bbox = msg->objects[k].bounding_box_3d;
+                for (int i = 0; i <= 8; i++){
+                    bounding_box_[i] = bbox.corners[i];
+                }
+            }
         }
     }
     
@@ -50,7 +59,7 @@ private:
     }
 
     rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr laser_scan_sub_;
-    rclcpp::Subscription<zed_interfaces::msg::BoundingBox3D>::SharedPtr bounding_box_sub_;
+    rclcpp::Subscription<zed_interfaces::msg::ObjectsStamped>::SharedPtr zed_objects_sub_;
     rclcpp::Publisher<sensor_msgs::msg::LaserScan>::SharedPtr filtered_scan_pub_;
 };
 
