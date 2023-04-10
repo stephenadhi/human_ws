@@ -14,6 +14,13 @@ def generate_launch_description():
     with open(config_file_path, 'r') as file:
         planner_config = yaml.safe_load(file)['social_motion_planner']['ros__parameters']
     
+    laserscan_filter_node_cmd = Node(
+        package='social_motion_planner',
+        executable='laserscan_filter_node',
+        name='laserscan_filter_node',
+        output='screen'.
+    )
+    
     social_motion_planner_cmd = Node(
         package='social_motion_planner',
         executable='neural_motion_planner',
@@ -24,5 +31,6 @@ def generate_launch_description():
     
     ld = LaunchDescription()
     
+    ld.add_action(laserscan_filter_node_cmd)
     ld.add_action(social_motion_planner_cmd)
     return ld
