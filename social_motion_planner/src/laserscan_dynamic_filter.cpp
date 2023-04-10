@@ -12,8 +12,8 @@ public:
         : Node("laser_scan_filter") {
         laser_scan_sub_ = this->create_subscription<sensor_msgs::msg::LaserScan>(
             "scan", 10, std::bind(&LaserScanFilterNode::laserScanCallback, this, std::placeholders::_1));
-        bounding_box_sub_ = this->create_subscription<zed_interfaces::msg::BoundingBox3D>(
-            "bounding_box", 10, std::bind(&LaserScanFilterNode::boundingBoxCallback, this, std::placeholders::_1));
+        zed_objects_sub_ = this->create_subscription<zed_interfaces::msg::ObjectsStamped>(
+            "/zed2/zed_node/obj_det/objects", 10, std::bind(&LaserScanFilterNode::zedObjectsCallback, this, std::placeholders::_1));
         filtered_scan_pub_ = this->create_publisher<sensor_msgs::msg::LaserScan>("filtered_scan", 10);
     }
 
