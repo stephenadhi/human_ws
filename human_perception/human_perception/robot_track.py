@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-
+from rclpy.time import Time
 from visualization_msgs.msg import Marker
 from geometry_msgs.msg import Point
 
@@ -23,7 +23,7 @@ class Robot_track:
         self.arr_interp_padded = np.zeros([self.max_history_length + 1, 2])
         self.marker = Marker()
         self.marker.id = 0
-        self.marker.header.frame_id = "locobot/odom"
+        self.marker.header.frame_id = "map"
         self.marker.type = self.marker.LINE_STRIP
         self.marker.action = self.marker.ADD
         self.marker.color.a = 1.0
@@ -39,10 +39,10 @@ class Robot_track:
     def interpolated_pose(self, pose_):
 
       #  start = time.time()
-        self.curr_time = (pose_.header.stamp.secs + pose_.header.stamp.nsecs / self.nano_factor)  # in seconds
+        self.curr_time = Time.from_msg(pose_.header.stamp).nanoseconds
 
-        self.odoms.append([pose_.pose.pose.position.x, pose_.pose.pose.position.y,
-                           pose_.header.stamp.secs + pose_.header.stamp.nsecs / self.nano_factor])
+        self.odoms.append([pose_.pose.position.x, pose_.pose.position.y,
+                           self.curr_time])
 
        # self.odoms.append([pose_.twist.twist.linear.x, pose_.twist.twist.linear.y,
        #                    pose_.header.stamp.secs + pose_.header.stamp.nsecs / self.nano_factor])

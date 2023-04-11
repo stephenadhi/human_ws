@@ -7,7 +7,7 @@ from rclpy.time import Time
 from rclpy.qos import QoSProfile, DurabilityPolicy, ReliabilityPolicy
 
 from nav_msgs.msg import Odometry, Path
-from geometry_msgs.msg import Pose, PoseStamped, Quaternion
+from geometry_msgs.msg import Point, Pose, PoseStamped, Quaternion
 from visualization_msgs.msg import Marker, MarkerArray
 from zed_interfaces.msg import ObjectsStamped
 from soloco_interfaces.msg import TrackedPerson, TrackedPersons
@@ -56,7 +56,7 @@ class HumanTrackPublisher(Node):
         
         # Create subscribers
         self.zed_sub = self.create_subscription(ObjectsStamped, detected_obj_topic, self.zed_callback, qos)
-        self.odom_sub = self.create_subscription(PoseStamped, odom_topic, self.odom_callback, qos)
+        self.odom_sub = self.create_subscription(Odometry, odom_topic, self.odom_callback, qos)
         
         # Create publishers
         self.human_track_interpolated_pub = self.create_publisher(TrackedPersons, human_track_topic, qos)
@@ -69,13 +69,15 @@ class HumanTrackPublisher(Node):
 
         # People vector as cache for detected humans
         self.people = TrackedPersons()
+        self.robot_track = Robot_track(self.max_history_length)
         
     def odom_callback(self, msg):
         # Get current robot pose in publishing frame (default: 'map')
-        robot_in_map_frame = self.pose_transform(msg.pose.pose, self.pub_frame_id, msg.header.frame_id)
+        robot_in_map_frame = PoseStamped()
+        robot_in_map_frame.pose = self.pose_transform(msg.pose.pose, self.pub_frame_id, msg.header.frame_id)
         
-        if robot_in_map_frame: # if transform exists, concatenate robot with people and publish
-            self.robot_track.interpolated_pose(robot_in_map_frame, self.max_history_length)
+        if robot_in_map_frame.pose: # if transform exists, concatenate robot with people and publish
+            self.robot_track.interpolated_pose(robot_in_map_frame)
             # Append current interpolaed robot position to marker array
             marker_array = MarkerArray()
             marker_array.markers.append(self.robot_track.marker)
@@ -88,7 +90,7 @@ class HumanTrackPublisher(Node):
                         point.x = person.track.poses[i].position.x
                         point.y = person.track.poses[i].position.y
                         # Append point to person_track
-                        track.append(point)
+                        person_track.append(point)
                     # Create new marker for each person track
                     marker = Marker()
                     marker.id = person.track_id + 1  # 0 is reserved for the robot
@@ -104,7 +106,7 @@ class HumanTrackPublisher(Node):
                     marker.lifetime = Duration(seconds=0.1)
                     marker_array.markers.append(marker)
             # Publish final marker array
-            self.marker_array_pub.publish(marker_array.markers)
+            self.marker_array_pub.publish(marker_array)
 
     def zed_callback(self, msg):
         # Loop through all detected objects, only consider valid tracking
