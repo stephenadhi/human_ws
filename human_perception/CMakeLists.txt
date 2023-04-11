@@ -7,7 +7,9 @@ endif()
 
 # find dependencies
 find_package(ament_cmake REQUIRED)
+find_package(ament_cmake_python REQUIRED)
 find_package(rclcpp REQUIRED)
+find_package(rclpy  REQUIRED)
 find_package(visualization_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
@@ -50,9 +52,18 @@ ament_target_dependencies(robot_track_publisher
 install(TARGETS human_track_publisher robot_track_publisher
   DESTINATION lib/${PROJECT_NAME})
 
+# Install Python modules
+ament_python_install_package(${PROJECT_NAME})
+
+# Install python executables
+install(PROGRAMS
+        ${PROJECT_NAME}/human_tracks.py
+        DESTINATION lib/${PROJECT_NAME}
+        )
+
 # Install launch files and directories.
 install(DIRECTORY
-        src launch include config rviz
+        src launch include config rviz ${PROJECT_NAME}
         DESTINATION share/${PROJECT_NAME}
         )
 

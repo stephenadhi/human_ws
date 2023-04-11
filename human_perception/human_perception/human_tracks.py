@@ -1,8 +1,10 @@
+#!/usr/bin/env python3
+
 import rclpy
 from rclpy.node import Node
 from rclpy.duration import Duration
 from rclpy.time import Time
-from rclpy.qos import QoSProfile, DurabilityPolicy
+from rclpy.qos import QoSProfile, DurabilityPolicy, ReliabilityPolicy
 
 from nav_msgs.msg import Odometry, Path
 from geometry_msgs.msg import Pose, PoseStamped, Quaternion
@@ -24,7 +26,7 @@ class HumanTrackPublisher(Node):
         # QoS settings
         qos = QoSProfile(
             depth=10,
-            reliability=QoSProfile.ReliabilityPolicy.RELIABLE,
+            reliability=ReliabilityPolicy.RELIABLE,
             durability=DurabilityPolicy.VOLATILE)
         # Declare parameters
         self.declare_parameter('odom_topic', '/locobot/odom')
@@ -49,12 +51,12 @@ class HumanTrackPublisher(Node):
         self.delay_tolerance = self.get_parameter("delay_tolerance").get_parameter_value().double_value
         self.max_history_length = self.get_parameter("max_history_length").get_parameter_value().integer_value
         self.visualize_bbox = self.get_parameter("visualize_bbox").get_parameter_value().bool_value
-        self.max_num_agents = self.get_parameter('max_num_agents').get_parameter_value().interger_value
+        self.max_num_agents = self.get_parameter('max_num_agents').get_parameter_value().integer_value
         self.track_timeout = self.get_parameter('track_timeout').get_parameter_value().double_value
         
         # Create subscribers
         self.zed_sub = self.create_subscription(ObjectsStamped, detected_obj_topic, self.zed_callback, qos)
-        self.odom_sub = self.create_subscription(Goal, odom_topic, self.odom_callback, qos)
+        self.odom_sub = self.create_subscription(PoseStamped, odom_topic, self.odom_callback, qos)
         
         # Create publishers
         self.human_track_interpolated_pub = self.create_publisher(TrackedPersons, human_track_topic, qos)
