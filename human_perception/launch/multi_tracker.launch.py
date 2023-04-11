@@ -29,7 +29,7 @@ def generate_launch_description():
 
     human_track_publisher_cmd = Node(
         package='human_perception',
-        executable='human_track_publisher',
+        executable='human_tracks.py', # 'human_track_publisher',
         name='human_track_publisher',
         output='screen',
         parameters=[human_tracker_config],
@@ -55,7 +55,7 @@ def generate_launch_description():
     ld = LaunchDescription()
     
     ld.add_action(human_track_publisher_cmd)
-    ld.add_action(robot_track_publisher_cmd)
+    # ld.add_action(robot_track_publisher_cmd)
     ld.add_action(multi_tracking_rviz2_cmd)
     
     return ld
