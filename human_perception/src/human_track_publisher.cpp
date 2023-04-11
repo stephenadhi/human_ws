@@ -100,8 +100,8 @@ private:
                 currPose.pose.orientation.w = 1.0;
                 
                 // Get bounding box dimensions
-                tracked_person.bbox_x_length = msg->objects[count].dimensions_3d[0];
-                tracked_person.bbox_y_length = msg->objects[count].dimensions_3d[1];
+                //tracked_person.bbox_x_length = msg->objects[count].dimensions_3d[0];
+                //tracked_person.bbox_y_length = msg->objects[count].dimensions_3d[1];
                 //tracked_person.bbox_z_length = msg->objects[count].dimensions_3d[2];
                 
                 // If tf transform exists, convert current pose to world space
@@ -268,8 +268,8 @@ private:
         marker.pose.position.x = pose_world.pose.position.x;
         marker.pose.position.y = pose_world.pose.position.y;
         marker.pose.position.z = 1.80 / 2.0;
-        marker.scale.x = tracked_person.bbox_x_length;
-        marker.scale.y = tracked_person.bbox_y_length;
+        //marker.scale.x = tracked_person.bbox_x_length;
+        //marker.scale.y = tracked_person.bbox_y_length;
         marker.scale.z = 1.80;
         marker.color.a = 1.0;
         marker.color.r = 1.0;
