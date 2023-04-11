@@ -122,7 +122,6 @@ private:
                         tracked_person.current_pose.pose = pose_world.pose;
                         // Save to people vector and stamp time of person track
                         people.tracks.push_back(tracked_person);
-                        people.tracks.back().header.stamp = now();
                         RCLCPP_INFO(this->get_logger(), "New person detected! I heard there are %li people", people.tracks.size());
                     }
                 }
@@ -161,7 +160,7 @@ private:
             visualization_msgs::msg::MarkerArray markers) {
         // Setup marker for visualization
         visualization_msgs::msg::Marker marker;
-        marker.header.frame_id = person.header.frame_id;
+        marker.header.frame_id = pub_frame_id;
         marker.header.stamp = this->now();
         marker.ns = "human_trajectory";
         marker.id = person.track_id;
@@ -238,7 +237,6 @@ private:
                     interpolate_person_pos(person, now().seconds(), det_time.seconds(), max_interp_interval, human_markers);
                 }
                 // stamp the time of person track update
-                person.header.stamp = now();
                 new_object = false;
             }
             // PRUNE: Delete older person object longer than tolerance time
