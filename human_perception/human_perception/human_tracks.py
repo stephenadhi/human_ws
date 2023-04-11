@@ -13,7 +13,7 @@ from zed_interfaces.msg import ObjectsStamped
 from soloco_interfaces.msg import TrackedPerson, TrackedPersons
 
 from tf2_geometry_msgs import do_transform_pose
-from tf2_ros import Buffer, TransformListener
+from tf2_ros import Buffer, TransformListener, TransformException
 
 import numpy as np
 from collections import deque
@@ -29,7 +29,7 @@ class HumanTrackPublisher(Node):
             reliability=ReliabilityPolicy.RELIABLE,
             durability=DurabilityPolicy.VOLATILE)
         # Declare parameters
-        self.declare_parameter('odom_topic', '/locobot/odom')
+        self.declare_parameter('odom_topic', '/zed2/zed_node/odom')
         self.declare_parameter('detected_obj_topic', '/zed2/zed_node/obj_det/objects')
         self.declare_parameter('human_track_topic', '/human/track')
         self.declare_parameter('pub_frame_id', 'map')
@@ -92,9 +92,9 @@ class HumanTrackPublisher(Node):
                     # Create new marker for each person track
                     marker = Marker()
                     marker.id = person.track_id + 1  # 0 is reserved for the robot
-                    marker.header.frame_id = pub_frame_id
-                    marker.type = self.marker.LINE_STRIP
-                    marker.action = self.marker.ADD
+                    marker.header.frame_id = self.pub_frame_id
+                    marker.type = marker.LINE_STRIP
+                    marker.action = marker.ADD
                     marker.color.a = 1.0
                     marker.color.r = 0.0
                     marker.color.g = 0.0
@@ -108,53 +108,54 @@ class HumanTrackPublisher(Node):
 
     def zed_callback(self, msg):
         # Loop through all detected objects, only consider valid tracking
-        if (msg.objects[count].tracking_state == 1 and msg.objects[count].label == "Person"):
-            for obj in range(len(msg.objects)):
-                obj_id = msg.objects[count].label_id
+        for obj in range(len(msg.objects)):
+            if (msg.objects[obj].tracking_state == 1 and msg.objects[obj].label == "Person"):
+                obj_id = msg.objects[obj].label_id
                 # Get the person id and tracking state
-                tracked_person = soloco_interfaces.msg.TrackedPerson()
+                tracked_person = TrackedPerson()
                 tracked_person.track_id = obj_id
                 tracked_person.tracking_state = 1
                 # Position in camera frame, saved in poseStamped message format
-                curr_pose_cam = geometry_msgs.msg.PoseStamped()
+                curr_pose_cam = PoseStamped()
                 curr_pose_cam.header = msg.header
-                curr_pose_cam.pose.position.x = msg.objects[count].position[0]
-                curr_pose_cam.pose.position.y = msg.objects[count].position[1]
+                curr_pose_cam.pose.position.x = float(msg.objects[obj].position[0])
+                curr_pose_cam.pose.position.y = float(msg.objects[obj].position[1])
                 curr_pose_cam.pose.position.z = 0.0
                 curr_pose_cam.pose.orientation = Quaternion(x=0.0, y=0.0, z=0.0, w=1.0)
                 # Convert pose to publishing frame (default: 'map')
-                curr_pose_map = self.pose_transform(msg.pose.pose, self.pub_frame_id, msg.header.frame_id)
-                if curr_pose_map: # if transform exists               
-                    curr_timestamp = self.get_clock().now()
+                curr_pose_map = PoseStamped()
+                curr_pose_map.header.frame_id = self.pub_frame_id
+                curr_pose_map.pose = self.pose_transform(curr_pose_cam.pose, self.pub_frame_id, msg.header.frame_id)
+                if curr_pose_map.pose: # if transform exists               
+                    curr_pose_map.header.stamp = self.get_clock().now().to_msg()
                     new_object = True
-                    people_count = len(self.people.tracks)
                     # Check for matching id from previous detections
                     if len(self.people.tracks) != 0:
                         for person in self.people.tracks:
                             if person.track_id == obj.id:
                                 new_object = False
-                                self.add_interpolated_point(curr_pose-map, obj_id, pub_frame_id, curr_timestamp)  
+                                self.add_interpolated_point(curr_pose-map, obj_id, self.get_clock().now().to_msg())  
                     # In case this object does not belong to existing tracks
                     if new_object:
                         # Create a new person and append currebt map pose
                         person = TrackedPerson()
                         person.current_pose = curr_pose_map
-                        person.track.header.stamp = curr_timestamp
+                        person.track.header.stamp = self.get_clock().now().to_msg()
                         person.track.poses.append(curr_pose_map)
             # Delete entries of interpolated points older than 
-            self.prune_old_interpolated_points(curr_timestamp)
+            self.prune_old_interpolated_points(self.get_clock().now().to_msg())
 
     def pose_transform(self, curr_pose, output_frame, input_frame):
-        transformed_pose = PoseStamped()
+        transformed_pose = Pose()
         try:
-            tf = m_tf_buffer.lookup_transform(output_frame, input_frame, self.get_clock().now())
-            transformed_pose = tf2_geometry_msgs.do_transform_pose(curr_pose, tf)
-        except tf2_ros.TransformException as ex:
-            self.get_logger().error('%s', ex)
+            tf = self.tf_buffer.lookup_transform(output_frame, input_frame, rclpy.time.Time())
+            transformed_pose = do_transform_pose(curr_pose, tf)
+        except TransformException as ex:
+            self.get_logger().warning(f"Failed to transform: '{ex}'.")
             
         return transformed_pose if transformed_pose else None
 
-    def add_interpolated_point(self, curr_pose, person_id, pub_frame_id, timestamp_):
+    def add_interpolated_point(self, curr_pose, person_id, timestamp_):
         # get time of current pose
         det_time = Time(curr_pose.header.stamp)
         # Create deque object for saving track
@@ -178,7 +179,7 @@ class HumanTrackPublisher(Node):
             arr_interp_padded[num_t_quan_steps + 1:, 0] = x_interp[-1]
             arr_interp_padded[num_t_quan_steps + 1:, 1] = y_interp[-1]
         # Renew person track
-        self.people.tracks[person_id].track.header.stamp = now()
+        self.people.tracks[person_id].track.header.stamp = self.get_clock().now().to_msg()
         self.people.tracks[person_id].track.poses.clear()
         for i in range(self.max_history_length + 1):
             pose_xy = Pose()
