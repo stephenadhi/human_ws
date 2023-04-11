@@ -75,6 +75,7 @@ class HumanTrackPublisher(Node):
         # Get current robot pose in publishing frame (default: 'map')
         robot_in_map_frame = PoseStamped()
         robot_in_map_frame.pose = self.pose_transform(msg.pose.pose, self.pub_frame_id, msg.header.frame_id)
+        robot_in_map_frame.header.stamp = msg.header.stamp
         
         if robot_in_map_frame.pose: # if transform exists, concatenate robot with people and publish
             self.robot_track.interpolated_pose(robot_in_map_frame)
@@ -95,6 +96,7 @@ class HumanTrackPublisher(Node):
                     marker = Marker()
                     marker.id = person.track_id + 1  # 0 is reserved for the robot
                     marker.header.frame_id = self.pub_frame_id
+                    marker.header.stamp = self.get_clock().now().to_msg()
                     marker.type = marker.LINE_STRIP
                     marker.action = marker.ADD
                     marker.color.a = 1.0
@@ -103,7 +105,7 @@ class HumanTrackPublisher(Node):
                     marker.color.b = 1.0
                     marker.scale.x = 0.05
                     marker.points = person_track
-                    marker.lifetime = Duration(seconds=0.1)
+                    marker.lifetime = Duration(seconds=0.1).to_msg()
                     marker_array.markers.append(marker)
             # Publish final marker array
             self.marker_array_pub.publish(marker_array)
