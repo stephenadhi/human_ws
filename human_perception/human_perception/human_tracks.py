@@ -34,7 +34,7 @@ class HumanTrackPublisher(Node):
         self.declare_parameter('human_track_topic', '/human/track')
         self.declare_parameter('pub_frame_id', 'map')
         self.declare_parameter('pub_frame_rate', 15.0)
-        self.declare_parameter('max_interp_interval', 0.4)
+        self.declare_parameter('interp_interval', 0.4)
         self.declare_parameter('max_history_length', 12)
         self.declare_parameter('delay_tolerance', 3.0)
         self.declare_parameter('visualize_bbox', False) 
@@ -47,7 +47,7 @@ class HumanTrackPublisher(Node):
         human_track_topic = self.get_parameter('human_track_topic').get_parameter_value().string_value
         self.pub_frame_id = self.get_parameter("pub_frame_id").get_parameter_value().string_value
         self.pub_frame_rate = self.get_parameter("pub_frame_rate").get_parameter_value().integer_value
-        self.max_interp_interval = self.get_parameter("max_interp_interval").get_parameter_value().double_value
+        self.interp_interval = self.get_parameter("interp_interval").get_parameter_value().double_value
         self.delay_tolerance = self.get_parameter("delay_tolerance").get_parameter_value().double_value
         self.max_history_length = self.get_parameter("max_history_length").get_parameter_value().integer_value
         self.visualize_bbox = self.get_parameter("visualize_bbox").get_parameter_value().bool_value
@@ -69,18 +69,19 @@ class HumanTrackPublisher(Node):
 
         # Bool to check object ID
         self.new_object = False
-        # People vector as cache for detected humans
+        
+        # Create cache for updating people and robot history
+        self.idx = 0
         self.people = TrackedPersons()
+        self.interpolated_tracklets = []
         self.robot_track = Robot_track(self.max_history_length)
-        # Create deque object for saving track
-        self.track = deque(maxlen=90)
         
     def odom_callback(self, msg):
         # Get current robot pose in publishing frame (default: 'map')
         robot_in_map_frame = PoseStamped()
         robot_in_map_frame.pose = self.pose_transform(msg.pose.pose, self.pub_frame_id, msg.header.frame_id)
         robot_in_map_frame.header.stamp = msg.header.stamp
-        marker_array = MarkerArray()
+
         if robot_in_map_frame.pose: # if transform exists, concatenate robot with people and publish
             self.robot_track.interpolated_pose(robot_in_map_frame)
 
@@ -91,45 +92,51 @@ class HumanTrackPublisher(Node):
                 # Get object ID
                 obj_id = msg.objects[obj].label_id
                 # Position in camera frame, saved in poseStamped message format
-                curr_pose_cam = PoseStamped()
-                curr_pose_cam.header = msg.header
-                curr_pose_cam.pose.position.x = float(msg.objects[obj].position[0])
-                curr_pose_cam.pose.position.y = float(msg.objects[obj].position[1])
-                curr_pose_cam.pose.position.z = 0.0
-                curr_pose_cam.pose.orientation = Quaternion(x=0.0, y=0.0, z=0.0, w=1.0)
-                # Convert pose to publishing frame (default: 'map')
+                curr_pose_cam = Pose()
+                curr_pose_cam.position.x = float(msg.objects[obj].position[0])
+                curr_pose_cam.position.y = float(msg.objects[obj].position[1])
+                curr_pose_cam.position.z = 0.0
+                curr_pose_cam.orientation = Quaternion(x=0.0, y=0.0, z=0.0, w=1.0)
+                # Convert pose to poseStamped in publishing frame (default: 'map')
                 curr_pose_map = PoseStamped()
+                curr_pose_map.header.stamp = msg.header.stamp
                 curr_pose_map.header.frame_id = self.pub_frame_id
                 curr_pose_map.pose = self.pose_transform(curr_pose_cam.pose, self.pub_frame_id, msg.header.frame_id)
-                if curr_pose_map.pose: # if transform exists               
-                    curr_pose_map.header.stamp = self.get_clock().now().to_msg()
+                # if transformed pose exists
+                if curr_pose_map.pose:             
                     self.new_object = True
-                    # Check for matching id from previous detections
+                    self.idx = len(self.people.tracks) - 1
+                    # Check for matching id in cache
                     if len(self.people.tracks) != 0:
                         for person in self.people.tracks:
                             idx = 0
                             if person.track_id == obj_id:
                                 self.get_logger().info(f'Track ID Matched: {person.track_id}, idx: {idx}')
                                 self.new_object = False
-                                self.add_interpolated_point(curr_pose_map, idx, self.get_clock().now())
+                                self.interpolated_tracklets[idx].add_interpolated_point(curr_pose_map, idx, self.get_clock().now())
                                 person.track.header.stamp = self.get_clock().now().to_msg()
+                                self.idx = idx
                                 break
                             idx += 1
                     # In case this object does not belong to existing tracks
                     if self.new_object:
+                        curr_time_ = self.get_clock().now()
                         # Create a new person and append current person pose in map frame
                         tracked_person = TrackedPerson()
-                        tracked_person.track.header.stamp = self.get_clock().now().to_msg()
+                        tracked_person.track.header.stamp = curr_time_.to_msg()
                         tracked_person.tracking_state = 1
                         tracked_person.track_id = obj_id
                         tracked_person.current_pose = curr_pose_map
                         self.people.tracks.append(tracked_person)
-                        idx = len(self.people.tracks) - 1
                         self.get_logger().info(f'New person detected! ID: {obj_id}, idx: {idx}')
-                        self.add_interpolated_point(curr_pose_map, idx, self.get_clock().now())
+                        self.interpolated_tracklets.append(
+                            interpolatedTracklet(curr_pose_map, idx, curr_time_, self.max_history_length, self.interp_interval))
+                    # Update person track
+                    self.update_person_track(person_idx=self.idx)
+
             # Delete entries of interpolated points older than 
             self.prune_old_interpolated_points(self.get_clock().now())
-        # Visualize human and robot trackmarkers
+        # Visualize human and robot markers
         self.visualize_markers()
 
     def pose_transform(self, curr_pose, output_frame, input_frame):
@@ -142,34 +149,14 @@ class HumanTrackPublisher(Node):
             
         return transformed_pose if transformed_pose else None
 
-    def add_interpolated_point(self, curr_pose, person_idx, timestamp_):
-        curr_time_ = timestamp_.nanoseconds/10**9
-        # get time of current pose
-        det_time = Time.from_msg(curr_pose.header.stamp).nanoseconds/10**9
-        self.track.append([curr_pose.pose.position.x, curr_pose.pose.position.y, det_time])
-        np_track = np.array(self.track)
-        # Create padding array to assign zeros for unknown future positions
-        arr_interp_padded = np.zeros([self.max_history_length + 1, 2])
-        # Get number of steps depending on measured pose time and interpolation interval
-        num_t_quan_steps = int((curr_time_ - self.track[0][2]) / self.max_interp_interval)
-        num_t_quan_steps = self.max_history_length if num_t_quan_steps > self.max_history_length else num_t_quan_steps
-        # Get the time points for interpolation
-        inter_time_points = curr_time_ - np.arange(num_t_quan_steps + 1) * self.max_interp_interval
-        # Interpolate using numpy library
-        x_interp = np.interp(inter_time_points, np_track[:, 2], np_track[:, 0])
-        y_interp = np.interp(inter_time_points, np_track[:, 2], np_track[:, 1])
-        # Assign the interpolated points to the padded array
-        arr_interp_padded[0:num_t_quan_steps + 1, 0] = x_interp
-        arr_interp_padded[0:num_t_quan_steps + 1, 1] = y_interp    
-        if num_t_quan_steps != self.max_history_length:
-            arr_interp_padded[num_t_quan_steps + 1:, 0] = x_interp[-1]
-            arr_interp_padded[num_t_quan_steps + 1:, 1] = y_interp[-1]
-        # Renew person track
+    def update_person_track(self, person_idx):
+        # Get interpolated tracklet
+        interpolated_tracklet = self.interpolated_tracklets[person_idx]
         self.people.tracks[person_idx].track.header.stamp = self.get_clock().now().to_msg()
         for i in range(self.max_history_length + 1):
             pose_xy = Pose()
-            pose_xy.position.x = arr_interp_padded[i, 0]
-            pose_xy.position.y = arr_interp_padded[i, 1]
+            pose_xy.position.x = interpolated_tracklet.arr_interp_padded[i, 0]
+            pose_xy.position.y = interpolated_tracklet.arr_interp_padded[i, 1]
             if self.new_object:
                 self.people.tracks[person_idx].track.poses.append(pose_xy)    
             else:
@@ -223,6 +210,38 @@ class HumanTrackPublisher(Node):
         # Publish final marker array
         self.marker_array_pub.publish(marker_array)
 
+class interpolatedTracklet:
+    def __init__(self, curr_pose, timestamp_, max_history_length, interp_interval):
+        # Initialize variables
+        self.max_history_length = max_history_length
+        self.interp_interval = interp_interval
+        # Deque object as cache for saving history
+        self.track = deque(maxlen=90)
+        # Create padding array to assign zeros for unknown future positions
+        self.arr_interp_padded = np.zeros([self.max_history_length + 1, 2])
+        # Add interpolated point
+        self.add_interpolated_point(curr_pose, timestamp_)
+
+    def add_interpolated_point(self, curr_pose, person_idx, timestamp_):
+        curr_time_ = timestamp_.nanoseconds/10**9
+        # get time of current pose
+        det_time_ = Time.from_msg(curr_pose.header.stamp).nanoseconds/10**9
+        self.track.append([curr_pose.pose.position.x, curr_pose.pose.position.y, det_time_])
+        np_track = np.array(self.track)
+        # Get number of steps depending on measured pose time and interpolation interval
+        num_t_quan_steps = int((curr_time_ - self.track[0][2]) / self.interp_interval)
+        num_t_quan_steps = self.max_history_length if num_t_quan_steps > self.max_history_length else num_t_quan_steps
+        # Get the time points for interpolation
+        inter_time_points = curr_time_ - np.arange(num_t_quan_steps + 1) * self.interp_interval
+        # Interpolate using numpy library
+        x_interp = np.interp(inter_time_points, np_track[:, 2], np_track[:, 0])
+        y_interp = np.interp(inter_time_points, np_track[:, 2], np_track[:, 1])
+        # Assign the interpolated points to the padded array
+        self.arr_interp_padded[0:num_t_quan_steps + 1, 0] = x_interp
+        self.arr_interp_padded[0:num_t_quan_steps + 1, 1] = y_interp    
+        if num_t_quan_steps != self.max_history_length:
+            self.arr_interp_padded[num_t_quan_steps + 1:, 0] = x_interp[-1]
+            self.arr_interp_padded[num_t_quan_steps + 1:, 1] = y_interp[-1]
 
 def main(args=None):
     rclpy.init(args=args)
