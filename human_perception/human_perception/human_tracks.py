@@ -31,7 +31,9 @@ class HumanTrackPublisher(Node):
         # Declare parameters
         self.declare_parameter('odom_topic', '/zed2/zed_node/odom')
         self.declare_parameter('detected_obj_topic', '/zed2/zed_node/obj_det/objects')
-        self.declare_parameter('human_track_topic', '/human/track')
+        self.declare_parameter('human_track_topic', '/human/tracks')
+        self.declare_parameter('pose_marker_topic', '/visualization/tracks')
+        self.declare_parameter('bounding_box_topic', '/visualization/bounding_boxes')
         self.declare_parameter('pub_frame_id', 'map')
         self.declare_parameter('pub_frame_rate', 15.0)
         self.declare_parameter('interp_interval', 0.4)
@@ -45,6 +47,8 @@ class HumanTrackPublisher(Node):
         odom_topic = self.get_parameter('odom_topic').get_parameter_value().string_value
         detected_obj_topic = self.get_parameter('detected_obj_topic').get_parameter_value().string_value
         human_track_topic = self.get_parameter('human_track_topic').get_parameter_value().string_value
+        pose_marker_topic = self.get_parameter('pose_marker_topic').get_parameter_value().string_value
+        bounding_box_topic = self.get_parameter('bounding_box_topic').get_parameter_value().string_value
         self.pub_frame_id = self.get_parameter("pub_frame_id").get_parameter_value().string_value
         self.pub_frame_rate = self.get_parameter("pub_frame_rate").get_parameter_value().integer_value
         self.interp_interval = self.get_parameter("interp_interval").get_parameter_value().double_value
@@ -60,8 +64,8 @@ class HumanTrackPublisher(Node):
         
         # Create publishers
         self.human_track_interpolated_pub = self.create_publisher(TrackedPersons, human_track_topic, qos)
-        self.marker_array_pub = self.create_publisher(MarkerArray, 'track_markers', 10)
-        self.bbox_pub = self.create_publisher(MarkerArray, 'human_bounding_boxes', 10)
+        self.pose_markers_pub = self.create_publisher(MarkerArray, pose_marker_topic, 10)
+        self.bbox_markers_pub = self.create_publisher(MarkerArray, bounding_box_topic, 10)
 
         # Create tf buffer and transform listener   
         self.tf_buffer = Buffer()
@@ -136,7 +140,8 @@ class HumanTrackPublisher(Node):
 
             # Delete entries of interpolated points older than 
             self.prune_old_interpolated_points(self.get_clock().now())
-        # Visualize human and robot markers
+
+        # Visualize markers for detected person(s) track and robot track
         self.visualize_markers()
 
     def pose_transform(self, curr_pose, output_frame, input_frame):
@@ -176,9 +181,9 @@ class HumanTrackPublisher(Node):
             self.get_logger().info(f'Deleted old track with ID: {person.track_id}')
             
     def visualize_markers(self):
-        marker_array = MarkerArray()
+        pose_marker_array, bbox_marker_array = MarkerArray()
         # Append current interpolated robot position to marker array
-        marker_array.markers.append(self.robot_track.marker)
+        pose_marker_array.markers.append(self.robot_track.marker)
         # Additionally append people to marker array
         if len(self.people.tracks) != 0:
             # self.get_logger().info(f'There are {len(self.people.tracks)} person(s) detected')
@@ -193,7 +198,7 @@ class HumanTrackPublisher(Node):
                     person_marker_points.append(point)
                 # Create new marker for each person track
                 marker = Marker()
-                marker.ns = "tracks"
+                marker.ns = "human"
                 marker.id = person.track_id + 1  # 0 is reserved for the robot
                 marker.header.frame_id = self.pub_frame_id
                 marker.header.stamp = self.get_clock().now().to_msg()
@@ -206,9 +211,31 @@ class HumanTrackPublisher(Node):
                 marker.scale.x = 0.05
                 marker.points = person_marker_points
                 marker.lifetime = Duration(seconds=0.1).to_msg()
-                marker_array.markers.append(marker)
+                pose_marker_array.markers.append(marker)
+                # Create bounding box marker for the person
+                if self.visualize_bbox:
+                    marker = Marker()
+                    marker.ns = "human"
+                    marker.id = person.track_id + 1  # 0 is reserved for the robot
+                    marker.header.frame_id = self.pub_frame_id
+                    marker.header.stamp = self.get_clock().now().to_msg()
+                    marker.type = marker.CUBE
+                    marker.action = marker.ADD
+                    marker.pose.position.x = person.current_pose.pose.position.x
+                    marker.pose.position.y = person.current_pose.pose.position.y
+                    marker.pose.position.z = 1.80 / 2.0
+                    marker.scale.x = 0.20
+                    marker.scale.y = 0.20
+                    marker.scale.z = 1.80
+                    marker.color.a = 0.4
+                    marker.color.r = 0.0
+                    marker.color.g = 0.9
+                    marker.color.b = 0.0
+                    marker.lifetime = Duration(seconds=0.2).to_msg()
+                    bbox_marker_array.markers.append(marker)
         # Publish final marker array
-        self.marker_array_pub.publish(marker_array)
+        self.pose_markers_pub.publish(pose_marker_array)
+        self.bbox_markers_pub.publish(bbox_marker_array)
 
 class interpolatedTracklet:
     def __init__(self, curr_pose, timestamp_, max_history_length, interp_interval):
