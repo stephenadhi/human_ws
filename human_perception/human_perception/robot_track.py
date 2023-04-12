@@ -1,23 +1,10 @@
 #!/usr/bin/env python3
-# source: https://github.com/tarunmj6/ros_occupancygrid/blob/master/scripts/mapping.py
-
-import rospy
-from nav_msgs.msg import Odometry
-from nav_msgs.msg import Path
-from geometry_msgs.msg import PoseStamped
+from rclpy.time import Time, Duration
 from visualization_msgs.msg import Marker
 from geometry_msgs.msg import Point
 
-from geometry_msgs.msg import Twist, PoseWithCovarianceStamped
-from std_srvs.srv import Empty, EmptyRequest
-import time
-import math
-
 from collections import deque
 import numpy as np
-
-import time
-
 
 class Robot_track:
     def __init__(self, max_history_length):
@@ -35,8 +22,9 @@ class Robot_track:
        # self.start_nsecs = pose_.header.stamp.nsecs
         self.arr_interp_padded = np.zeros([self.max_history_length + 1, 2])
         self.marker = Marker()
+        self.marker.ns = "tracks"
         self.marker.id = 0
-        self.marker.header.frame_id = "locobot/odom"
+        self.marker.header.frame_id = "map"
         self.marker.type = self.marker.LINE_STRIP
         self.marker.action = self.marker.ADD
         self.marker.color.a = 1.0
@@ -46,33 +34,30 @@ class Robot_track:
         self.marker.pose.orientation.y = 0.0
         self.marker.pose.orientation.z = 0.0
         self.marker.pose.orientation.w = 1.0
-        #self.marker.lifetime = rospy.Duration.from_sec(0.5)
+        self.marker.lifetime = Duration(seconds=0.5).to_msg()
 
 
     def interpolated_pose(self, pose_):
+        self.curr_time = Time.from_msg(pose_.header.stamp)
+        self.marker.header.stamp = pose_.header.stamp
 
-      #  start = time.time()
-        self.curr_time = (pose_.header.stamp.secs + pose_.header.stamp.nsecs / self.nano_factor)  # in seconds
+        self.odoms.append([pose_.pose.position.x, pose_.pose.position.y, self.curr_time.nanoseconds/self.nano_factor])
+       # self.odoms.append([pose_.twist.twist.linear.x, pose_.twist.twist.linear.y, self.curr_time.nanoseconds/self.nano_factor])
 
-        self.odoms.append([pose_.pose.pose.position.x, pose_.pose.pose.position.y,
-                           pose_.header.stamp.secs + pose_.header.stamp.nsecs / self.nano_factor])
-
-       # self.odoms.append([pose_.twist.twist.linear.x, pose_.twist.twist.linear.y,
-       #                    pose_.header.stamp.secs + pose_.header.stamp.nsecs / self.nano_factor])
-
-        num_t_quan_steps = int((self.curr_time - self.odoms[0][2]) / self.interp_point)
+        num_t_quan_steps = int((self.curr_time.nanoseconds/self.nano_factor - self.odoms[0][2]) / self.interp_point)
         num_t_quan_steps = self.max_history_length if num_t_quan_steps > self.max_history_length else num_t_quan_steps
+        
         np_odoms = np.array(self.odoms)
-        inter_time_points = self.curr_time - np.arange(num_t_quan_steps + 1) * self.interp_point
+        inter_time_points = self.curr_time.nanoseconds/self.nano_factor - np.arange(num_t_quan_steps + 1) * self.interp_point
         x_interp = np.interp(inter_time_points, np_odoms[:, 2], np_odoms[:, 0])
         y_interp = np.interp(inter_time_points, np_odoms[:, 2], np_odoms[:, 1])
-       # arr_interp = np.concatenate([x_interp, y_interp])
+
         self.arr_interp_padded[0:num_t_quan_steps + 1, 0] = x_interp
         self.arr_interp_padded[0:num_t_quan_steps + 1, 1] = y_interp
+
         if num_t_quan_steps != self.max_history_length:
             self.arr_interp_padded[num_t_quan_steps +1:, 0] = x_interp[-1]
             self.arr_interp_padded[num_t_quan_steps +1:, 1] = y_interp[-1]
-
 
         current_points = []
         for i in range(self.max_history_length + 1):
