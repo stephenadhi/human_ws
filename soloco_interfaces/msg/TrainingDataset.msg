@@ -15,4 +15,4 @@ nav_msgs/OccupancyGrid occgrid_raw
 nav_msgs/OccupancyGrid occgrid_filtered
 
 # people with their interpolated history
-soloco_interfaces/TrackedPersons tracks
+soloco_interfaces/TrackedPersons people
