@@ -22,6 +22,7 @@ class Robot_track:
        # self.start_nsecs = pose_.header.stamp.nsecs
         self.arr_interp_padded = np.zeros([self.max_history_length + 1, 2])
         self.marker = Marker()
+        self.marker.ns = "tracks"
         self.marker.id = 0
         self.marker.header.frame_id = "map"
         self.marker.type = self.marker.LINE_STRIP
@@ -33,21 +34,21 @@ class Robot_track:
         self.marker.pose.orientation.y = 0.0
         self.marker.pose.orientation.z = 0.0
         self.marker.pose.orientation.w = 1.0
-        self.marker.lifetime = Duration(seconds=0.1).to_msg()
+        self.marker.lifetime = Duration(seconds=0.5).to_msg()
 
 
     def interpolated_pose(self, pose_):
         self.curr_time = Time.from_msg(pose_.header.stamp)
         self.marker.header.stamp = pose_.header.stamp
 
-        self.odoms.append([pose_.pose.position.x, pose_.pose.position.y, self.curr_time.nanoseconds])
-       # self.odoms.append([pose_.twist.twist.linear.x, pose_.twist.twist.linear.y, self.curr_time.nanoseconds])
+        self.odoms.append([pose_.pose.position.x, pose_.pose.position.y, self.curr_time.nanoseconds/self.nano_factor])
+       # self.odoms.append([pose_.twist.twist.linear.x, pose_.twist.twist.linear.y, self.curr_time.nanoseconds/self.nano_factor])
 
-        num_t_quan_steps = int((self.curr_time.nanoseconds - self.odoms[0][2]) / self.interp_point)
+        num_t_quan_steps = int((self.curr_time.nanoseconds/self.nano_factor - self.odoms[0][2]) / self.interp_point)
         num_t_quan_steps = self.max_history_length if num_t_quan_steps > self.max_history_length else num_t_quan_steps
         
         np_odoms = np.array(self.odoms)
-        inter_time_points = self.curr_time.nanoseconds - np.arange(num_t_quan_steps + 1) * self.interp_point
+        inter_time_points = self.curr_time.nanoseconds/self.nano_factor - np.arange(num_t_quan_steps + 1) * self.interp_point
         x_interp = np.interp(inter_time_points, np_odoms[:, 2], np_odoms[:, 0])
         y_interp = np.interp(inter_time_points, np_odoms[:, 2], np_odoms[:, 1])
 
