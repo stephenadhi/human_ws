@@ -29,7 +29,7 @@ class HumanTrackPublisher(Node):
             reliability=ReliabilityPolicy.RELIABLE,
             durability=DurabilityPolicy.VOLATILE)
         # Declare parameters
-        self.declare_parameter('odom_topic', '/zed2/zed_node/odom')
+        self.declare_parameter('robot_odom_topic', '/zed2/zed_node/odom')
         self.declare_parameter('detected_obj_topic', '/zed2/zed_node/obj_det/objects')
         self.declare_parameter('human_track_topic', '/human/tracks')
         self.declare_parameter('pose_marker_topic', '/visualization/tracks')
@@ -37,14 +37,14 @@ class HumanTrackPublisher(Node):
         self.declare_parameter('pub_frame_id', 'map')
         self.declare_parameter('pub_frame_rate', 15.0)
         self.declare_parameter('interp_interval', 0.4)
-        self.declare_parameter('max_history_length', 12)
-        self.declare_parameter('delay_tolerance', 3.0)
-        self.declare_parameter('visualize_bbox', False) 
+        self.declare_parameter('delay_tolerance', 2.0)
+        self.declare_parameter('max_history_length', 7)
         self.declare_parameter('max_num_agents', 5)
-        self.declare_parameter('track_timeout', 2.0)    
+        self.declare_parameter('track_timeout', 2.0)
+        self.declare_parameter('visualize_bbox', False) 
 
         # Get parameter values
-        odom_topic = self.get_parameter('odom_topic').get_parameter_value().string_value
+        robot_odom_topic = self.get_parameter('robot_odom_topic').get_parameter_value().string_value
         detected_obj_topic = self.get_parameter('detected_obj_topic').get_parameter_value().string_value
         human_track_topic = self.get_parameter('human_track_topic').get_parameter_value().string_value
         pose_marker_topic = self.get_parameter('pose_marker_topic').get_parameter_value().string_value
@@ -54,13 +54,12 @@ class HumanTrackPublisher(Node):
         self.interp_interval = self.get_parameter("interp_interval").get_parameter_value().double_value
         self.delay_tolerance = self.get_parameter("delay_tolerance").get_parameter_value().double_value
         self.max_history_length = self.get_parameter("max_history_length").get_parameter_value().integer_value
-        self.visualize_bbox = self.get_parameter("visualize_bbox").get_parameter_value().bool_value
         self.max_num_agents = self.get_parameter('max_num_agents').get_parameter_value().integer_value
         self.track_timeout = self.get_parameter('track_timeout').get_parameter_value().double_value
-        
+        self.visualize_bbox = self.get_parameter("visualize_bbox").get_parameter_value().bool_value    
         # Create subscribers
         self.zed_sub = self.create_subscription(ObjectsStamped, detected_obj_topic, self.zed_callback, qos)
-        self.odom_sub = self.create_subscription(Odometry, odom_topic, self.odom_callback, qos)
+        self.odom_sub = self.create_subscription(Odometry, robot_odom_topic, self.odom_callback, qos)
         
         # Create publishers
         self.human_track_interpolated_pub = self.create_publisher(TrackedPersons, human_track_topic, qos)

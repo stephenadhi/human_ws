@@ -1,15 +1,19 @@
 human_perception:
   human_tracker:
-    # Parameters for human_track_publisher.cpp
     ros_parameters:
+      # Subscriber topics
+      robot_odom_topic: "/locobot/odom"
       detected_obj_topic: "/zed2/zed_node/obj_det/objects"
+      # Publisher topics
       human_track_topic: "/human/interpolated_history"
-      odom_topic: "/zed2/zed_node/odom"
+      pose_marker_topic: "/visualization/tracks"
+      bounding_box_topic: "/visualization/bounding_boxes"
       pub_frame_id: "map"
-      
-      pub_frame_rate: 15.0
-      max_interp_interval: 0.4
-      max_history_length: 12
-      delay_tolerance: 3.0
-
-      visualize_bbox: false
+      # Parameters
+      pub_frame_rate: 15.0      # currently not used
+      interp_interval: 0.4      # time interval between interpolation points [s]
+      delay_tolerance: 0.2      # delay tolerance [s]
+      max_history_length: 7     # maximum number of history points (without current)
+      max_num_agents: 5         # currently not used
+      track_timeout: 2.0        # maximum time to keep old tracks before deleting it [s]
+      visualize_bbox: false     # Whether to visualize bounding boxes for the current human poses
