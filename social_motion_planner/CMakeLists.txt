@@ -19,6 +19,22 @@ find_package(soloco_interfaces REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(pcl_ros REQUIRED)
 
+add_executable(laserscan_filter_node src/laserscan_filter_node.cpp)
+ament_target_dependencies(laserscan_filter_node
+        rclcpp
+        visualization_msgs
+        geometry_msgs
+        nav_msgs
+        sensor_msgs
+        soloco_interfaces
+        zed_interfaces
+        tf2_ros
+        tf2_sensor_msgs 
+        tf2_geometry_msgs)
+
+install(TARGETS laserscan_filter_node
+        DESTINATION lib/${PROJECT_NAME})
+
 # Install Python modules
 ament_python_install_package(${PROJECT_NAME})
 
