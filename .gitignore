@@ -1,6 +1,5 @@
 build/
 install/
 log/
-social_motion_planner/social_motion_planner/data/*
 depth_map.png
 *__pycache__
