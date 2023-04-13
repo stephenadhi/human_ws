@@ -9,7 +9,7 @@ def generate_launch_description():
     config_file_path = os.path.join(
         get_package_share_directory('social_motion_planner'),
         'config',
-        'local_planner.yaml'
+        'neural_motion_planner.yaml'
     )
     with open(config_file_path, 'r') as file:
         planner_config = yaml.safe_load(file)['social_motion_planner']['ros__parameters']
@@ -18,7 +18,7 @@ def generate_launch_description():
         package='social_motion_planner',
         executable='laserscan_filter_node',
         name='laserscan_filter_node',
-        output='screen'.
+        output='screen',
     )
     
     social_motion_planner_cmd = Node(
