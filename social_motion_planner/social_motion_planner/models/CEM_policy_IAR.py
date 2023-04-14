@@ -189,4 +189,5 @@ class CEM_IAR(nn.Module):
                     print('Error')
                     u = np.array([0., 0.])
             self.pred_model.plot_list = []
+            print(u)
             return u

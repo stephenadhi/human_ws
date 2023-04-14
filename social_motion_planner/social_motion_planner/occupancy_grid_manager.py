@@ -18,8 +18,8 @@ class OccupancyGridManager(object):
     def __init__(self, costmap_msg, subscribe_to_updates=False):
         # OccupancyGrid starts on lower left corner
         self._grid_data = np.array(costmap_msg.data,
-                                   dtype=np.uint8).reshape(data.info.height,
-                                                           data.info.width)
+                                   dtype=np.uint8).reshape(costmap_msg.info.height,
+                                                           costmap_msg.info.width)
         self._occ_grid_metadata = costmap_msg.info
         self._reference_frame = costmap_msg.header.frame_id
 

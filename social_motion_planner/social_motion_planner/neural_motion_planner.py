@@ -41,11 +41,11 @@ class NeuralMotionPlanner(Node):
         # Declare topic parameters
         self.declare_parameter('odom_topic', '/locobot/odom')
         self.declare_parameter('goal_pose_topic', '/goal_pose')
-        self.declare_parameter('costmap_topic', '/local_costmap/costmap_raw')
+        self.declare_parameter('costmap_topic', '/local_costmap/costmap')
         self.declare_parameter('cmd_vel_topic', '/locobot/commands/velocity')
         self.declare_parameter('human_track_topic', '/human/tracks')
         # Device to use: 'gpu' or 'cpu'
-        self.declare_parameter('device', 'cuda') 
+        self.declare_parameter('device', 'cpu') 
         # Define neural model
         self.declare_parameter('model_name', 'CEM_IAR')        
         # Declare robot parameters
@@ -109,7 +109,7 @@ class NeuralMotionPlanner(Node):
         
         # Subscribers
         self.goal_pose_sub = self.create_subscription(PoseStamped, goal_pose_topic, self.goal_callback, self.pose_qos) 
-        self.human_sub = self.create_subscription(TrackedPersons, human_track_topic, self.marker_callback, self.pose_qos)
+        self.human_sub = self.create_subscription(TrackedPersons, human_track_topic, self.human_callback, self.pose_qos)
         # self.marker_sub = self.create_subscription(MarkerArray, '/visualization/tracks', self.marker_callback, self.pose_qos)
         
         # Subscriber for synced update
@@ -117,11 +117,12 @@ class NeuralMotionPlanner(Node):
         self.costmap_sub = Subscriber(self, OccupancyGrid, costmap_topic)
         
         # Sync messages with slop (max delay) = 0.1 seconds
-        time_sync = ApproximateTimeSynchronizer([self.ego_sub, self.human_sub, self.costmap_sub, self.goal_pose_sub], queue_size=10, slop=0.1)
+        time_sync = ApproximateTimeSynchronizer([self.ego_sub, self.costmap_sub], queue_size=10, slop=0.1)
         time_sync.registerCallback(self.common_callback)
 
     def goal_callback(self, goal_msg):
         goal = [goal_msg.pose.position.x, goal_msg.pose.position.y]
+
         self.goal_pose = np.array(goal)
 
     # def marker_callback(self, marker_msg):
@@ -147,10 +148,10 @@ class NeuralMotionPlanner(Node):
         
         # Send costmap to occupancy grid manager
         self.ogm = OccupancyGridManager(costmap_msg, subscribe_to_updates=False)
-        # Concatenate information about people track, robot state, and goal
-        x = np.concatenate([self.ped_pos_xy_cem.flatten(), self.neigh_matrix.flatten(), self.r_state, self.goal_pose])
         
         if self.goal_pose is not None:
+            # Concatenate information about people track, robot state, and goal
+            x = np.concatenate([self.ped_pos_xy_cem.flatten(), self.neigh_matrix.flatten(), self.r_state, self.goal_pose])
             # Get command from neural model forward pass, given costmap object
             u = self.model.predict(x, costmap_obj=self.ogm)
             # Publish resulting twist to cmd_vel topic
