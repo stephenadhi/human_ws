@@ -71,11 +71,11 @@ class HumanTrackPublisher(Node):
         self.transform_listener = TransformListener(self.tf_buffer, self)
 
         # Bool to check object ID
-        self.new_object = False
+        self.new_object = True
         
         # Create cache for updating people and robot history
-        self.idx = 0
         self.people = TrackedPersons()
+        self.idx = len(self.people.tracks) - 1
         self.interpolated_tracklets = []
         self.robot_track = Robot_track(self.max_history_length)
         
@@ -104,25 +104,26 @@ class HumanTrackPublisher(Node):
                 curr_pose_map = PoseStamped()
                 curr_pose_map.header.stamp = msg.header.stamp
                 curr_pose_map.header.frame_id = self.pub_frame_id
-                curr_pose_map.pose = self.pose_transform(curr_pose_cam.pose, self.pub_frame_id, msg.header.frame_id)
+                curr_pose_map.pose = self.pose_transform(curr_pose_cam, self.pub_frame_id, msg.header.frame_id)
                 # if transformed pose exists
                 if curr_pose_map.pose:             
                     self.new_object = True
                     self.idx = len(self.people.tracks) - 1
                     # Check for matching id in cache
                     if len(self.people.tracks) != 0:
+                        idx = 0
                         for person in self.people.tracks:
-                            idx = 0
                             if person.track_id == obj_id:
                                 self.get_logger().info(f'Track ID Matched: {person.track_id}, idx: {idx}')
                                 self.new_object = False
-                                self.interpolated_tracklets[idx].add_interpolated_point(curr_pose_map, idx, self.get_clock().now())
+                                self.interpolated_tracklets[idx].add_interpolated_point(curr_pose_map, self.get_clock().now())
                                 person.track.header.stamp = self.get_clock().now().to_msg()
                                 self.idx = idx
                                 break
                             idx += 1
                     # In case this object does not belong to existing tracks
                     if self.new_object:
+                        self.idx += 1
                         curr_time_ = self.get_clock().now()
                         # Create a new person and append current person pose in map frame
                         tracked_person = TrackedPerson()
@@ -131,18 +132,18 @@ class HumanTrackPublisher(Node):
                         tracked_person.track_id = obj_id
                         tracked_person.current_pose = curr_pose_map
                         self.people.tracks.append(tracked_person)
-                        self.get_logger().info(f'New person detected! ID: {obj_id}, idx: {idx}')
+                        self.get_logger().info(f'New person detected! ID: {obj_id}, idx: {self.idx}')
                         self.interpolated_tracklets.append(
-                            interpolatedTracklet(curr_pose_map, idx, curr_time_, self.max_history_length, self.interp_interval))
+                            interpolatedTracklet(curr_pose_map, curr_time_, self.max_history_length, self.interp_interval))
                     # Update person track
                     self.update_person_track(person_idx=self.idx)
-
-            # Delete entries of interpolated points older than 
-            self.prune_old_interpolated_points(self.get_clock().now())
 
         # Visualize markers for detected person(s) track and robot track
         self.visualize_markers()
 
+        # Delete entries of interpolated points
+        self.prune_old_interpolated_points(self.get_clock().now())
+        
     def pose_transform(self, curr_pose, output_frame, input_frame):
         transformed_pose = Pose()
         try:
@@ -167,20 +168,25 @@ class HumanTrackPublisher(Node):
                 self.people.tracks[person_idx].track.poses[i] = pose_xy 
 
     def prune_old_interpolated_points(self, timestamp_):
-        track_to_delete = []
+        idx_to_delete = []
+        idx = 0
         for person in self.people.tracks:
             det_time = Time.from_msg(person.track.header.stamp)
             time_diff = (timestamp_.nanoseconds - det_time.nanoseconds)/10**9
             # self.get_logger().info(f'Track time difference: {time_diff}s')
             if ((time_diff) > self.track_timeout):
-                track_to_delete.append(person)
+                idx_to_delete.append(idx)
+            idx += 1
         # Delete old tracks
-        for person in track_to_delete:
-            self.people.tracks.remove(person)
-            self.get_logger().info(f'Deleted old track with ID: {person.track_id}')
+        for id in idx_to_delete:
+            self.get_logger().info(f'Deleting old track with ID: {self.people.tracks[id].track_id}')
+            del self.people.tracks[id]
+            del self.interpolated_tracklets[id]
+            
             
     def visualize_markers(self):
-        pose_marker_array, bbox_marker_array = MarkerArray()
+        pose_marker_array = MarkerArray() 
+        bbox_marker_array = MarkerArray()
         # Append current interpolated robot position to marker array
         pose_marker_array.markers.append(self.robot_track.marker)
         # Additionally append people to marker array
@@ -248,7 +254,7 @@ class interpolatedTracklet:
         # Add interpolated point
         self.add_interpolated_point(curr_pose, timestamp_)
 
-    def add_interpolated_point(self, curr_pose, person_idx, timestamp_):
+    def add_interpolated_point(self, curr_pose, timestamp_):
         curr_time_ = timestamp_.nanoseconds/10**9
         # get time of current pose
         det_time_ = Time.from_msg(curr_pose.header.stamp).nanoseconds/10**9
