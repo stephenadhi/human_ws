@@ -5,8 +5,8 @@ from torch import nn
 import numpy as np
 import os
 
-from AR_fast import TrajectoryGeneratorAR
-from IAR_full_Tranf import TrajectoryGenerator
+from social_motion_planner.models.AR_fast import TrajectoryGeneratorAR
+from social_motion_planner.models.IAR_full_Tranf import TrajectoryGenerator
 
 torch.autograd.set_detect_anomaly(True)
 from data.utils import prepare_states, batched_Robot_coll_smoothed_loss, cart2pol, pol2cart, GaußNLL, actionXYtoROT

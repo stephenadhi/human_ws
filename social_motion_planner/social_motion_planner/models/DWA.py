@@ -4,7 +4,7 @@ import numpy as np
 import torch
 import os
 from config import ConfigRobot, ConfigSim, RobotType
-from model.AR_fast import TrajectoryGeneratorAR
+from social_motion_planner.models.AR_fast import TrajectoryGeneratorAR
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 

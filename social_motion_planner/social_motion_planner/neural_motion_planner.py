@@ -16,8 +16,8 @@ from nav_msgs.msg import Odometry
 from visualization_msgs.msg import MarkerArray
 from soloco_interfaces.msg import TrackedPersons
 
-from models.DWA import DWA
-from models.CEM_policy_IAR import CEM_IAR
+from social_motion_planner.models.DWA import DWA
+from social_motion_planner.models.CEM_policy_IAR import CEM_IAR
 
 from occupancy_grid_manager import OccupancyGridManager
 
@@ -134,8 +134,9 @@ class NeuralMotionPlanner(Node):
         # update people state
         for person_idx, person in enumerate(human_msg.tracks):
             for pos_idx, past_pos in enumerate(person.track):
-                self.ped_pos_xy_cem[pos_idx, person_idx, :] = np.array([past_pos.position.x, past_pos.position.y])
-    
+                coords_array = np.array([past_pos.position.x, past_pos.position.y])
+                self.ped_pos_xy_cem[pos_idx, person_idx, :] = coords_array[::-1]
+
     def common_callback(self, odom_msg, costmap_msg):
         # update robot state
         self.r_state[0] = odom_msg.twist.twist.linear.x

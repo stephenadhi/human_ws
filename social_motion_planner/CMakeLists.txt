@@ -16,6 +16,8 @@ find_package(std_msgs REQUIRED)
 find_package(action_msgs REQUIRED)
 find_package(visualization_msgs REQUIRED)
 find_package(soloco_interfaces REQUIRED)
+find_package(zed_interfaces REQUIRED)
+find_package(tf2_sensor_msgs REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(pcl_ros REQUIRED)
 
