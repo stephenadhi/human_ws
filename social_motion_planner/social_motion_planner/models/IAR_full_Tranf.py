@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from data.utils import dynamic_window, actionXYtoROT
+from social_motion_planner.data.utils import dynamic_window, actionXYtoROT
 from social_motion_planner.models.utils import Hist_Encoder, Decoder_TF
 
 

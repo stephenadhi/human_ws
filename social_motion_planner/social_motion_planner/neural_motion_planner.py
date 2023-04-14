@@ -19,7 +19,7 @@ from soloco_interfaces.msg import TrackedPersons
 from social_motion_planner.models.DWA import DWA
 from social_motion_planner.models.CEM_policy_IAR import CEM_IAR
 
-from occupancy_grid_manager import OccupancyGridManager
+from social_motion_planner.occupancy_grid_manager import OccupancyGridManager
 
 class NeuralMotionPlanner(Node):
     def __init__(self):
