@@ -45,7 +45,7 @@ class NeuralMotionPlanner(Node):
         self.declare_parameter('cmd_vel_topic', '/locobot/commands/velocity')
         self.declare_parameter('human_track_topic', '/human/tracks')
         # Device to use: 'gpu' or 'cpu'
-        self.declare_parameter('device', 'gpu') 
+        self.declare_parameter('device', 'cuda') 
         # Define neural model
         self.declare_parameter('model_name', 'CEM_IAR')        
         # Declare robot parameters
@@ -65,9 +65,6 @@ class NeuralMotionPlanner(Node):
     def initialize_node(self):
         # Device to use
         self.device= self.get_parameter('device').get_parameter_value().string_value
-        # Initialize model
-        model_name = self.get_parameter('model_name').get_parameter_value().string_value
-        self.model = self.switch_case_model(model_name)
         # Initialize robot params
         self.robot_params_dict = {}
         self.robot_params_dict['use_robot_model'] = self.get_parameter('use_robot_model').get_parameter_value().bool_value 
@@ -76,10 +73,10 @@ class NeuralMotionPlanner(Node):
         self.robot_params_dict['max_yaw_rate'] = self.get_parameter('max_yaw_rate').get_parameter_value().double_value  
         self.robot_params_dict['max_accel'] = self.get_parameter('max_accel').get_parameter_value().double_value  
         self.robot_params_dict['max_delta_yaw_rate'] = self.get_parameter('max_delta_yaw_rate').get_parameter_value().double_value  
-        self.robot_params_dict['collision_dist'] = self.get_parameter('collision_dist').get_parameter_value().double_value  
+        self.robot_params_dict['collision_dist'] = self.get_parameter('collision_dist').get_parameter_value().double_value
         # Initialize maximum number of agents, history length, and interpolation interval
-        self.max_num_agents = self.get_parameter('max_num_agents').get_parameter_value().interger_value  
-        self.max_history_length = self.get_parameter('max_history_length').get_parameter_value().interger_value  
+        self.max_num_agents = self.get_parameter('max_num_agents').get_parameter_value().integer_value  
+        self.max_history_length = self.get_parameter('max_history_length').get_parameter_value().integer_value  
         self.interp_interval = self.get_parameter('interp_interval').get_parameter_value().double_value
         # Initialize neighboring matrix
         self.neigh_matrix = np.ones((6, 6), int)
@@ -89,10 +86,13 @@ class NeuralMotionPlanner(Node):
         # Initialize current position of all people and goal pose
         self.ped_pos_xy_cem = np.ones((self.max_history_length + 1, self.max_num_agents + 1, 2)) * 500 # placeholder value
         self.goal_pose = None
+        # Initialize model
+        model_name = self.get_parameter('model_name').get_parameter_value().string_value
+        self.model = self.switch_case_model(model_name)
 
     def switch_case_model(self, model_name):
         if model_name == 'CEM_IAR':
-            return CEM_IAR(self.robot_params_dict, self.interp_interval, hist=self.max_history_length, max_num_agents=5, device=self.device)
+            return CEM_IAR(self.robot_params_dict, self.interp_interval, hist=self.max_history_length, num_agent=self.max_num_agents, device=self.device)
         else:
             raise Exception('An error occurred')
             
