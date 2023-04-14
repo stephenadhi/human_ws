@@ -140,9 +140,9 @@ class NeuralMotionPlanner(Node):
 
     def common_callback(self, odom_msg, costmap_msg):
         # update robot state
-        self.r_state[0] = odom_msg.twist.twist.linear.x
-        self.r_state[1] = odom_msg.twist.twist.linear.y
-        self.r_state[2] = np.arctan2(odom_msg.twist.twist.linear.y, odom_msg.twist.twist.linear.x)
+        self.r_state[0] = 0.0
+        self.r_state[1] = 0.0
+        self.r_state[2] = odom_msg.pose.pose.orientation.z
         self.r_state[3] = np.sqrt(odom_msg.twist.twist.linear.x**2 + odom_msg.twist.twist.linear.y**2)
         self.r_state[4] = odom_msg.twist.twist.angular.z
         
@@ -156,8 +156,8 @@ class NeuralMotionPlanner(Node):
             u = self.model.predict(x, costmap_obj=self.ogm)
             # Publish resulting twist to cmd_vel topic
             cmd_vel = Twist()
-            cmd_vel.linear.x = u[0]
-            cmd_vel.angular.z = u[1]
+            cmd_vel.linear.x = float(u[0])
+            cmd_vel.angular.z = float(u[1])
             self.cmd_vel_publisher.publish(cmd_vel)
 
 def main(args=None):

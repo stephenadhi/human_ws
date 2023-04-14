@@ -21,10 +21,6 @@ find_package(tf2_sensor_msgs REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(pcl_ros REQUIRED)
 
-add_executable(laser_to_world src/laser_to_world.cpp)
-ament_target_dependencies(laser_to_world
-        rclcpp)
-
 #add_executable(laserscan_filter_node src/laserscan_filter_node.cpp)
 #ament_target_dependencies(laserscan_filter_node
 #        rclcpp
@@ -38,13 +34,13 @@ ament_target_dependencies(laser_to_world
 #        tf2_sensor_msgs 
 #        tf2_geometry_msgs)
 
-install(TARGETS laser_to_world # laserscan_filter_node
-        DESTINATION lib/${PROJECT_NAME})
+#install(TARGETS laserscan_filter_node
+#        DESTINATION lib/${PROJECT_NAME})
 
 # Install Python modules
 ament_python_install_package(${PROJECT_NAME})
 
-# Install executables
+# Install path_calculator executables
 install(PROGRAMS
         ${PROJECT_NAME}/neural_motion_planner.py
         DESTINATION lib/${PROJECT_NAME}
