@@ -65,7 +65,10 @@ class HumanTrackPublisher(Node):
         self.human_track_interpolated_pub = self.create_publisher(TrackedPersons, human_track_topic, qos)
         self.pose_markers_pub = self.create_publisher(MarkerArray, pose_marker_topic, 10)
         self.bbox_markers_pub = self.create_publisher(MarkerArray, bounding_box_topic, 10)
-
+        # Timer for visualization and pruning old data
+        timer_period = 0.1  # seconds
+        self.timer = self.create_timer(timer_period, self.timer_callback)
+        
         # Create tf buffer and transform listener   
         self.tf_buffer = Buffer()
         self.transform_listener = TransformListener(self.tf_buffer, self)
@@ -137,10 +140,11 @@ class HumanTrackPublisher(Node):
                             interpolatedTracklet(curr_pose_map, curr_time_, self.max_history_length, self.interp_interval))
                     # Update person track
                     self.update_person_track(person_idx=self.idx)
-
+    
+    """Visualization and pruning function independent of sensor callback"""
+    def timer_callback(self):
         # Visualize markers for detected person(s) track and robot track
         self.visualize_markers()
-
         # Delete entries of interpolated points
         self.prune_old_interpolated_points(self.get_clock().now())
         
