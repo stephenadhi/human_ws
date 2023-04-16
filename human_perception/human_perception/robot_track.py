@@ -9,17 +9,11 @@ import numpy as np
 class Robot_track:
     def __init__(self, max_history_length):
         self.max_history_length = max_history_length
-    #    self.interpolated_poses = Path()
-    #    self.interpolated_poses.header.frame_id = "locobot/odom"
-       # self.odom = pose_
         self.odoms = deque(maxlen=90)  # from odom data, not PoseStamped
         self.points_interp = deque(maxlen=self.max_history_length)
         self.interp_point = 0.4
         self.curr_time = 0.
         self.nano_factor = 10 ** 9
-       # self.start_time = (pose_.header.stamp.secs + pose_.header.stamp.nsecs / self.nano_factor)  # in seconds
-       # self.start_secs = pose_.header.stamp.secs
-       # self.start_nsecs = pose_.header.stamp.nsecs
         self.arr_interp_padded = np.zeros([self.max_history_length + 1, 2])
         self.marker = Marker()
         self.marker.ns = "tracks"
@@ -35,7 +29,6 @@ class Robot_track:
         self.marker.pose.orientation.z = 0.0
         self.marker.pose.orientation.w = 1.0
         self.marker.lifetime = Duration(seconds=0.5).to_msg()
-
 
     def interpolated_pose(self, pose_):
         self.curr_time = Time.from_msg(pose_.header.stamp)

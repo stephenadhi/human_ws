@@ -187,7 +187,6 @@ class HumanTrackPublisher(Node):
             del self.people.tracks[id]
             del self.interpolated_tracklets[id]
             
-            
     def visualize_markers(self):
         pose_marker_array = MarkerArray() 
         bbox_marker_array = MarkerArray()
