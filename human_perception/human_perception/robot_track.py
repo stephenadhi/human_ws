@@ -1,10 +1,58 @@
 #!/usr/bin/env python3
-from rclpy.time import Time, Duration
+
+import rclpy
+from rclpy.node import Node
+from rclpy.duration import Duration
+from rclpy.time import Time
+from rclpy.qos import QoSProfile, DurabilityPolicy, ReliabilityPolicy
+
+from nav_msgs.msg import Odometry, Path
+from geometry_msgs.msg import Point, Pose, PoseStamped, Quaternion
 from visualization_msgs.msg import Marker
-from geometry_msgs.msg import Point
 
 from collections import deque
 import numpy as np
+
+from human_perception.utils import interpolatedTracklet, pose_transform
+
+class RobotTrackPublisher(Node):
+    def __init__(self):
+        super().__init__('robot_track_publisher')
+        # QoS settings
+        qos = QoSProfile(
+            depth=10,
+            reliability=ReliabilityPolicy.RELIABLE,
+            durability=DurabilityPolicy.VOLATILE)
+        # Declare parameters
+        self.declare_parameter('robot_odom_topic', '/zed2/zed_node/odom')
+        self.declare_parameter('pose_marker_topic', '/visualization/robot_track')
+        self.declare_parameter('bounding_box_topic', '/visualization/bounding_boxes')
+        self.declare_parameter('pub_frame_id', 'map')
+        self.declare_parameter('pub_frame_rate', 15.0)
+        self.declare_parameter('interp_interval', 0.4)
+        self.declare_parameter('delay_tolerance', 2.0)
+        self.declare_parameter('max_history_length', 7)
+
+        # Get parameter values
+        robot_odom_topic = self.get_parameter('robot_odom_topic').get_parameter_value().string_value
+        pose_marker_topic = self.get_parameter('pose_marker_topic').get_parameter_value().string_value
+        self.pub_frame_id = self.get_parameter("pub_frame_id").get_parameter_value().string_value
+        self.pub_frame_rate = self.get_parameter("pub_frame_rate").get_parameter_value().integer_value
+        self.interp_interval = self.get_parameter("interp_interval").get_parameter_value().double_value
+        self.delay_tolerance = self.get_parameter("delay_tolerance").get_parameter_value().double_value
+        self.max_history_length = self.get_parameter("max_history_length").get_parameter_value().integer_value 
+        # Create subscribers
+        self.odom_sub = self.create_subscription(Odometry, robot_odom_topic, self.odom_callback, qos)
+        self.robot_track = Robot_track(self.max_history_length)
+
+    def odom_callback(self, msg):
+        # Get current robot pose in publishing frame (default: 'map')
+        robot_in_map_frame = PoseStamped()
+        robot_in_map_frame.pose = self.pose_transform(msg.pose.pose, self.pub_frame_id, msg.header.frame_id)
+        robot_in_map_frame.header.stamp = msg.header.stamp
+
+        if robot_in_map_frame.pose: # if transform exists, concatenate robot with people and publish
+            self.robot_track.interpolated_pose(robot_in_map_frame)
 
 class Robot_track:
     def __init__(self, max_history_length):
@@ -61,3 +109,12 @@ class Robot_track:
 
         self.marker.points = current_points
 
+def main(args=None):
+    rclpy.init(args=args)
+    robot_track_publisher = RobotTrackPublisher()
+    rclpy.spin(robot_track_publisher)
+    robot_track_publisher.destroy_node()
+    rclpy.shutdown()
+
+if __name__ == '__main__':
+    main()
