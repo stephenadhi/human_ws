@@ -11,8 +11,8 @@ from message_filters import Subscriber, ApproximateTimeSynchronizer
 
 from action_msgs.msg import GoalStatus
 from nav_msgs.msg import OccupancyGrid
-from geometry_msgs.msg import Twist, PoseStamped
-from nav_msgs.msg import Odometry
+from geometry_msgs.msg import Twist, Pose, PoseStamped
+from nav_msgs.msg import Odometry, Path
 from visualization_msgs.msg import MarkerArray
 from soloco_interfaces.msg import TrackedPersons
 
@@ -139,6 +139,9 @@ class NeuralMotionPlanner(Node):
     #             self.ped_pos_xy_cem[pos_idx, person_idx, :] = coords_array[::-1]
 
     def common_callback(self, odom_msg, costmap_msg):
+        robot_pose = Pose()
+        robot_pose = odom_msg.pose.pose
+
         # update robot state
         self.r_state[0] = 0.0
         self.r_state[1] = 0.0
@@ -159,6 +162,11 @@ class NeuralMotionPlanner(Node):
             cmd_vel.linear.x = float(u[0])
             cmd_vel.angular.z = float(u[1])
             self.cmd_vel_publisher.publish(cmd_vel)
+
+    #         self.visualize_model_plan(mean_robot_action=mean_robot_action)
+    
+    # def visualize_model_plan(self, robot_pose, mean_robot_action):
+
 
 def main(args=None):
     try:
