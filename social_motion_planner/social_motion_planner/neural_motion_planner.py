@@ -109,8 +109,8 @@ class NeuralMotionPlanner(Node):
         
         # Subscribers
         self.goal_pose_sub = self.create_subscription(PoseStamped, goal_pose_topic, self.goal_callback, self.pose_qos) 
-        self.human_sub = self.create_subscription(TrackedPersons, human_track_topic, self.human_callback, self.pose_qos)
-        # self.marker_sub = self.create_subscription(MarkerArray, '/visualization/tracks', self.marker_callback, self.pose_qos)
+        # self.human_sub = self.create_subscription(TrackedPersons, human_track_topic, self.human_callback, self.pose_qos)
+        self.marker_sub = self.create_subscription(MarkerArray, '/visualization/tracks', self.marker_callback, self.pose_qos)
         
         # Subscriber for synced update
         self.ego_sub = Subscriber(self, Odometry, odom_topic)
@@ -125,18 +125,18 @@ class NeuralMotionPlanner(Node):
 
         self.goal_pose = np.array(goal)
 
-    # def marker_callback(self, marker_msg):
-    #     self.ped_pos_xy_cem = np.ones((self.max_history_length + 1, self.max_num_agents + 1, 2)) * 99
-    #     for i, ped in enumerate(marker_msg.markers):
-    #         coords_array = np.array([[e.x, e.y] for e in ped.points])
-    #         self.ped_pos_xy_cem[:, i] = coords_array[::-1]
+    def marker_callback(self, marker_msg):
+        self.ped_pos_xy_cem = np.ones((self.max_history_length + 1, self.max_num_agents + 1, 2)) * 99
+        for i, ped in enumerate(marker_msg.markers):
+            coords_array = np.array([[e.x, e.y] for e in ped.points])
+            self.ped_pos_xy_cem[:, i] = coords_array[::-1]
 
-    def human_callback(self, human_msg):
-        # update people state
-        for person_idx, person in enumerate(human_msg.tracks):
-            for pos_idx, past_pos in enumerate(person.track):
-                coords_array = np.array([past_pos.position.x, past_pos.position.y])
-                self.ped_pos_xy_cem[pos_idx, person_idx, :] = coords_array[::-1]
+    # def human_callback(self, human_msg):
+    #     # update people state
+    #     for person_idx, person in enumerate(human_msg.tracks):
+    #         for pos_idx, past_pos in enumerate(person.track):
+    #             coords_array = np.array([past_pos.position.x, past_pos.position.y])
+    #             self.ped_pos_xy_cem[pos_idx, person_idx, :] = coords_array[::-1]
 
     def common_callback(self, odom_msg, costmap_msg):
         # update robot state
