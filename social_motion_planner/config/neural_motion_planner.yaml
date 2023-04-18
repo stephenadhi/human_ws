@@ -10,7 +10,7 @@ social_motion_planner:
     goal_tolerance: 0.5
     # Topic parameters
     odom_topic: '/locobot/odom'
-    goal_pose_topic: '/goal_pose'
+    goal_pose_topic: '/subgoal_pose'
     costmap_topic: '/local_costmap/costmap'
     cmd_vel_topic: '/locobot/commands/velocity'
     human_track_topic: '/human/tracks'
