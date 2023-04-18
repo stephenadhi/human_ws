@@ -135,7 +135,7 @@ class NeuralMotionPlanner(Node):
 
     def goal_callback(self, goal_msg):
         goal = [goal_msg.pose.position.x, goal_msg.pose.position.y]
-
+        print('goal received')
         self.goal_pose = np.array(goal)
 
     def marker_callback(self, marker_msg):
@@ -180,7 +180,7 @@ class NeuralMotionPlanner(Node):
     
     def visualize_future(self, current_future):
         agent_marker = MarkerArray()
-
+        print('mip')
         for i, track in enumerate(current_future):
             # Create a Marker message
             marker = Marker()
@@ -190,7 +190,7 @@ class NeuralMotionPlanner(Node):
             marker.type = marker.LINE_STRIP
             marker.action = marker.ADD
             marker.lifetime = Duration(seconds=1.0).to_msg()
-            marker.scale.x = 0.1
+            marker.scale.x = 0.05
             if i == 0:
                 marker.color.r = 0.0
                 marker.color.g = 1.0
@@ -206,13 +206,13 @@ class NeuralMotionPlanner(Node):
             track_points = []
             for point in track:
                 p = Point()
-                p.x = point[0]
-                p.y = point[1]
+                p.x = float(point[0])
+                p.y = float(point[1])
                 track_points.append(p)
             marker.points = track_points
             agent_marker.markers.append(marker)
 
-        self.agent_future_publisher.publish(agent_marker.markers) 
+        self.agent_future_publisher.publish(agent_marker) 
 
 def main(args=None):
     try:
