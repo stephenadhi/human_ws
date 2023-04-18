@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import os
 import rclpy
 import numpy as np
 
@@ -19,12 +20,15 @@ from soloco_interfaces.msg import TrackedPersons
 
 from social_motion_planner.models.DWA import DWA
 from social_motion_planner.models.CEM_policy_IAR import CEM_IAR
-
 from social_motion_planner.occupancy_grid_manager import OccupancyGridManager
+
+from launch_ros.substitutions import FindPackageShare
 
 class NeuralMotionPlanner(Node):
     def __init__(self):
         super().__init__('neural_motion_planner')
+        self.pkg_name = 'social_motion_planner'
+        self.pkg_dir = FindPackageShare(package=self.pkg_name).find(self.pkg_name)
         # define quality of service
         self.pose_qos = QoSProfile(
             durability=QoSDurabilityPolicy.VOLATILE,
@@ -92,15 +96,15 @@ class NeuralMotionPlanner(Node):
         self.goal_pose = None
         # Initialize model
         model_name = self.get_parameter('model_name').get_parameter_value().string_value
-        self.AR_checkpoint = self.get_parameter('AR_checkpoint').get_parameter_value().string_value
-        self.IAR_checkpoint = self.get_parameter('IAR_checkpoint').get_parameter_value().string_value
+        self.AR_checkpoint = os.path.join(self.pkg_dir, self.pkg_name, self.get_parameter('AR_checkpoint').get_parameter_value().string_value)
+        self.IAR_checkpoint = os.path.join(self.pkg_dir, self.pkg_name, self.get_parameter('IAR_checkpoint').get_parameter_value().string_value)
         self.model = self.switch_case_model(model_name)
 
     def switch_case_model(self, model_name):
         if model_name == 'CEM_IAR':
             return CEM_IAR(self.robot_params_dict, self.interp_interval, hist=self.max_history_length, 
-                           num_agent=self.max_num_agents, AR_checkpoint_path=self.AR_checkpoint,
-                           IAR_checkpoint_path=self.IAR_checkpoint, device=self.device)
+                           num_agent=self.max_num_agents, AR_checkpoint=self.AR_checkpoint,
+                           IAR_checkpoint=self.IAR_checkpoint, device=self.device)
         else:
             raise Exception('An error occurred')
             

@@ -16,7 +16,7 @@ def generate_launch_description():
     
     social_motion_planner_cmd = Node(
         package='social_motion_planner',
-        executable='neural_motion_planner',
+        executable='neural_motion_planner.py',
         name='neural_motion_planner',
         output='screen',
         parameters=[planner_config],
