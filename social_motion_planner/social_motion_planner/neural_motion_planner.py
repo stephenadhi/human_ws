@@ -54,8 +54,8 @@ class NeuralMotionPlanner(Node):
         self.declare_parameter('device', 'cpu') 
         # Define neural model
         self.declare_parameter('model_name', 'CEM_IAR')
-        self.declare_parameter('AR_checkpoint', '')
-        self.declare_parameter('IAR_checkpoint', '')     
+        self.declare_parameter('AR_checkpoint', 'models/weights/SIMNoGoal-univ_fast_AR2/checkpoint_with_model.pt')
+        self.declare_parameter('IAR_checkpoint', 'models/weights/SIMNoGoal-univ_IAR_Full_trans/checkpoint_with_model.pt')     
         # Declare robot parameters
         self.declare_parameter('use_robot_model', True)   # Flag for robot param constrains usage
         self.declare_parameter('max_speed', 0.5)          # [m/s] # 0.5 locobot
