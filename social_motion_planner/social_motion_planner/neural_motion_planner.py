@@ -2,8 +2,8 @@
 import os
 import rclpy
 import numpy as np
-from math import sqrt, hypot
-
+from math import hypot
+from tf_transformations import euler_from_quaternion
 # import functionalities from rclpy
 from rclpy.qos import QoSDurabilityPolicy, QoSHistoryPolicy, QoSReliabilityPolicy
 from rclpy.qos import QoSProfile
@@ -48,7 +48,7 @@ class NeuralMotionPlanner(Node):
         self.declare_parameter('odom_topic', '/locobot/odom')
         self.declare_parameter('goal_pose_topic', '/goal_pose')
         self.declare_parameter('costmap_topic', '/local_costmap/costmap')
-        self.declare_parameter('cmd_vel_topic', '/locobot/commands/velocity')
+        self.declare_parameter('cmd_vel_topic', '/locobot/commands/vedlocity')
         self.declare_parameter('human_track_topic', '/human/tracks')
         self.declare_parameter('future_topic', '/visualization/predicted_future')
         # Device to use: 'gpu' or 'cpu'
@@ -61,6 +61,7 @@ class NeuralMotionPlanner(Node):
         self.declare_parameter('goal_tolerance', 0.5)
         # Declare robot parameters
         self.declare_parameter('use_robot_model', True)   # Flag for robot param constrains usage
+        self.declare_parameter('robot_model', 'differential_drive')
         self.declare_parameter('max_speed', 0.5)          # [m/s] # 0.5 locobot
         self.declare_parameter('min_speed', -0.1)         # [m/s]
         self.declare_parameter('max_yaw_rate', 1.0)       # [rad/s]
@@ -77,6 +78,7 @@ class NeuralMotionPlanner(Node):
         # Device to use
         self.device= self.get_parameter('device').get_parameter_value().string_value
         # Initialize robot params
+        self.robot_model = self.get_parameter('robot_model').get_parameter_value().string_value
         self.robot_params_dict = {}
         self.robot_params_dict['use_robot_model'] = self.get_parameter('use_robot_model').get_parameter_value().bool_value 
         self.robot_params_dict['max_speed'] = self.get_parameter('max_speed').get_parameter_value().double_value  
@@ -96,6 +98,7 @@ class NeuralMotionPlanner(Node):
         self.r_state = np.zeros(5)  # v_x, v_y, yaw, v_t, omega_t
         # Initialize current position of all people and goal pose
         self.ped_pos_xy_cem = np.ones((self.max_history_length + 1, self.max_num_agents + 1, 2)) * 500 # placeholder value
+        self.new_goal = False
         self.goal_pose = None
         self.goal_tolerance = self.get_parameter('goal_tolerance').get_parameter_value().double_value
         # Initialize model
@@ -138,7 +141,11 @@ class NeuralMotionPlanner(Node):
         time_sync.registerCallback(self.common_callback)
 
     def goal_callback(self, goal_msg):
-        goal = [goal_msg.pose.position.x, goal_msg.pose.position.y]
+        self.new_goal = True
+        ori = goal_msg.pose.orientation
+        quat = (ori.x, ori.y, ori.z, ori.w)
+        goal_yaw = euler_from_quaternion(quat)
+        goal = [goal_msg.pose.position.x, goal_msg.pose.position.y, goal_yaw[2]]
         # print('goal received')
         self.goal_pose = np.array(goal)
 
@@ -170,24 +177,40 @@ class NeuralMotionPlanner(Node):
         self.ogm = OccupancyGridManager(costmap_msg, subscribe_to_updates=False)
         
         if self.goal_pose is not None:
+            if self.new_goal == True and self.robot_model == 'differential_drive':
+                ori = odom_msg.pose.pose.orientation
+                quat = (ori.x, ori.y, ori.z, ori.w)                
+                robot_yaw = euler_from_quaternion(quat)
+                yaw_diff = abs(self.goal_pose[2] - robot_yaw[2])
+                self.spin_robot_in_goal_direction(yaw_diff)
             # Calculate euclidian distance to goal
             distance_to_goal = hypot((odom_msg.pose.pose.position.x-self.goal_pose[0]), 
                                  (odom_msg.pose.pose.position.y-self.goal_pose[1]))
+
+            # Concatenate information about people track, robot state, and goal
+            x = np.concatenate([self.ped_pos_xy_cem.flatten(), self.neigh_matrix.flatten(), self.r_state, self.goal_pose[:2]])
+            # Get command from neural model forward pass, given costmap object
+            u, current_future = self.model.predict(x, costmap_obj=self.ogm)
+
             if distance_to_goal > self.goal_tolerance:
-                # Concatenate information about people track, robot state, and goal
-                x = np.concatenate([self.ped_pos_xy_cem.flatten(), self.neigh_matrix.flatten(), self.r_state, self.goal_pose])
-                # Get command from neural model forward pass, given costmap object
-                u, current_future = self.model.predict(x, costmap_obj=self.ogm)
                 # Publish resulting twist to cmd_vel topic
                 cmd_vel = Twist()
                 cmd_vel.linear.x = float(u[0])
                 cmd_vel.angular.z = float(u[1])
-                self.cmd_vel_publisher.publish(cmd_vel)
-
-                self.visualize_future(current_future)
+                self.cmd_vel_publisher.publish(cmd_vel)            
             else:
                 self.get_logger().info('Goal pose achieved.')
+                self.goal_pose = None
+
+            self.visualize_future(current_future)
     
+    def spin_robot_in_goal_direction(self, yaw_diff):
+        cmd_vel = Twist()
+        cmd_vel.angular.z = 0.1
+        self.cmd_vel_publisher.publish(cmd_vel)
+        if yaw_diff < 0.1:
+            self.new_goal = False
+
     def visualize_future(self, current_future):
         agent_marker = MarkerArray()
         for i, track in enumerate(current_future):
@@ -222,6 +245,7 @@ class NeuralMotionPlanner(Node):
             agent_marker.markers.append(marker)
 
         self.agent_future_publisher.publish(agent_marker) 
+
 
 def main(args=None):
     try:

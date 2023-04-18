@@ -16,6 +16,7 @@ social_motion_planner:
     human_track_topic: '/human/tracks'
     future_topic: 'visualization/predicted_future'
     # Robot parameters
+    robot_model: "differential_drive"
     max_speed: 0.5          # [m/s] # 0.5 locobot
     min_speed: -0.1         # [m/s]
     max_yaw_rate: 1.0       # [rad/s]
