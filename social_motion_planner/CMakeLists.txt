@@ -23,6 +23,7 @@ ament_target_dependencies(subgoal_publisher
        rclcpp
        geometry_msgs
        nav_msgs
+       visualization_msgs
        )
 install(TARGETS subgoal_publisher
   DESTINATION lib/${PROJECT_NAME})
