@@ -21,8 +21,17 @@ def generate_launch_description():
         output='screen',
         parameters=[planner_config],
     )
-    
+
+    subgoal_publisher_cmd = Node(
+        package='social_motion_planner',
+        executable='subgoal_publisher',
+        name='subgoal_publisher',
+        output='screen',
+        parameters=[planner_config],
+    )
+
     ld = LaunchDescription()
-    
+    ld.add_action(subgoal_publisher_cmd)
     ld.add_action(social_motion_planner_cmd)
+
     return ld
