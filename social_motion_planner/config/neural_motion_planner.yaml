@@ -6,6 +6,7 @@ social_motion_planner:
     costmap_topic: "/local_costmap/costmap_raw"
     cmd_vel_topic: "/locobot/commands/velocity"
     human_track_topic: "/human/tracks"
+    future_topic: "visualization/predicted_future"
     # device
     device: "gpu"           # Options: 'gpu' or 'cpu'
     # Model to use

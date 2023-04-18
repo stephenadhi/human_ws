@@ -6,14 +6,15 @@ import numpy as np
 from rclpy.qos import QoSDurabilityPolicy, QoSHistoryPolicy, QoSReliabilityPolicy
 from rclpy.qos import QoSProfile
 from rclpy.node import Node
+from rclpy.duration import Duration
 # import message filters functionalities
 from message_filters import Subscriber, ApproximateTimeSynchronizer
 
 from action_msgs.msg import GoalStatus
 from nav_msgs.msg import OccupancyGrid
-from geometry_msgs.msg import Twist, Pose, PoseStamped
+from geometry_msgs.msg import Point, Twist, Pose, PoseStamped
 from nav_msgs.msg import Odometry, Path
-from visualization_msgs.msg import MarkerArray
+from visualization_msgs.msg import Marker, MarkerArray
 from soloco_interfaces.msg import TrackedPersons
 
 from social_motion_planner.models.DWA import DWA
@@ -44,6 +45,7 @@ class NeuralMotionPlanner(Node):
         self.declare_parameter('costmap_topic', '/local_costmap/costmap')
         self.declare_parameter('cmd_vel_topic', '/locobot/commands/velocity')
         self.declare_parameter('human_track_topic', '/human/tracks')
+        self.declare_parameter('future_topic', '/visualization/predicted_future')
         # Device to use: 'gpu' or 'cpu'
         self.declare_parameter('device', 'cpu') 
         # Define neural model
@@ -103,10 +105,11 @@ class NeuralMotionPlanner(Node):
         costmap_topic = self.get_parameter('costmap_topic').get_parameter_value().string_value
         cmd_vel_topic = self.get_parameter('cmd_vel_topic').get_parameter_value().string_value
         human_track_topic = self.get_parameter('human_track_topic').get_parameter_value().string_value
+        future_topic = self.get_parameter('future_topic').get_parameter_value().string_value
 
         # Publishers
         self.cmd_vel_publisher = self.create_publisher(Twist, cmd_vel_topic, self.pose_qos)
-        
+        self.agent_future_publisher = self.create_publisher(MarkerArray, future_topic, self.pose_qos)
         # Subscribers
         self.goal_pose_sub = self.create_subscription(PoseStamped, goal_pose_topic, self.goal_callback, self.pose_qos) 
         # self.human_sub = self.create_subscription(TrackedPersons, human_track_topic, self.human_callback, self.pose_qos)
@@ -156,17 +159,50 @@ class NeuralMotionPlanner(Node):
             # Concatenate information about people track, robot state, and goal
             x = np.concatenate([self.ped_pos_xy_cem.flatten(), self.neigh_matrix.flatten(), self.r_state, self.goal_pose])
             # Get command from neural model forward pass, given costmap object
-            u = self.model.predict(x, costmap_obj=self.ogm)
+            u, current_future = self.model.predict(x, costmap_obj=self.ogm)
             # Publish resulting twist to cmd_vel topic
             cmd_vel = Twist()
             cmd_vel.linear.x = float(u[0])
             cmd_vel.angular.z = float(u[1])
             self.cmd_vel_publisher.publish(cmd_vel)
 
-    #         self.visualize_model_plan(mean_robot_action=mean_robot_action)
+            self.visualize_future(current_future)
     
-    # def visualize_model_plan(self, robot_pose, mean_robot_action):
+    def visualize_future(self, current_future):
+        agent_marker = MarkerArray()
 
+        for i, track in enumerate(current_future):
+            # Create a Marker message
+            marker = Marker()
+            marker.id = i + 100
+            marker.header.frame_id = "map"
+            marker.header.stamp = self.get_clock().now().to_msg()
+            marker.type = marker.LINE_STRIP
+            marker.action = marker.ADD
+            marker.lifetime = Duration(seconds=1.0).to_msg()
+            marker.scale.x = 0.1
+            if i == 0:
+                marker.color.r = 0.0
+                marker.color.g = 1.0
+                marker.color.b = 0.0
+                marker.color.a = 1.0
+            else:
+                marker.color.r = 1.0
+                marker.color.g = 0.5
+                marker.color.b = 0.0
+                marker.color.a = 1.0
+            # Set the pose of the Marker message
+            marker.pose.orientation.w = 1.0
+            track_points = []
+            for point in track:
+                p = Point()
+                p.x = point[0]
+                p.y = point[1]
+                track_points.append(p)
+            marker.points = track_points
+            agent_marker.markers.append(marker)
+
+        self.agent_future_publisher.publish(agent_marker.markers) 
 
 def main(args=None):
     try:

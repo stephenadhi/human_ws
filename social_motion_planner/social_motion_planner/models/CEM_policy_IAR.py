@@ -216,8 +216,7 @@ class CEM_IAR(nn.Module):
                 print('Error')
                 u = np.array([0., 0.])
             self.pred_model.plot_list = []
-            print( x[5][0].unsqueeze(0)) 
-            mean_robot_action = np.cumsum(best_action, axis=0)
-            print(mean_robot_action) 
 
-            return u #, mean_robot_action
+            current_future = self.get_pred_traj_abs()
+            
+            return u, current_future
