@@ -135,7 +135,7 @@ class NeuralMotionPlanner(Node):
 
     def goal_callback(self, goal_msg):
         goal = [goal_msg.pose.position.x, goal_msg.pose.position.y]
-        print('goal received')
+        # print('goal received')
         self.goal_pose = np.array(goal)
 
     def marker_callback(self, marker_msg):
@@ -180,7 +180,6 @@ class NeuralMotionPlanner(Node):
     
     def visualize_future(self, current_future):
         agent_marker = MarkerArray()
-        print('mip')
         for i, track in enumerate(current_future):
             # Create a Marker message
             marker = Marker()
