@@ -61,7 +61,6 @@ private:
         marker.scale.x = goal_tolerance;
         marker.scale.y = goal_tolerance;
         marker.scale.z = 0.01;
-        marker.scale.z = 0.0;
         marker.color.a = 0.3;
         marker.color.r = 1.0;
         marker.color.g = 1.0;
