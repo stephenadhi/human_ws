@@ -163,9 +163,6 @@ class NeuralMotionPlanner(Node):
     #             self.ped_pos_xy_cem[pos_idx, person_idx, :] = coords_array[::-1]
 
     def common_callback(self, odom_msg, costmap_msg):
-        robot_pose = Pose()
-        robot_pose = odom_msg.pose.pose
-
         # update robot state
         self.r_state[0] = 0.0
         self.r_state[1] = 0.0
