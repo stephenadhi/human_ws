@@ -15,7 +15,8 @@ from social_motion_planner.data.utils import prepare_states, batched_Robot_coll_
 class Prediction_Model(nn.Module):
     def __init__(self, robot_params_dict, dt, feature_size,
                  hist_steps,predictions_steps, num_agent,
-                 sample_batch, device='cuda'):
+                 sample_batch, AR_checkpoint_path,
+                 IAR_checkpoint_path. device='cuda'):
         super(Prediction_Model, self).__init__()
         self.robot_params_dict = robot_params_dict
         self.dt = dt
@@ -28,6 +29,8 @@ class Prediction_Model(nn.Module):
         self.pred_model_iar, _ = self.get_model(sample_batch)
         self.plot_list = []
         self.pred_traj_abs = None
+        self.AR_checkpoint_path = AR_checkpoint_path
+        self.IAR_checkpoint_path = IAR_checkpoint_path
 
     def get_model(self, sample_batch):
 
@@ -35,10 +38,9 @@ class Prediction_Model(nn.Module):
         _dir = _dir + "/weights/"
 
         # checkpoint_path = _dir + 'Test_no_goal_loss/checkpoint_with_model.pt'#EXPERIMENT_NAME + '-univ/checkpoint_with_model.pt'
-        checkpoint_path = _dir + 'SIMNoGoal-univ_fast_AR2/checkpoint_with_model.pt'
-
+        # checkpoint_path = _dir + 'SIMNoGoal-univ_fast_AR2/checkpoint_with_model.pt'
         # checkpoint_path = '/home/martin/Sim2Goal/models/weights/SIMNoGoal-univ_fast_AR_debug2/checkpoint_with_model.pt'
-        checkpoint = torch.load(checkpoint_path, map_location=torch.device(self.device))
+        checkpoint = torch.load(self.AR_checkpoint_path, map_location=torch.device(self.device))
         model_ar = TrajectoryGeneratorAR(self.num_agent, self.robot_params_dict, self.dt,
                                          predictions_steps = self.predictions_steps,
                                          sample_batch=sample_batch,
@@ -49,12 +51,12 @@ class Prediction_Model(nn.Module):
         else:
             model_ar.cpu()
         model_ar.eval()
-        checkpoint_path = _dir + 'SIMNoGoal-univ_IAR_Full_trans/checkpoint_with_model.pt'
+        # checkpoint_path = _dir + 'SIMNoGoal-univ_IAR_Full_trans/checkpoint_with_model.pt'
         # checkpoint_path = '/home/martin/Sim2Goal/models/weights/SIMNoGoal-univ_noSocialCRT/checkpoint_with_model.pt'
         # checkpoint_path = '/home/martin/Sim2Goal/models/weights/SIMNoGoal-univ_IAR_test/checkpoint_with_model.pt'
         # checkpoint_path = '/home/martin/Sim2Goal/models/weights/SIMNoGoal-univ_IAR_Transf_enc_test/checkpoint_with_model.pt'
         # checkpoint_path = '/home/martin/Sim2Goal/models/weights/SIMNoGoal-univ_IAR_Full_trans_debug8/checkpoint_with_model.pt'
-        checkpoint = torch.load(checkpoint_path, map_location=torch.device(self.device))
+        checkpoint = torch.load(self.IAR_checkpoint_path, map_location=torch.device(self.device))
 
         # checkpoint_sampler_path = _dir + 'GFLOW-ETHandUCY_sampler-univ/checkpoint_with_model.pt'
         # checkpoint_sampler = torch.load(checkpoint_sampler_path)

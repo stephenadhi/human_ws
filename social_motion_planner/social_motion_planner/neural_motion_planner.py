@@ -49,7 +49,9 @@ class NeuralMotionPlanner(Node):
         # Device to use: 'gpu' or 'cpu'
         self.declare_parameter('device', 'cpu') 
         # Define neural model
-        self.declare_parameter('model_name', 'CEM_IAR')        
+        self.declare_parameter('model_name', 'CEM_IAR')
+        self.declare_parameter('AR_checkpoint', '')
+        self.declare_parameter('IAR_checkpoint', '')     
         # Declare robot parameters
         self.declare_parameter('use_robot_model', True)   # Flag for robot param constrains usage
         self.declare_parameter('max_speed', 0.5)          # [m/s] # 0.5 locobot
@@ -90,11 +92,15 @@ class NeuralMotionPlanner(Node):
         self.goal_pose = None
         # Initialize model
         model_name = self.get_parameter('model_name').get_parameter_value().string_value
+        self.AR_checkpoint = self.get_parameter('AR_checkpoint').get_parameter_value().string_value
+        self.IAR_checkpoint = self.get_parameter('IAR_checkpoint').get_parameter_value().string_value
         self.model = self.switch_case_model(model_name)
 
     def switch_case_model(self, model_name):
         if model_name == 'CEM_IAR':
-            return CEM_IAR(self.robot_params_dict, self.interp_interval, hist=self.max_history_length, num_agent=self.max_num_agents, device=self.device)
+            return CEM_IAR(self.robot_params_dict, self.interp_interval, hist=self.max_history_length, 
+                           num_agent=self.max_num_agents, AR_checkpoint_path=self.AR_checkpoint,
+                           IAR_checkpoint_path=self.IAR_checkpoint, device=self.device)
         else:
             raise Exception('An error occurred')
             

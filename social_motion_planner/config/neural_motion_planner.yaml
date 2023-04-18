@@ -1,17 +1,18 @@
 social_motion_planner:
   ros__parameters:
-    # Topic parameters
-    odom_topic: "/locobot/odom"
-    goal_pose_topic: "/goal_pose"
-    costmap_topic: "/local_costmap/costmap_raw"
-    cmd_vel_topic: "/locobot/commands/velocity"
-    human_track_topic: "/human/tracks"
-    future_topic: "visualization/predicted_future"
-    # device
-    device: "gpu"           # Options: 'gpu' or 'cpu'
-    # Model to use
-    model_name: 'CEM_IAR'   # Model name
+    # Neural model
+    model_name: 'CEM_IAR'
     use_robot_model: True   # Flag for robot param constrains usage
+    AR_checkpoint: 'models/weights/SIMNoGoal-univ_fast_AR2/checkpoint_with_model.pt'
+    IAR_checkpoint: 'models/weights/SIMNoGoal-univ_IAR_Full_trans/checkpoint_with_model.pt'
+    device: 'gpu'           # Options: 'gpu' or 'cpu'
+    # Topic parameters
+    odom_topic: '/locobot/odom'
+    goal_pose_topic: '/goal_pose'
+    costmap_topic: '/local_costmap/costmap'
+    cmd_vel_topic: '/locobot/commands/velocity'
+    human_track_topic: '/human/tracks'
+    future_topic: 'visualization/predicted_future'
     # Robot parameters
     max_speed: 0.5          # [m/s] # 0.5 locobot
     min_speed: -0.1         # [m/s]
