@@ -29,7 +29,7 @@ class HumanTrackPublisher(Node):
             reliability=ReliabilityPolicy.RELIABLE,
             durability=DurabilityPolicy.VOLATILE)
         # Declare parameters
-        self.declare_parameter('robot_odom_topic', '/zed2/zed_node/odom')
+        self.declare_parameter('robot_odom_topic', '/locobot/odom')
         self.declare_parameter('detected_obj_topic', '/zed2/zed_node/obj_det/objects')
         self.declare_parameter('human_track_topic', '/human/tracks')
         self.declare_parameter('pose_marker_topic', '/visualization/tracks')
@@ -242,8 +242,9 @@ class HumanTrackPublisher(Node):
                     marker.lifetime = Duration(seconds=0.2).to_msg()
                     bbox_marker_array.markers.append(marker)
         # Publish final marker array
-        self.pose_markers_pub.publish(pose_marker_array)
-        self.bbox_markers_pub.publish(bbox_marker_array)
+        if pose_marker_array.markers is not None:
+            self.pose_markers_pub.publish(pose_marker_array)
+            self.bbox_markers_pub.publish(bbox_marker_array)
 
 class interpolatedTracklet:
     def __init__(self, curr_pose, timestamp_, max_history_length, interp_interval):
