@@ -6,6 +6,8 @@ social_motion_planner:
     AR_checkpoint: 'models/weights/SIMNoGoal-univ_fast_AR2/checkpoint_with_model.pt'
     IAR_checkpoint: 'models/weights/SIMNoGoal-univ_IAR_Full_trans/checkpoint_with_model.pt'
     device: 'cpu'           # Options: 'cuda' or 'cpu'
+    # Goal tolerance
+    goal_tolerance: 0.5
     # Topic parameters
     odom_topic: '/locobot/odom'
     goal_pose_topic: '/goal_pose'

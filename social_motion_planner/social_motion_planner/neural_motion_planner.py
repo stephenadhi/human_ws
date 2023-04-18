@@ -2,6 +2,7 @@
 import os
 import rclpy
 import numpy as np
+from math import sqrt, hypot
 
 # import functionalities from rclpy
 from rclpy.qos import QoSDurabilityPolicy, QoSHistoryPolicy, QoSReliabilityPolicy
@@ -56,6 +57,8 @@ class NeuralMotionPlanner(Node):
         self.declare_parameter('model_name', 'CEM_IAR')
         self.declare_parameter('AR_checkpoint', 'models/weights/SIMNoGoal-univ_fast_AR2/checkpoint_with_model.pt')
         self.declare_parameter('IAR_checkpoint', 'models/weights/SIMNoGoal-univ_IAR_Full_trans/checkpoint_with_model.pt')     
+        # Declare goal tolerance
+        self.declare_parameter('goal_tolerance', 0.5)
         # Declare robot parameters
         self.declare_parameter('use_robot_model', True)   # Flag for robot param constrains usage
         self.declare_parameter('max_speed', 0.5)          # [m/s] # 0.5 locobot
@@ -94,6 +97,7 @@ class NeuralMotionPlanner(Node):
         # Initialize current position of all people and goal pose
         self.ped_pos_xy_cem = np.ones((self.max_history_length + 1, self.max_num_agents + 1, 2)) * 500 # placeholder value
         self.goal_pose = None
+        self.goal_tolerance = self.get_parameter('goal_tolerance').get_parameter_value().double_value
         # Initialize model
         model_name = self.get_parameter('model_name').get_parameter_value().string_value
         self.AR_checkpoint = os.path.join(self.pkg_dir, self.pkg_name, self.get_parameter('AR_checkpoint').get_parameter_value().string_value)
@@ -159,24 +163,30 @@ class NeuralMotionPlanner(Node):
         self.r_state[0] = 0.0
         self.r_state[1] = 0.0
         self.r_state[2] = odom_msg.pose.pose.orientation.z
-        self.r_state[3] = np.sqrt(odom_msg.twist.twist.linear.x**2 + odom_msg.twist.twist.linear.y**2)
+        self.r_state[3] = hypot(odom_msg.twist.twist.linear.x, odom_msg.twist.twist.linear.y)
         self.r_state[4] = odom_msg.twist.twist.angular.z
         
         # Send costmap to occupancy grid manager
         self.ogm = OccupancyGridManager(costmap_msg, subscribe_to_updates=False)
         
         if self.goal_pose is not None:
-            # Concatenate information about people track, robot state, and goal
-            x = np.concatenate([self.ped_pos_xy_cem.flatten(), self.neigh_matrix.flatten(), self.r_state, self.goal_pose])
-            # Get command from neural model forward pass, given costmap object
-            u, current_future = self.model.predict(x, costmap_obj=self.ogm)
-            # Publish resulting twist to cmd_vel topic
-            cmd_vel = Twist()
-            cmd_vel.linear.x = float(u[0])
-            cmd_vel.angular.z = float(u[1])
-            self.cmd_vel_publisher.publish(cmd_vel)
+            # Calculate euclidian distance to goal
+            distance_to_goal = hypot((odom_msg.pose.pose.position.x-self.goal_pose[0]), 
+                                 (odom_msg.pose.pose.position.y-self.goal_pose[1]))
+            if distance_to_goal > self.goal_tolerance:
+                # Concatenate information about people track, robot state, and goal
+                x = np.concatenate([self.ped_pos_xy_cem.flatten(), self.neigh_matrix.flatten(), self.r_state, self.goal_pose])
+                # Get command from neural model forward pass, given costmap object
+                u, current_future = self.model.predict(x, costmap_obj=self.ogm)
+                # Publish resulting twist to cmd_vel topic
+                cmd_vel = Twist()
+                cmd_vel.linear.x = float(u[0])
+                cmd_vel.angular.z = float(u[1])
+                self.cmd_vel_publisher.publish(cmd_vel)
 
-            self.visualize_future(current_future)
+                self.visualize_future(current_future)
+            else:
+                self.get_logger().info('Goal pose achieved.')
     
     def visualize_future(self, current_future):
         agent_marker = MarkerArray()
