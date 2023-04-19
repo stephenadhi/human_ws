@@ -45,7 +45,7 @@ private:
         auto idx = std::distance(msg->poses.begin(), goal_pose_it);
         subgoal_pose = msg->poses[idx];
         subgoal_pose.header.stamp = this->get_clock()->now();
-
+        //RCLCPP_INFO(this->get_logger(),"lookahead dist: %f", lookahead_dist);
         subgoal_pub_->publish(subgoal_pose);
         visualize_subgoal(subgoal_pose);
     }
@@ -58,13 +58,17 @@ private:
         marker.id = 0;
         marker.type = visualization_msgs::msg::Marker::CYLINDER;
         marker.action = visualization_msgs::msg::Marker::ADD;
-        marker.scale.x = goal_tolerance;
-        marker.scale.y = goal_tolerance;
+        marker.scale.x = goal_tolerance*2;
+        marker.scale.y = goal_tolerance*2;
         marker.scale.z = 0.01;
         marker.color.a = 0.3;
         marker.color.r = 1.0;
         marker.color.g = 1.0;
         marker.color.b = 0.0;
+        builtin_interfaces::msg::Duration lifetime;
+        lifetime.sec = 0.5;
+        lifetime.nanosec = 0;
+        marker.lifetime = lifetime;
         marker.pose.position.x = subgoal.pose.position.x;
         marker.pose.position.y = subgoal.pose.position.y;
         marker_pub_->publish(marker);
