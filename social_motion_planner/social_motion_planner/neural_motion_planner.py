@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import os
 import rclpy
+from rclpy.time import Time
 import numpy as np
 from math import hypot
 from tf_transformations import euler_from_quaternion
@@ -14,7 +15,7 @@ from message_filters import Subscriber, ApproximateTimeSynchronizer
 
 from action_msgs.msg import GoalStatus
 from nav_msgs.msg import OccupancyGrid
-from geometry_msgs.msg import Point, Twist, Pose, PoseStamped
+from geometry_msgs.msg import Point, PointStamped, Twist, Pose, PoseStamped
 from nav_msgs.msg import Odometry, Path
 from visualization_msgs.msg import Marker, MarkerArray
 from soloco_interfaces.msg import TrackedPersons
@@ -22,8 +23,11 @@ from soloco_interfaces.msg import TrackedPersons
 from social_motion_planner.models.DWA import DWA
 from social_motion_planner.models.CEM_policy_IAR import CEM_IAR
 from social_motion_planner.occupancy_grid_manager import OccupancyGridManager
-
+# from social_motion_planner.utils import point_transform, pose_transform
 from launch_ros.substitutions import FindPackageShare
+
+from tf2_geometry_msgs import do_transform_pose, do_transform_point
+from tf2_ros import Buffer, TransformListener, TransformException
 
 class NeuralMotionPlanner(Node):
     def __init__(self):
@@ -51,6 +55,7 @@ class NeuralMotionPlanner(Node):
         self.declare_parameter('costmap_topic', '/local_costmap/costmap')
         self.declare_parameter('cmd_vel_topic', '/locobot/commands/vedlocity')
         self.declare_parameter('human_track_topic', '/human/tracks')
+        self.declare_parameter('tracks_marker_topic', '/visualization/tracks')       
         self.declare_parameter('future_topic', '/visualization/predicted_future')
         # Device to use: 'gpu' or 'cpu'
         self.declare_parameter('device', 'cpu') 
@@ -74,6 +79,10 @@ class NeuralMotionPlanner(Node):
         # Declare maximum history length
         self.declare_parameter('max_history_length', 7) # [maximum history length]
         self.declare_parameter('interp_interval', 0.4) # [interpolation interval]
+
+        # Create tf buffer and transform listener   
+        self.tf_buffer = Buffer()
+        self.transform_listener = TransformListener(self.tf_buffer, self)
 
     def initialize_node(self):
         # Device to use
@@ -103,6 +112,7 @@ class NeuralMotionPlanner(Node):
         self.global_goal = None
         self.goal_pose = None
         self.goal_tolerance = self.get_parameter('goal_tolerance').get_parameter_value().double_value
+        self.ogm = None
         # Initialize model
         model_name = self.get_parameter('model_name').get_parameter_value().string_value
         self.AR_checkpoint = os.path.join(self.pkg_dir, self.pkg_name, self.get_parameter('AR_checkpoint').get_parameter_value().string_value)
@@ -125,6 +135,7 @@ class NeuralMotionPlanner(Node):
         costmap_topic = self.get_parameter('costmap_topic').get_parameter_value().string_value
         cmd_vel_topic = self.get_parameter('cmd_vel_topic').get_parameter_value().string_value
         human_track_topic = self.get_parameter('human_track_topic').get_parameter_value().string_value
+        tracks_marker_topic = self.get_parameter('tracks_marker_topic').get_parameter_value().string_value
         future_topic = self.get_parameter('future_topic').get_parameter_value().string_value
 
         # Publishers
@@ -134,23 +145,33 @@ class NeuralMotionPlanner(Node):
         self.goal_pose_sub = self.create_subscription(PoseStamped, goal_pose_topic, self.goal_callback, self.pose_qos) 
         self.subgoal_sub = self.create_subscription(PoseStamped, subgoal_topic, self.subgoal_callback, self.pose_qos) 
         # self.human_sub = self.create_subscription(TrackedPersons, human_track_topic, self.human_callback, self.pose_qos)
-        self.marker_sub = self.create_subscription(MarkerArray, '/visualization/tracks', self.marker_callback, self.pose_qos)
+        self.marker_sub = self.create_subscription(MarkerArray, tracks_marker_topic, self.marker_callback, self.pose_qos)
         
+        self.costmap_sub = self.create_subscription(OccupancyGrid, costmap_topic, self.costmap_callback, self.pose_qos)
+        self.odom_sub = self.create_subscription(Odometry, odom_topic, self.odom_callback, self.pose_qos)
         # Subscriber for synced update
-        self.ego_sub = Subscriber(self, Odometry, odom_topic)
-        self.costmap_sub = Subscriber(self, OccupancyGrid, costmap_topic)
+        # self.ego_sub = Subscriber(self, Odometry, odom_topic)
+        # self.costmap_sub = Subscriber(self, OccupancyGrid, costmap_topic)
         
         # Sync messages with slop (max delay) = 0.1 seconds
-        time_sync = ApproximateTimeSynchronizer([self.ego_sub, self.costmap_sub], queue_size=10, slop=0.1)
-        time_sync.registerCallback(self.common_callback)
+        # time_sync = ApproximateTimeSynchronizer([self.ego_sub, self.costmap_sub], queue_size=10, slop=0.1)
+        # time_sync.registerCallback(self.common_callback)
 
     def goal_callback(self, goal_msg):
         self.new_goal = True
-        ori = goal_msg.pose.orientation
-        quat = (ori.x, ori.y, ori.z, ori.w)
-        goal_yaw = euler_from_quaternion(quat)
-        goal = [goal_msg.pose.position.x, goal_msg.pose.position.y, goal_yaw[2]]
-        self.global_goal = np.array(goal)
+        self.get_logger().info(f'New global goal received in {goal_msg.header.frame_id} frame')
+        curr_goal = PoseStamped()
+        curr_goal.pose = self.pose_transform(goal_msg.pose, "locobot/odom", goal_msg.header.frame_id)
+        curr_goal = goal_msg
+        if curr_goal.pose:
+            self.get_logger().info('Goal transformed')
+            curr_goal.header.frame_id = 'locobot/odom'
+            ori = curr_goal.pose.orientation
+            quat = (ori.x, ori.y, ori.z, ori.w)
+            goal_yaw = euler_from_quaternion(quat)
+            goal = [curr_goal.pose.position.x, curr_goal.pose.position.y, goal_yaw[2]]
+            self.global_goal = np.array(goal)
+            self.get_logger().info(f'Heading towards x:{goal[0]}, y: {goal[1]}')
 
     def subgoal_callback(self, goal_msg):
         ori = goal_msg.pose.orientation
@@ -172,51 +193,80 @@ class NeuralMotionPlanner(Node):
     #             coords_array = np.array([past_pos.position.x, past_pos.position.y])
     #             self.ped_pos_xy_cem[pos_idx, person_idx, :] = coords_array[::-1]
 
-    def common_callback(self, odom_msg, costmap_msg):
+    def costmap_callback(self, costmap_msg):
+        # Send costmap to occupancy grid manager
+        self.ogm = OccupancyGridManager(costmap_msg)
+
+    def odom_callback(self, odom_msg):
+        ori = odom_msg.pose.pose.orientation
+        quat = (ori.x, ori.y, ori.z, ori.w)                
+        robot_yaw = euler_from_quaternion(quat)
+        self.r_pos_xy = [odom_msg.pose.pose.position.x, odom_msg.pose.pose.position.y]
         # update robot state
         self.r_state[0] = 0.0
         self.r_state[1] = 0.0
-        self.r_state[2] = odom_msg.pose.pose.orientation.z
+        self.r_state[2] = robot_yaw[2]
         self.r_state[3] = hypot(odom_msg.twist.twist.linear.x, odom_msg.twist.twist.linear.y)
         self.r_state[4] = odom_msg.twist.twist.angular.z
-        
-        # Send costmap to occupancy grid manager
-        self.ogm = OccupancyGridManager(costmap_msg, subscribe_to_updates=False)
-        
-        if self.global_goal is not None:
+
+        if self.global_goal is not None and self.ogm is not None:
             if self.new_goal == True and self.robot_model == 'differential_drive':
-                ori = odom_msg.pose.pose.orientation
-                quat = (ori.x, ori.y, ori.z, ori.w)                
-                robot_yaw = euler_from_quaternion(quat)
-                yaw_diff = self.goal_pose[2] - robot_yaw[2]
+                yaw_diff = self.global_goal[2] - robot_yaw[2]
                 self.spin_robot_in_subgoal_direction(yaw_diff)
             # Calculate euclidian distance to subgoal
-            distance_to_goal = hypot((odom_msg.pose.pose.position.x-self.goal_pose[0]), 
-                                 (odom_msg.pose.pose.position.y-self.goal_pose[1]))
 
+            distance_to_goal = hypot((odom_msg.pose.pose.position.x-self.global_goal[0]), 
+                                 (odom_msg.pose.pose.position.y-self.global_goal[1]))
             # Concatenate information about people track, robot state, and goal
-            x = np.concatenate([self.ped_pos_xy_cem.flatten(), self.neigh_matrix.flatten(), self.r_state, self.goal_pose[:2]])
+            x = np.concatenate([self.ped_pos_xy_cem.flatten(), self.neigh_matrix.flatten(), self.r_state, self.global_goal[:2]])
             # Get command from neural model forward pass, given costmap object
             u, current_future = self.model.predict(x, costmap_obj=self.ogm)
-
+            cmd_vel = Twist()
             if distance_to_goal > self.goal_tolerance:
                 # Publish resulting twist to cmd_vel topic
-                cmd_vel = Twist()
                 cmd_vel.linear.x = float(u[0])
                 cmd_vel.angular.z = float(u[1])
                 self.cmd_vel_publisher.publish(cmd_vel)            
             else:
-                self.get_logger().info('Goal pose achieved.')
+                # Publish resulting twist to cmd_vel topic
+                cmd_vel.linear.x = 0.0
+                cmd_vel.angular.z = 0.0
+                self.cmd_vel_publisher.publish(cmd_vel)
+                self.get_logger().info(f'Distance to goal: {distance_to_goal} Goal pose achieved.')
                 self.global_goal = None
 
             self.visualize_future(current_future)
     
     def spin_robot_in_subgoal_direction(self, yaw_diff):
         cmd_vel = Twist()
-        cmd_vel.angular.z = 0.5 if yaw_diff > 0 else -0.5
+        cmd_vel.angular.z = 0.8 if yaw_diff > 0 else -0.8
         self.cmd_vel_publisher.publish(cmd_vel)
         if abs(yaw_diff) < 0.2:
             self.new_goal = False
+            self.get_logger().info("Spin in goal direction completed.")
+
+    def pose_transform(self, curr_pose, output_frame, input_frame):
+        transformed_pose = Pose()
+        success = False
+        while not success:
+            try:
+                tf = self.tf_buffer.lookup_transform(output_frame, input_frame, Time())
+                transformed_pose = do_transform_pose(curr_pose, tf)
+            except TransformException as ex:
+                self.get_logger().warning(f"Failed to transform: '{ex}'.")
+            if transformed_pose: success = True
+        
+        return transformed_pose
+
+    def point_transform(self, curr_point, output_frame, input_frame):
+        transformed_point = Point()
+        try:
+            tf = self.tf_buffer.lookup_transform(output_frame, input_frame, Time())
+            transformed_point = do_transform_point(curr_point, tf)
+        except TransformException as ex:
+            self.get_logger().warning(f"Failed to transform: '{ex}'.")
+            
+        return transformed_point if transformed_point else None
 
     def visualize_future(self, current_future):
         agent_marker = MarkerArray()
@@ -224,7 +274,7 @@ class NeuralMotionPlanner(Node):
             # Create a Marker message
             marker = Marker()
             marker.id = i + 100
-            marker.header.frame_id = "map"
+            marker.header.frame_id = "locobot/odom"
             marker.header.stamp = self.get_clock().now().to_msg()
             marker.type = marker.LINE_STRIP
             marker.action = marker.ADD
@@ -244,10 +294,11 @@ class NeuralMotionPlanner(Node):
             marker.pose.orientation.w = 1.0
             track_points = []
             for point in track:
-                p = Point()
-                p.x = float(point[0])
-                p.y = float(point[1])
-                track_points.append(p)
+                p = PointStamped()
+                p.point.x = float(point[0])
+                p.point.y = float(point[1])
+                pos = self.point_transform(p, "map", "locobot/odom")
+                track_points.append(p.point)
             marker.points = track_points
             agent_marker.markers.append(marker)
 
