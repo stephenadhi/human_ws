@@ -188,9 +188,9 @@ class NeuralMotionPlanner(Node):
                 ori = odom_msg.pose.pose.orientation
                 quat = (ori.x, ori.y, ori.z, ori.w)                
                 robot_yaw = euler_from_quaternion(quat)
-                yaw_diff = self.global_goal[2] - robot_yaw[2]
-                self.spin_robot_in_goal_direction(yaw_diff)
-            # Calculate euclidian distance to goal
+                yaw_diff = self.goal_pose[2] - robot_yaw[2]
+                self.spin_robot_in_subgoal_direction(yaw_diff)
+            # Calculate euclidian distance to subgoal
             distance_to_goal = hypot((odom_msg.pose.pose.position.x-self.goal_pose[0]), 
                                  (odom_msg.pose.pose.position.y-self.goal_pose[1]))
 
@@ -211,7 +211,7 @@ class NeuralMotionPlanner(Node):
 
             self.visualize_future(current_future)
     
-    def spin_robot_in_goal_direction(self, yaw_diff):
+    def spin_robot_in_subgoal_direction(self, yaw_diff):
         cmd_vel = Twist()
         cmd_vel.angular.z = 0.5 if yaw_diff > 0 else -0.5
         self.cmd_vel_publisher.publish(cmd_vel)
