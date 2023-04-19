@@ -34,7 +34,7 @@ class HumanTrackPublisher(Node):
         self.declare_parameter('human_track_topic', '/human/tracks')
         self.declare_parameter('pose_marker_topic', '/visualization/tracks')
         self.declare_parameter('bounding_box_topic', '/visualization/bounding_boxes')
-        self.declare_parameter('pub_frame_id', 'map')
+        self.declare_parameter('pub_frame_id', 'locobot/odom')
         self.declare_parameter('pub_frame_rate', 15.0)
         self.declare_parameter('interp_interval', 0.4)
         self.declare_parameter('delay_tolerance', 2.0)
@@ -85,11 +85,11 @@ class HumanTrackPublisher(Node):
     def odom_callback(self, msg):
         # Get current robot pose in publishing frame (default: 'map')
         robot_in_pub_frame = PoseStamped()
-        robot_in_pub_frame.pose = self.pose_transform(msg.pose.pose, self.pub_frame_id, msg.header.frame_id) if msg.header.frame_id == self.pub_frame_id else msg.pose.pose
+        # robot_in_pub_frame.pose = self.pose_transform(msg.pose.pose, self.pub_frame_id, msg.header.frame_id) if msg.header.frame_id == self.pub_frame_id else msg.pose.pose
         robot_in_pub_frame.header.stamp = msg.header.stamp
 
-        if robot_in_pub_frame.pose: # if transform exists, concatenate robot with people and publish
-            self.robot_track.interpolated_pose(robot_in_pub_frame)
+        #if robot_in_pub_frame.pose: # if transform exists, concatenate robot with people and publish
+        self.robot_track.interpolated_pose(robot_in_pub_frame)
 
     def zed_callback(self, msg):
         # Loop through all detected objects, only consider valid tracking
