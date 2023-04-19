@@ -47,6 +47,7 @@ class NeuralMotionPlanner(Node):
         # Declare topic parameters
         self.declare_parameter('odom_topic', '/locobot/odom')
         self.declare_parameter('goal_pose_topic', '/goal_pose')
+        self.declare_parameter('subgoal_topic', '/subgoal_pose')
         self.declare_parameter('costmap_topic', '/local_costmap/costmap')
         self.declare_parameter('cmd_vel_topic', '/locobot/commands/vedlocity')
         self.declare_parameter('human_track_topic', '/human/tracks')
@@ -99,6 +100,7 @@ class NeuralMotionPlanner(Node):
         # Initialize current position of all people and goal pose
         self.ped_pos_xy_cem = np.ones((self.max_history_length + 1, self.max_num_agents + 1, 2)) * 500 # placeholder value
         self.new_goal = False
+        self.global_goal = None
         self.goal_pose = None
         self.goal_tolerance = self.get_parameter('goal_tolerance').get_parameter_value().double_value
         # Initialize model
@@ -119,6 +121,7 @@ class NeuralMotionPlanner(Node):
         # Get ROS parameters
         odom_topic = self.get_parameter('odom_topic').get_parameter_value().string_value
         goal_pose_topic = self.get_parameter('goal_pose_topic').get_parameter_value().string_value
+        subgoal_topic = self.get_parameter('subgoal_topic').get_parameter_value().string_value
         costmap_topic = self.get_parameter('costmap_topic').get_parameter_value().string_value
         cmd_vel_topic = self.get_parameter('cmd_vel_topic').get_parameter_value().string_value
         human_track_topic = self.get_parameter('human_track_topic').get_parameter_value().string_value
@@ -129,6 +132,7 @@ class NeuralMotionPlanner(Node):
         self.agent_future_publisher = self.create_publisher(MarkerArray, future_topic, self.pose_qos)
         # Subscribers
         self.goal_pose_sub = self.create_subscription(PoseStamped, goal_pose_topic, self.goal_callback, self.pose_qos) 
+        self.subgoal_sub = self.create_subscription(PoseStamped, subgoal_topic, self.subgoal_callback, self.pose_qos) 
         # self.human_sub = self.create_subscription(TrackedPersons, human_track_topic, self.human_callback, self.pose_qos)
         self.marker_sub = self.create_subscription(MarkerArray, '/visualization/tracks', self.marker_callback, self.pose_qos)
         
@@ -146,7 +150,13 @@ class NeuralMotionPlanner(Node):
         quat = (ori.x, ori.y, ori.z, ori.w)
         goal_yaw = euler_from_quaternion(quat)
         goal = [goal_msg.pose.position.x, goal_msg.pose.position.y, goal_yaw[2]]
-        # print('goal received')
+        self.global_goal = np.array(goal)
+
+    def subgoal_callback(self, goal_msg):
+        ori = goal_msg.pose.orientation
+        quat = (ori.x, ori.y, ori.z, ori.w)
+        goal_yaw = euler_from_quaternion(quat)
+        goal = [goal_msg.pose.position.x, goal_msg.pose.position.y, goal_yaw[2]]
         self.goal_pose = np.array(goal)
 
     def marker_callback(self, marker_msg):
@@ -173,12 +183,12 @@ class NeuralMotionPlanner(Node):
         # Send costmap to occupancy grid manager
         self.ogm = OccupancyGridManager(costmap_msg, subscribe_to_updates=False)
         
-        if self.goal_pose is not None:
+        if self.global_goal is not None:
             if self.new_goal == True and self.robot_model == 'differential_drive':
                 ori = odom_msg.pose.pose.orientation
                 quat = (ori.x, ori.y, ori.z, ori.w)                
                 robot_yaw = euler_from_quaternion(quat)
-                yaw_diff = abs(self.goal_pose[2] - robot_yaw[2])
+                yaw_diff = self.global_goal[2] - robot_yaw[2]
                 self.spin_robot_in_goal_direction(yaw_diff)
             # Calculate euclidian distance to goal
             distance_to_goal = hypot((odom_msg.pose.pose.position.x-self.goal_pose[0]), 
@@ -197,15 +207,15 @@ class NeuralMotionPlanner(Node):
                 self.cmd_vel_publisher.publish(cmd_vel)            
             else:
                 self.get_logger().info('Goal pose achieved.')
-                self.goal_pose = None
+                self.global_goal = None
 
             self.visualize_future(current_future)
     
     def spin_robot_in_goal_direction(self, yaw_diff):
         cmd_vel = Twist()
-        cmd_vel.angular.z = 0.1
+        cmd_vel.angular.z = 0.5 if yaw_diff > 0 else -0.5
         self.cmd_vel_publisher.publish(cmd_vel)
-        if yaw_diff < 0.1:
+        if abs(yaw_diff) < 0.2:
             self.new_goal = False
 
     def visualize_future(self, current_future):
