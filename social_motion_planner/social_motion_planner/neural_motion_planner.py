@@ -49,7 +49,7 @@ class NeuralMotionPlanner(Node):
         
     def declare_ros_parameters(self):
         # Declare topic parameters
-        self.declare_parameter('odom_topic', 'locobot/odom')
+        self.declare_parameter('odom_topic', self.pub_frame_id)
         self.declare_parameter('goal_pose_topic', 'goal_pose')
         self.declare_parameter('subgoal_topic', 'subgoal_pose')
         self.declare_parameter('costmap_topic', 'local_costmap/costmap')
@@ -57,6 +57,7 @@ class NeuralMotionPlanner(Node):
         self.declare_parameter('human_track_topic', 'human/tracks')
         self.declare_parameter('tracks_marker_topic', 'visualization/tracks')       
         self.declare_parameter('future_topic', 'visualization/predicted_future')
+        self.declare_parameter('pub_frame_id', 'locobot/odom')
         # Device to use: 'gpu' or 'cpu'
         self.declare_parameter('device', 'cpu') 
         # Define neural model
@@ -137,7 +138,7 @@ class NeuralMotionPlanner(Node):
         human_track_topic = self.get_parameter('human_track_topic').get_parameter_value().string_value
         tracks_marker_topic = self.get_parameter('tracks_marker_topic').get_parameter_value().string_value
         future_topic = self.get_parameter('future_topic').get_parameter_value().string_value
-
+        self.pub_frame_id = self.get_parameter("pub_frame_id").get_parameter_value().string_value
         # Publishers
         self.cmd_vel_publisher = self.create_publisher(Twist, cmd_vel_topic, self.pose_qos)
         self.agent_future_publisher = self.create_publisher(MarkerArray, future_topic, self.pose_qos)
@@ -161,11 +162,11 @@ class NeuralMotionPlanner(Node):
         self.new_goal = True
         self.get_logger().info(f'New global goal received in {goal_msg.header.frame_id} frame')
         curr_goal = PoseStamped()
-        curr_goal.pose = self.pose_transform(goal_msg.pose, "locobot/odom", goal_msg.header.frame_id)
+        curr_goal.pose = self.pose_transform(goal_msg.pose, self.pub_frame_id, goal_msg.header.frame_id)
         curr_goal = goal_msg
         if curr_goal.pose:
             self.get_logger().info('Goal transformed')
-            curr_goal.header.frame_id = 'locobot/odom'
+            curr_goal.header.frame_id = self.pub_frame_id
             ori = curr_goal.pose.orientation
             quat = (ori.x, ori.y, ori.z, ori.w)
             goal_yaw = euler_from_quaternion(quat)
@@ -274,7 +275,7 @@ class NeuralMotionPlanner(Node):
             # Create a Marker message
             marker = Marker()
             marker.id = i + 100
-            marker.header.frame_id = "locobot/odom"
+            marker.header.frame_id = self.pub_frame_id
             marker.header.stamp = self.get_clock().now().to_msg()
             marker.type = marker.LINE_STRIP
             marker.action = marker.ADD
@@ -297,7 +298,7 @@ class NeuralMotionPlanner(Node):
                 p = PointStamped()
                 p.point.x = float(point[0])
                 p.point.y = float(point[1])
-                pos = self.point_transform(p, "map", "locobot/odom")
+                pos = self.point_transform(p, "map", self.pub_frame_id)
                 track_points.append(p.point)
             marker.points = track_points
             agent_marker.markers.append(marker)
