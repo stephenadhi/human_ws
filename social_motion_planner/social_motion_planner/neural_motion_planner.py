@@ -49,14 +49,14 @@ class NeuralMotionPlanner(Node):
         
     def declare_ros_parameters(self):
         # Declare topic parameters
-        self.declare_parameter('odom_topic', '/locobot/odom')
-        self.declare_parameter('goal_pose_topic', '/goal_pose')
-        self.declare_parameter('subgoal_topic', '/subgoal_pose')
-        self.declare_parameter('costmap_topic', '/local_costmap/costmap')
-        self.declare_parameter('cmd_vel_topic', '/locobot/commands/vedlocity')
-        self.declare_parameter('human_track_topic', '/human/tracks')
-        self.declare_parameter('tracks_marker_topic', '/visualization/tracks')       
-        self.declare_parameter('future_topic', '/visualization/predicted_future')
+        self.declare_parameter('odom_topic', 'locobot/odom')
+        self.declare_parameter('goal_pose_topic', 'goal_pose')
+        self.declare_parameter('subgoal_topic', 'subgoal_pose')
+        self.declare_parameter('costmap_topic', 'local_costmap/costmap')
+        self.declare_parameter('cmd_vel_topic', 'locobot/commands/vedlocity')
+        self.declare_parameter('human_track_topic', 'human/tracks')
+        self.declare_parameter('tracks_marker_topic', 'visualization/tracks')       
+        self.declare_parameter('future_topic', 'visualization/predicted_future')
         # Device to use: 'gpu' or 'cpu'
         self.declare_parameter('device', 'cpu') 
         # Define neural model

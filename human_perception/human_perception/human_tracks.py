@@ -29,11 +29,11 @@ class HumanTrackPublisher(Node):
             reliability=ReliabilityPolicy.RELIABLE,
             durability=DurabilityPolicy.VOLATILE)
         # Declare parameters
-        self.declare_parameter('robot_odom_topic', '/locobot/odom')
-        self.declare_parameter('detected_obj_topic', '/zed2/zed_node/obj_det/objects')
-        self.declare_parameter('human_track_topic', '/human/tracks')
-        self.declare_parameter('pose_marker_topic', '/visualization/tracks')
-        self.declare_parameter('bounding_box_topic', '/visualization/bounding_boxes')
+        self.declare_parameter('robot_odom_topic', 'locobot/odom')
+        self.declare_parameter('detected_obj_topic', 'zed2/zed_node/obj_det/objects')
+        self.declare_parameter('human_track_topic', 'human/tracks')
+        self.declare_parameter('pose_marker_topic', 'visualization/tracks')
+        self.declare_parameter('bounding_box_topic', 'visualization/bounding_boxes')
         self.declare_parameter('pub_frame_id', 'locobot/odom')
         self.declare_parameter('pub_frame_rate', 15.0)
         self.declare_parameter('interp_interval', 0.4)

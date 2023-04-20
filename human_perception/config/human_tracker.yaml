@@ -2,12 +2,12 @@ human_perception:
   human_tracker:
     ros_parameters:
       # Subscriber topics
-      robot_odom_topic: "/locobot/odom"
-      detected_obj_topic: "/zed2/zed_node/obj_det/objects"
+      robot_odom_topic: "locobot/odom"
+      detected_obj_topic: "zed2/zed_node/obj_det/objects"
       # Publisher topics
-      human_track_topic: "/human/interpolated_history"
-      pose_marker_topic: "/visualization/tracks"
-      bounding_box_topic: "/visualization/bounding_boxes"
+      human_track_topic: "human/interpolated_history"
+      pose_marker_topic: "visualization/tracks"
+      bounding_box_topic: "visualization/bounding_boxes"
       pub_frame_id: "locobot/odom"
       # Parameters
       pub_frame_rate: 15.0      # currently not used

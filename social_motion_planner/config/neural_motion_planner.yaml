@@ -10,13 +10,13 @@ social_motion_planner:
     goal_tolerance: 0.5
     lookahead_dist: 2.0
     # Topic parameters
-    odom_topic: '/locobot/odom'
-    goal_pose_topic: '/goal_pose'
-    subgoal_topic: '/subgoal_pose'
-    costmap_topic: '/local_costmap/costmap'
-    cmd_vel_topic: '/locobot/commands/velocity'
-    human_track_topic: '/human/tracks'
-    tracks_marker_topic: '/visualization/tracks'
+    odom_topic: 'locobot/odom'
+    goal_pose_topic: 'goal_pose'
+    subgoal_topic: 'subgoal_pose'
+    costmap_topic: 'local_costmap/costmap'
+    cmd_vel_topic: 'locobot/commands/velocity'
+    human_track_topic: 'human/tracks'
+    tracks_marker_topic: 'visualization/tracks'
     future_topic: 'visualization/predicted_future'
     # Robot parameters
     robot_model: "differential_drive"
