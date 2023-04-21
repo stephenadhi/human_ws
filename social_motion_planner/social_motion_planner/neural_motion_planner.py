@@ -80,7 +80,7 @@ class NeuralMotionPlanner(Node):
         # Declare maximum history length
         self.declare_parameter('max_history_length', 7) # [maximum history length]
         self.declare_parameter('interp_interval', 0.4) # [interpolation interval]
-
+        self.declare_parameter('controller_frequency', 20.0) # [controller frequency]
         # Create tf buffer and transform listener   
         self.tf_buffer = Buffer()
         self.transform_listener = TransformListener(self.tf_buffer, self)
@@ -106,6 +106,8 @@ class NeuralMotionPlanner(Node):
         self.neigh_matrix = np.ones((6, 6), int)
         np.fill_diagonal(self.neigh_matrix, 0)
         # Initialize current robot state
+        self.r_pos_xy = np.zeros(2)
+        self.robot_yaw = np.zeros(3)
         self.r_state = np.zeros(5)  # v_x, v_y, yaw, v_t, omega_t
         # Initialize current position of all people and goal pose
         self.ped_pos_xy_cem = np.ones((self.max_history_length + 1, self.max_num_agents + 1, 2)) * 500 # placeholder value
@@ -150,6 +152,12 @@ class NeuralMotionPlanner(Node):
         
         self.costmap_sub = self.create_subscription(OccupancyGrid, costmap_topic, self.costmap_callback, self.pose_qos)
         self.odom_sub = self.create_subscription(Odometry, odom_topic, self.odom_callback, self.pose_qos)
+        
+        controller_frequency = self.get_parameter('controller_frequency').get_parameter_value().double_value
+        self.timer_period = 1/controller_frequency
+
+        self.timer = self.create_timer(self.timer_period, self.timer_callback)
+
         # Subscriber for synced update
         # self.ego_sub = Subscriber(self, Odometry, odom_topic)
         # self.costmap_sub = Subscriber(self, OccupancyGrid, costmap_topic)
@@ -199,37 +207,44 @@ class NeuralMotionPlanner(Node):
         self.ogm = OccupancyGridManager(costmap_msg)
 
     def odom_callback(self, odom_msg):
+        # update robot states
+        self.r_pos_xy[0] = odom_msg.pose.pose.position.x
+        self.r_pos_xy[1] = odom_msg.pose.pose.position.y
         ori = odom_msg.pose.pose.orientation
         quat = (ori.x, ori.y, ori.z, ori.w)                
-        robot_yaw = euler_from_quaternion(quat)
-        self.r_pos_xy = [odom_msg.pose.pose.position.x, odom_msg.pose.pose.position.y]
-        # update robot state
+        self.robot_yaw = euler_from_quaternion(quat)
+
         self.r_state[0] = 0.0
         self.r_state[1] = 0.0
-        self.r_state[2] = robot_yaw[2]
+        self.r_state[2] = self.robot_yaw[2]
         self.r_state[3] = hypot(odom_msg.twist.twist.linear.x, odom_msg.twist.twist.linear.y)
         self.r_state[4] = odom_msg.twist.twist.angular.z
 
+    def timer_callback(self):
         if self.global_goal is not None and self.ogm is not None:
+            # If global goal is new
             if self.new_goal == True and self.robot_model == 'differential_drive':
-                yaw_diff = self.global_goal[2] - robot_yaw[2]
+                yaw_diff = self.global_goal[2] - self.robot_yaw[2]
                 self.spin_robot_in_subgoal_direction(yaw_diff)
-            # Calculate euclidian distance to subgoal
 
-            distance_to_goal = hypot((odom_msg.pose.pose.position.x-self.global_goal[0]), 
-                                 (odom_msg.pose.pose.position.y-self.global_goal[1]))
+            # Calculate euclidian distance to subgoal
+            distance_to_goal = hypot((self.r_pos_xy[0]-self.global_goal[0]), 
+                                 (self.r_pos_xy[1]-self.global_goal[1]))
+            
             # Concatenate information about people track, robot state, and goal
             x = np.concatenate([self.ped_pos_xy_cem.flatten(), self.neigh_matrix.flatten(), self.r_state, self.global_goal[:2]])
+            
             # Get command from neural model forward pass, given costmap object
             u, current_future = self.model.predict(x, costmap_obj=self.ogm)
+            
+            # Publish resulting twist to cmd_vel topic
             cmd_vel = Twist()
+
             if distance_to_goal > self.goal_tolerance:
-                # Publish resulting twist to cmd_vel topic
                 cmd_vel.linear.x = float(u[0])
                 cmd_vel.angular.z = float(u[1])
                 self.cmd_vel_publisher.publish(cmd_vel)            
             else:
-                # Publish resulting twist to cmd_vel topic
                 cmd_vel.linear.x = 0.0
                 cmd_vel.angular.z = 0.0
                 self.cmd_vel_publisher.publish(cmd_vel)
