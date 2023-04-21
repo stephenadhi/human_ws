@@ -168,25 +168,29 @@ class NeuralMotionPlanner(Node):
 
     def goal_callback(self, goal_msg):
         self.new_goal = True
-        self.get_logger().info(f'New global goal received in {goal_msg.header.frame_id} frame')
+        self.get_logger().info(f'New global goal received in {goal_msg.header.frame_id} frame.')
         curr_goal = PoseStamped()
-        curr_goal.pose = self.pose_transform(goal_msg.pose, self.pub_frame_id, goal_msg.header.frame_id)
-        curr_goal = goal_msg
-        if curr_goal.pose:
-            self.get_logger().info('Goal transformed')
-            curr_goal.header.frame_id = self.pub_frame_id
-            ori = curr_goal.pose.orientation
-            quat = (ori.x, ori.y, ori.z, ori.w)
-            goal_yaw = euler_from_quaternion(quat)
-            goal = [curr_goal.pose.position.x, curr_goal.pose.position.y, goal_yaw[2]]
-            self.global_goal = np.array(goal)
-            self.get_logger().info(f'Heading towards x:{goal[0]}, y: {goal[1]}')
+        if goal_msg.header.frame_id != self.pub_frame_id:
+            curr_goal.pose = self.pose_transform(goal_msg.pose, self.pub_frame_id, goal_msg.header.frame_id)
+            self.get_logger().info('Goal transformed to publishing frame.')
+        else:
+            curr_goal = goal_msg
+
+        ori = curr_goal.pose.orientation
+        quat = (ori.x, ori.y, ori.z, ori.w)
+        goal_yaw = euler_from_quaternion(quat)
+        goal = [curr_goal.pose.position.x, curr_goal.pose.position.y, goal_yaw[2]]
+        
+        self.global_goal = np.array(goal)
+
+        self.get_logger().info(f'Heading towards x:{goal[0]}, y: {goal[1]}')
 
     def subgoal_callback(self, goal_msg):
         ori = goal_msg.pose.orientation
         quat = (ori.x, ori.y, ori.z, ori.w)
         goal_yaw = euler_from_quaternion(quat)
         goal = [goal_msg.pose.position.x, goal_msg.pose.position.y, goal_yaw[2]]
+        
         self.goal_pose = np.array(goal)
 
     def marker_callback(self, marker_msg):
