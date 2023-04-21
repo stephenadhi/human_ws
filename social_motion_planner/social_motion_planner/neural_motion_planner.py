@@ -49,7 +49,7 @@ class NeuralMotionPlanner(Node):
         
     def declare_ros_parameters(self):
         # Declare topic parameters
-        self.declare_parameter('odom_topic', self.pub_frame_id)
+        self.declare_parameter('odom_topic', 'locobot/odom')
         self.declare_parameter('goal_pose_topic', 'goal_pose')
         self.declare_parameter('subgoal_topic', 'subgoal_pose')
         self.declare_parameter('costmap_topic', 'local_costmap/costmap')
