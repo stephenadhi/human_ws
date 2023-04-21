@@ -37,7 +37,7 @@ def generate_launch_description():
         default_value='false',
         choices=('true', 'false'),
         description='launches RViz if set to `true`.',
-    ),
+    )
 
     human_track_publisher_cmd = Node(
         package='human_perception',

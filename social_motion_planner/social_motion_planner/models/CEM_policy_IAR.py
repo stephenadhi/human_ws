@@ -15,7 +15,8 @@ from social_motion_planner.data.utils import prepare_states, batched_Robot_coll_
 class Prediction_Model(nn.Module):
     def __init__(self, robot_params_dict, dt, feature_size,
                  hist_steps,predictions_steps, num_agent,
-                 sample_batch, device='cuda'):
+                 sample_batch, AR_checkpoint,
+                 IAR_checkpoint, device='cuda'):
         super(Prediction_Model, self).__init__()
         self.robot_params_dict = robot_params_dict
         self.dt = dt
@@ -24,10 +25,13 @@ class Prediction_Model(nn.Module):
         self.predictions_steps = predictions_steps
         self.num_agent = num_agent
         self.sample_batch = sample_batch
+        self.AR_checkpoint = AR_checkpoint
+        self.IAR_checkpoint = IAR_checkpoint
         self.device = device
         self.pred_model_iar, _ = self.get_model(sample_batch)
         self.plot_list = []
         self.pred_traj_abs = None
+
 
     def get_model(self, sample_batch):
 
@@ -35,10 +39,9 @@ class Prediction_Model(nn.Module):
         _dir = _dir + "/weights/"
 
         # checkpoint_path = _dir + 'Test_no_goal_loss/checkpoint_with_model.pt'#EXPERIMENT_NAME + '-univ/checkpoint_with_model.pt'
-        checkpoint_path = _dir + 'SIMNoGoal-univ_fast_AR2/checkpoint_with_model.pt'
-
+        # checkpoint_path = _dir + 'SIMNoGoal-univ_fast_AR2/checkpoint_with_model.pt'
         # checkpoint_path = '/home/martin/Sim2Goal/models/weights/SIMNoGoal-univ_fast_AR_debug2/checkpoint_with_model.pt'
-        checkpoint = torch.load(checkpoint_path, map_location=torch.device(self.device))
+        checkpoint = torch.load(self.AR_checkpoint, map_location=torch.device(self.device))
         model_ar = TrajectoryGeneratorAR(self.num_agent, self.robot_params_dict, self.dt,
                                          predictions_steps = self.predictions_steps,
                                          sample_batch=sample_batch,
@@ -49,12 +52,12 @@ class Prediction_Model(nn.Module):
         else:
             model_ar.cpu()
         model_ar.eval()
-        checkpoint_path = _dir + 'SIMNoGoal-univ_IAR_Full_trans/checkpoint_with_model.pt'
+        # checkpoint_path = _dir + 'SIMNoGoal-univ_IAR_Full_trans/checkpoint_with_model.pt'
         # checkpoint_path = '/home/martin/Sim2Goal/models/weights/SIMNoGoal-univ_noSocialCRT/checkpoint_with_model.pt'
         # checkpoint_path = '/home/martin/Sim2Goal/models/weights/SIMNoGoal-univ_IAR_test/checkpoint_with_model.pt'
         # checkpoint_path = '/home/martin/Sim2Goal/models/weights/SIMNoGoal-univ_IAR_Transf_enc_test/checkpoint_with_model.pt'
         # checkpoint_path = '/home/martin/Sim2Goal/models/weights/SIMNoGoal-univ_IAR_Full_trans_debug8/checkpoint_with_model.pt'
-        checkpoint = torch.load(checkpoint_path, map_location=torch.device(self.device))
+        checkpoint = torch.load(self.IAR_checkpoint, map_location=torch.device(self.device))
 
         # checkpoint_sampler_path = _dir + 'GFLOW-ETHandUCY_sampler-univ/checkpoint_with_model.pt'
         # checkpoint_sampler = torch.load(checkpoint_sampler_path)
@@ -128,6 +131,8 @@ class CEM_IAR(nn.Module):
     def __init__(self, robot_params_dict, dt, hist=8,
                  num_agent=5, obstacle_cost_gain=1000,
                  soft_update= False, bc = False,
+                 AR_checkpoint='weights/SIMNoGoal-univ_fast_AR2/checkpoint_with_model.pt',
+                 IAR_checkpoint='weights/SIMNoGoal-univ_IAR_Full_trans/checkpoint_with_model.pt',
                  device='cuda'):
         super(CEM_IAR, self).__init__()
         self.device = device
@@ -147,10 +152,14 @@ class CEM_IAR(nn.Module):
         self.bc = bc
         self.hist = hist
         self.num_agent = num_agent
+        self.AR_checkpoint = AR_checkpoint
+        self.IAR_checkpoint = IAR_checkpoint
         self.device= device
         self.pred_model = Prediction_Model(robot_params_dict, dt, 16, self.hist,
                                            self.predictions_steps, self.num_agent,
-                                           self.sample_batch, device=self.device,
+                                           self.sample_batch, AR_checkpoint=self.AR_checkpoint,
+                                           IAR_checkpoint=self.IAR_checkpoint,
+                                           device=self.device, 
                                            )
         for param in self.pred_model.parameters():
             param.requires_grad = False
@@ -216,6 +225,7 @@ class CEM_IAR(nn.Module):
                 print('Error')
                 u = np.array([0., 0.])
             self.pred_model.plot_list = []
-            return u
-    def reset(self):
-        return None
+
+            current_future = self.get_pred_traj_abs()
+            
+            return u, current_future

@@ -24,11 +24,12 @@ class HumanTrackPublisher(Node):
             reliability=ReliabilityPolicy.RELIABLE,
             durability=DurabilityPolicy.VOLATILE)
         # Declare parameters
-        self.declare_parameter('detected_obj_topic', '/zed2/zed_node/obj_det/objects')
-        self.declare_parameter('human_track_topic', '/human/tracks')
-        self.declare_parameter('pose_marker_topic', '/visualization/human_tracks')
-        self.declare_parameter('bounding_box_topic', '/visualization/bounding_boxes')
-        self.declare_parameter('pub_frame_id', 'map')
+        self.declare_parameter('robot_odom_topic', 'locobot/odom')
+        self.declare_parameter('detected_obj_topic', 'zed2/zed_node/obj_det/objects')
+        self.declare_parameter('human_track_topic', 'human/tracks')
+        self.declare_parameter('pose_marker_topic', 'visualization/tracks')
+        self.declare_parameter('bounding_box_topic', 'visualization/bounding_boxes')
+        self.declare_parameter('pub_frame_id', 'locobot/odom')
         self.declare_parameter('pub_frame_rate', 15.0)
         self.declare_parameter('interp_interval', 0.4)
         self.declare_parameter('delay_tolerance', 2.0)
@@ -72,6 +73,16 @@ class HumanTrackPublisher(Node):
         self.people = TrackedPersons()
         self.idx = len(self.people.tracks) - 1
         self.interpolated_tracklets = []
+        self.robot_track = Robot_track(self.max_history_length)
+        
+    def odom_callback(self, msg):
+        # Get current robot pose in publishing frame (default: 'map')
+        robot_in_pub_frame = PoseStamped()
+        # robot_in_pub_frame.pose = self.pose_transform(msg.pose.pose, self.pub_frame_id, msg.header.frame_id) if msg.header.frame_id == self.pub_frame_id else msg.pose.pose
+        robot_in_pub_frame.header.stamp = msg.header.stamp
+        robot_in_pub_frame.pose = msg.pose.pose
+        # if robot_in_pub_frame.pose: # if transform exists, concatenate robot with people and publish
+        self.robot_track.interpolated_pose(robot_in_pub_frame)
 
     def zed_callback(self, msg):
         # Loop through all detected objects, only consider valid tracking
@@ -86,12 +97,12 @@ class HumanTrackPublisher(Node):
                 curr_pose_cam.position.z = 0.0
                 curr_pose_cam.orientation = Quaternion(x=0.0, y=0.0, z=0.0, w=1.0)
                 # Convert pose to poseStamped in publishing frame (default: 'map')
-                curr_pose_map = PoseStamped()
-                curr_pose_map.header.stamp = msg.header.stamp
-                curr_pose_map.header.frame_id = self.pub_frame_id
-                curr_pose_map.pose = self.pose_transform(curr_pose_cam, self.pub_frame_id, msg.header.frame_id)
+                curr_pose_pub_frame = PoseStamped()
+                curr_pose_pub_frame.header.stamp = msg.header.stamp
+                curr_pose_pub_frame.header.frame_id = self.pub_frame_id
+                curr_pose_pub_frame.pose = self.pose_transform(curr_pose_cam, self.pub_frame_id, msg.header.frame_id)
                 # if transformed pose exists
-                if curr_pose_map.pose:             
+                if curr_pose_pub_frame.pose:             
                     self.new_object = True
                     self.idx = len(self.people.tracks) - 1
                     # Check for matching id in cache
@@ -101,7 +112,7 @@ class HumanTrackPublisher(Node):
                             if person.track_id == obj_id:
                                 self.get_logger().info(f'Track ID Matched: {person.track_id}, idx: {idx}')
                                 self.new_object = False
-                                self.interpolated_tracklets[idx].add_interpolated_point(curr_pose_map, self.get_clock().now())
+                                self.interpolated_tracklets[idx].add_interpolated_point(curr_pose_pub_frame, self.get_clock().now())
                                 person.track.header.stamp = self.get_clock().now().to_msg()
                                 self.idx = idx
                                 break
@@ -115,11 +126,11 @@ class HumanTrackPublisher(Node):
                         tracked_person.track.header.stamp = curr_time_.to_msg()
                         tracked_person.tracking_state = 1
                         tracked_person.track_id = obj_id
-                        tracked_person.current_pose = curr_pose_map
+                        tracked_person.current_pose = curr_pose_pub_frame
                         self.people.tracks.append(tracked_person)
                         self.get_logger().info(f'New person detected! ID: {obj_id}, idx: {self.idx}')
                         self.interpolated_tracklets.append(
-                            interpolatedTracklet(curr_pose_map, curr_time_, self.max_history_length, self.interp_interval))
+                            interpolatedTracklet(curr_pose_pub_frame, curr_time_, self.max_history_length, self.interp_interval))
                     # Update person track
                     self.update_person_track(person_idx=self.idx)
   
@@ -212,8 +223,9 @@ class HumanTrackPublisher(Node):
                     marker.lifetime = Duration(seconds=0.2).to_msg()
                     bbox_marker_array.markers.append(marker)
         # Publish final marker array
-        self.pose_markers_pub.publish(pose_marker_array)
-        self.bbox_markers_pub.publish(bbox_marker_array)
+        if pose_marker_array.markers is not None:
+            self.pose_markers_pub.publish(pose_marker_array)
+            self.bbox_markers_pub.publish(bbox_marker_array)
 
 def main(args=None):
     rclpy.init(args=args)

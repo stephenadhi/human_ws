@@ -15,7 +15,7 @@ Author: Sammy Pfeiffer <Sammy.Pfeiffer at student.uts.edu.au>
 """
 
 class OccupancyGridManager(object):
-    def __init__(self, costmap_msg, subscribe_to_updates=False):
+    def __init__(self, costmap_msg=OccupancyGrid(), subscribe_to_updates=False):
         # OccupancyGrid starts on lower left corner
         self._grid_data = np.array(costmap_msg.data,
                                    dtype=np.uint8).reshape(costmap_msg.info.height,

@@ -66,7 +66,7 @@ class Robot_track:
         self.marker = Marker()
         self.marker.ns = "tracks"
         self.marker.id = 0
-        self.marker.header.frame_id = "map"
+        self.marker.header.frame_id = "locobot/odom"
         self.marker.type = self.marker.LINE_STRIP
         self.marker.action = self.marker.ADD
         self.marker.color.a = 1.0

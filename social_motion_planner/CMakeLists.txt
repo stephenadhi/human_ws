@@ -18,10 +18,20 @@ find_package(visualization_msgs REQUIRED)
 find_package(soloco_interfaces REQUIRED)
 find_package(zed_interfaces REQUIRED)
 
+add_executable(subgoal_publisher src/subgoal_publisher.cpp)
+ament_target_dependencies(subgoal_publisher
+       rclcpp
+       geometry_msgs
+       nav_msgs
+       visualization_msgs
+       )
+install(TARGETS subgoal_publisher
+  DESTINATION lib/${PROJECT_NAME})
+
 # Install Python modules
 ament_python_install_package(${PROJECT_NAME})
 
-# Install path_calculator executables
+# Install python executables
 install(PROGRAMS
         ${PROJECT_NAME}/neural_motion_planner.py
         DESTINATION lib/${PROJECT_NAME}

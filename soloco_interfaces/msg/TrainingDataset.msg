@@ -1,18 +1,22 @@
 # Message defining the recorded data from pedsim to create a training dataset
-# Everything will be recorded in the 'map' frame
 
 # header to track timestamp and frame id
 std_msgs/Header header
 
-# person_radius to define occupied space [in meters]
-int8 person_radius
+# Scene identifier
+int8 scene_id
 
-# Occupancy grid raw. This is the occupancy grid map based on the raw laserscan data.
-nav_msgs/OccupancyGrid occgrid_raw
+# ID of the ego agent
+int8 ego_agent_id
 
-# Occupancy grid filtered. This is the occupancy grid map based on the filtered laserscan data.
-# Points where it is located within the person radius will be removed
-nav_msgs/OccupancyGrid occgrid_filtered
+# Current states of the ego agent (pose and twist)
+nav_msgs/Odometry
 
-# people with their interpolated history
+# This is the local costmap. Only based on walls and/or static obstacles.
+nav_msgs/OccupancyGrid local_occgrid
+
+# This is the global costmap. Only based on walls and/or static obstacles.
+nav_msgs/OccupancyGrid global_occgrid
+
+# Only record current people position (x, y). Ego agent is excluded.
 soloco_interfaces/TrackedPersons people
