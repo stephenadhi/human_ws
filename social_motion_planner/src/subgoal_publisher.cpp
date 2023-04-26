@@ -66,7 +66,7 @@ private:
         marker.color.g = 1.0;
         marker.color.b = 0.0;
         builtin_interfaces::msg::Duration lifetime;
-        lifetime.sec = 0.5;
+        lifetime.sec = 0.1;
         lifetime.nanosec = 0;
         marker.lifetime = lifetime;
         marker.pose.position.x = subgoal.pose.position.x;
