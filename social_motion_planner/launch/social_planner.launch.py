@@ -22,6 +22,14 @@ def generate_launch_description():
         parameters=[planner_config],
     )
 
+    global_nav2_client_cmd = Node(
+        package='social_motion_planner',
+        executable='global_nav2_client.py',
+        name='global_nav2_client',
+        output='screen',
+        parameters=[planner_config],
+    )
+
     subgoal_publisher_cmd = Node(
         package='social_motion_planner',
         executable='subgoal_publisher',
@@ -31,6 +39,7 @@ def generate_launch_description():
     )
 
     ld = LaunchDescription()
+    ld.add_action(global_nav2_client_cmd)
     ld.add_action(subgoal_publisher_cmd)
     ld.add_action(social_motion_planner_cmd)
 

@@ -33,6 +33,10 @@ ament_python_install_package(${PROJECT_NAME})
 
 # Install python executables
 install(PROGRAMS
+        ${PROJECT_NAME}/global_nav2_client.py
+        DESTINATION lib/${PROJECT_NAME}
+        )
+install(PROGRAMS
         ${PROJECT_NAME}/neural_motion_planner.py
         DESTINATION lib/${PROJECT_NAME}
         )
