@@ -21,16 +21,15 @@ class GlobalNav2Client(Node):
 
         self.declare_parameter('pub_frame_id', 'locobot/odom')
         self.declare_parameter('global_goal_topic', 'global_goal_republished')
+        self.declare_parameter('invoke_global_planner', False)
         self.pub_frame_id = self.get_parameter("pub_frame_id").get_parameter_value().string_value
         global_goal_topic = self.get_parameter("global_goal_topic").get_parameter_value().string_value
-
+        self.invoke_global_planner = self.get_parameter('invoke_global_planner').get_parameter_value().bool_value
+        
         self.goal_sub = self.create_subscription(PoseStamped, 'goal_pose', self.goal_callback, 10) 
         self.odom_sub = self.create_subscription(Odometry, 'locobot/odom', self.odom_callback, 10) 
 
-        self.publisher = self.create_publisher(
-            PoseStamped,
-            global_goal_topic,
-            10)
+        self.publisher = self.create_publisher(PoseStamped, global_goal_topic, 10)
         self.timer = self.create_timer(5.0, self.timer_callback)
 
         # Create ComputePathToPose Client
@@ -38,8 +37,6 @@ class GlobalNav2Client(Node):
                                                         '/compute_path_to_pose')
 
         self.get_costmap_local_srv = self.create_client(GetCostmap, '/local_costmap/get_costmap')
-        
-        self.invoke_global_planner = True
 
         # Create tf buffer and transform listener   
         self.tf_buffer = Buffer()
