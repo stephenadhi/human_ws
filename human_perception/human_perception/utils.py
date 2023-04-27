@@ -1,19 +1,21 @@
 #!/usr/bin/env python3
-
+import rclpy
 from rclpy.time import Time
 
 import numpy as np
+from collections import deque
+
 from tf2_geometry_msgs import do_transform_pose
 from tf2_ros import TransformException
 from geometry_msgs.msg import Pose
 
-def pose_transform(self, curr_pose, output_frame, input_frame):
+def pose_transform(curr_pose, output_frame, input_frame, tf_buffer):
     transformed_pose = Pose()
     try:
-        tf = self.tf_buffer.lookup_transform(output_frame, input_frame, Time())
+        tf = tf_buffer.lookup_transform(output_frame, input_frame, Time())
         transformed_pose = do_transform_pose(curr_pose, tf)
     except TransformException as ex:
-        self.get_logger().warning(f"Failed to transform: '{ex}'.")
+        rclpy.logging.get_logger("tf_transform").warning(f"Failed to transform: '{ex}'.")
         
     return transformed_pose if transformed_pose else None
 
