@@ -6,19 +6,14 @@ from rclpy.duration import Duration
 from rclpy.time import Time
 from rclpy.qos import QoSProfile, DurabilityPolicy, ReliabilityPolicy
 
-from nav_msgs.msg import Odometry, Path
 from geometry_msgs.msg import Point, Pose, PoseStamped, Quaternion
 from visualization_msgs.msg import Marker, MarkerArray
 from zed_interfaces.msg import ObjectsStamped
 from soloco_interfaces.msg import TrackedPerson, TrackedPersons
 
-from tf2_geometry_msgs import do_transform_pose
-from tf2_ros import Buffer, TransformListener, TransformException
+from tf2_ros import Buffer, TransformListener
 
-import numpy as np
-from collections import deque
-
-from robot_track import Robot_track
+from human_perception.utils import interpolatedTracklet, pose_transform
 
 class HumanTrackPublisher(Node):
     def __init__(self):
@@ -44,7 +39,6 @@ class HumanTrackPublisher(Node):
         self.declare_parameter('visualize_bbox', False) 
 
         # Get parameter values
-        robot_odom_topic = self.get_parameter('robot_odom_topic').get_parameter_value().string_value
         detected_obj_topic = self.get_parameter('detected_obj_topic').get_parameter_value().string_value
         human_track_topic = self.get_parameter('human_track_topic').get_parameter_value().string_value
         pose_marker_topic = self.get_parameter('pose_marker_topic').get_parameter_value().string_value
@@ -59,7 +53,6 @@ class HumanTrackPublisher(Node):
         self.visualize_bbox = self.get_parameter("visualize_bbox").get_parameter_value().bool_value    
         # Create subscribers
         self.zed_sub = self.create_subscription(ObjectsStamped, detected_obj_topic, self.zed_callback, qos)
-        self.odom_sub = self.create_subscription(Odometry, robot_odom_topic, self.odom_callback, qos)
         
         # Create publishers
         self.human_track_interpolated_pub = self.create_publisher(TrackedPersons, human_track_topic, qos)
@@ -140,36 +133,26 @@ class HumanTrackPublisher(Node):
                             interpolatedTracklet(curr_pose_pub_frame, curr_time_, self.max_history_length, self.interp_interval))
                     # Update person track
                     self.update_person_track(person_idx=self.idx)
-    
+  
+    def update_person_track(self, person_idx):
+      # Get interpolated tracklet
+      interpolated_tracklet = self.interpolated_tracklets[person_idx]
+      self.people.tracks[person_idx].track.header.stamp = self.get_clock().now().to_msg()
+      for i in range(self.max_history_length + 1):
+          pose_xy = Pose()
+          pose_xy.position.x = interpolated_tracklet.arr_interp_padded[i, 0]
+          pose_xy.position.y = interpolated_tracklet.arr_interp_padded[i, 1]
+          if self.new_object:
+              self.people.tracks[person_idx].track.poses.append(pose_xy)    
+          else:
+              self.people.tracks[person_idx].track.poses[i] = pose_xy 
+
     """Visualization and pruning function independent of sensor callback"""
     def timer_callback(self):
         # Visualize markers for detected person(s) track and robot track
         self.visualize_markers()
         # Delete entries of interpolated points
         self.prune_old_interpolated_points(self.get_clock().now())
-        
-    def pose_transform(self, curr_pose, output_frame, input_frame):
-        transformed_pose = Pose()
-        try:
-            tf = self.tf_buffer.lookup_transform(output_frame, input_frame, rclpy.time.Time())
-            transformed_pose = do_transform_pose(curr_pose, tf)
-        except TransformException as ex:
-            self.get_logger().warning(f"Failed to transform: '{ex}'.")
-            
-        return transformed_pose if transformed_pose else None
-
-    def update_person_track(self, person_idx):
-        # Get interpolated tracklet
-        interpolated_tracklet = self.interpolated_tracklets[person_idx]
-        self.people.tracks[person_idx].track.header.stamp = self.get_clock().now().to_msg()
-        for i in range(self.max_history_length + 1):
-            pose_xy = Pose()
-            pose_xy.position.x = interpolated_tracklet.arr_interp_padded[i, 0]
-            pose_xy.position.y = interpolated_tracklet.arr_interp_padded[i, 1]
-            if self.new_object:
-                self.people.tracks[person_idx].track.poses.append(pose_xy)    
-            else:
-                self.people.tracks[person_idx].track.poses[i] = pose_xy 
 
     def prune_old_interpolated_points(self, timestamp_):
         idx_to_delete = []
@@ -190,9 +173,7 @@ class HumanTrackPublisher(Node):
     def visualize_markers(self):
         pose_marker_array = MarkerArray() 
         bbox_marker_array = MarkerArray()
-        # Append current interpolated robot position to marker array
-        pose_marker_array.markers.append(self.robot_track.marker)
-        # Additionally append people to marker array
+
         if len(self.people.tracks) != 0:
             # self.get_logger().info(f'There are {len(self.people.tracks)} person(s) detected')
             for person in self.people.tracks:
@@ -245,39 +226,6 @@ class HumanTrackPublisher(Node):
         if pose_marker_array.markers is not None:
             self.pose_markers_pub.publish(pose_marker_array)
             self.bbox_markers_pub.publish(bbox_marker_array)
-
-class interpolatedTracklet:
-    def __init__(self, curr_pose, timestamp_, max_history_length, interp_interval):
-        # Initialize variables
-        self.max_history_length = max_history_length
-        self.interp_interval = interp_interval
-        # Deque object as cache for saving history
-        self.track = deque(maxlen=90)
-        # Create padding array to assign zeros for unknown future positions
-        self.arr_interp_padded = np.zeros([self.max_history_length + 1, 2])
-        # Add interpolated point
-        self.add_interpolated_point(curr_pose, timestamp_)
-
-    def add_interpolated_point(self, curr_pose, timestamp_):
-        curr_time_ = timestamp_.nanoseconds/10**9
-        # get time of current pose
-        det_time_ = Time.from_msg(curr_pose.header.stamp).nanoseconds/10**9
-        self.track.append([curr_pose.pose.position.x, curr_pose.pose.position.y, det_time_])
-        np_track = np.array(self.track)
-        # Get number of steps depending on measured pose time and interpolation interval
-        num_t_quan_steps = int((curr_time_ - self.track[0][2]) / self.interp_interval)
-        num_t_quan_steps = self.max_history_length if num_t_quan_steps > self.max_history_length else num_t_quan_steps
-        # Get the time points for interpolation
-        inter_time_points = curr_time_ - np.arange(num_t_quan_steps + 1) * self.interp_interval
-        # Interpolate using numpy library
-        x_interp = np.interp(inter_time_points, np_track[:, 2], np_track[:, 0])
-        y_interp = np.interp(inter_time_points, np_track[:, 2], np_track[:, 1])
-        # Assign the interpolated points to the padded array
-        self.arr_interp_padded[0:num_t_quan_steps + 1, 0] = x_interp
-        self.arr_interp_padded[0:num_t_quan_steps + 1, 1] = y_interp    
-        if num_t_quan_steps != self.max_history_length:
-            self.arr_interp_padded[num_t_quan_steps + 1:, 0] = x_interp[-1]
-            self.arr_interp_padded[num_t_quan_steps + 1:, 1] = y_interp[-1]
 
 def main(args=None):
     rclpy.init(args=args)
