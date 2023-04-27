@@ -23,41 +23,17 @@ find_package(Eigen3 REQUIRED)
 
 include_directories(${GSL_INCLUDE_DIRS})
 
-add_executable(human_track_publisher src/human_track_publisher.cpp)
-ament_target_dependencies(human_track_publisher
-        rclcpp
-        visualization_msgs
-        geometry_msgs
-        nav_msgs
-        soloco_interfaces
-        zed_interfaces
-        tf2_ros
-        tf2_sensor_msgs 
-        tf2_geometry_msgs
-        Eigen3)
-        
-add_executable(robot_track_publisher src/robot_track_publisher.cpp)
-ament_target_dependencies(robot_track_publisher
-        rclcpp
-        visualization_msgs
-        geometry_msgs
-        nav_msgs
-        soloco_interfaces
-        zed_interfaces
-        tf2_ros
-        tf2_sensor_msgs 
-        tf2_geometry_msgs
-        Eigen3)
-                
-install(TARGETS human_track_publisher robot_track_publisher
-  DESTINATION lib/${PROJECT_NAME})
-
 # Install Python modules
 ament_python_install_package(${PROJECT_NAME})
 
 # Install python executables
 install(PROGRAMS
         ${PROJECT_NAME}/human_tracks.py
+        DESTINATION lib/${PROJECT_NAME}
+        )
+
+install(PROGRAMS
+        ${PROJECT_NAME}/robot_track.py
         DESTINATION lib/${PROJECT_NAME}
         )
 
