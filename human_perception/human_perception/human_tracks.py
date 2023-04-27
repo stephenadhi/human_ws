@@ -26,8 +26,8 @@ class HumanTrackPublisher(Node):
         # Declare parameters
         self.declare_parameter('robot_odom_topic', 'locobot/odom')
         self.declare_parameter('detected_obj_topic', 'zed2/zed_node/obj_det/objects')
-        self.declare_parameter('human_track_topic', 'human/tracks')
-        self.declare_parameter('pose_marker_topic', 'visualization/tracks')
+        self.declare_parameter('human_track_topic', 'human/interpolated_history')
+        self.declare_parameter('pose_marker_topic', 'visualization/human_tracks')
         self.declare_parameter('bounding_box_topic', 'visualization/bounding_boxes')
         self.declare_parameter('pub_frame_id', 'locobot/odom')
         self.declare_parameter('pub_frame_rate', 15.0)
@@ -44,7 +44,7 @@ class HumanTrackPublisher(Node):
         pose_marker_topic = self.get_parameter('pose_marker_topic').get_parameter_value().string_value
         bounding_box_topic = self.get_parameter('bounding_box_topic').get_parameter_value().string_value
         self.pub_frame_id = self.get_parameter("pub_frame_id").get_parameter_value().string_value
-        self.pub_frame_rate = self.get_parameter("pub_frame_rate").get_parameter_value().integer_value
+        self.pub_frame_rate = self.get_parameter("pub_frame_rate").get_parameter_value().double_value
         self.interp_interval = self.get_parameter("interp_interval").get_parameter_value().double_value
         self.delay_tolerance = self.get_parameter("delay_tolerance").get_parameter_value().double_value
         self.max_history_length = self.get_parameter("max_history_length").get_parameter_value().integer_value
@@ -58,8 +58,8 @@ class HumanTrackPublisher(Node):
         self.human_track_interpolated_pub = self.create_publisher(TrackedPersons, human_track_topic, qos)
         self.pose_markers_pub = self.create_publisher(MarkerArray, pose_marker_topic, 10)
         self.bbox_markers_pub = self.create_publisher(MarkerArray, bounding_box_topic, 10)
-        # Timer for visualization and pruning old data
-        timer_period = 0.1  # seconds
+        # Timer for publishing, visualization and pruning old data
+        timer_period = 1/self.pub_frame_rate  # seconds
         self.timer = self.create_timer(timer_period, self.timer_callback)
         
         # Create tf buffer and transform listener   
@@ -73,16 +73,6 @@ class HumanTrackPublisher(Node):
         self.people = TrackedPersons()
         self.idx = len(self.people.tracks) - 1
         self.interpolated_tracklets = []
-        self.robot_track = Robot_track(self.max_history_length)
-        
-    def odom_callback(self, msg):
-        # Get current robot pose in publishing frame (default: 'map')
-        robot_in_pub_frame = PoseStamped()
-        # robot_in_pub_frame.pose = self.pose_transform(msg.pose.pose, self.pub_frame_id, msg.header.frame_id) if msg.header.frame_id == self.pub_frame_id else msg.pose.pose
-        robot_in_pub_frame.header.stamp = msg.header.stamp
-        robot_in_pub_frame.pose = msg.pose.pose
-        # if robot_in_pub_frame.pose: # if transform exists, concatenate robot with people and publish
-        self.robot_track.interpolated_pose(robot_in_pub_frame)
 
     def zed_callback(self, msg):
         # Loop through all detected objects, only consider valid tracking
@@ -100,7 +90,7 @@ class HumanTrackPublisher(Node):
                 curr_pose_pub_frame = PoseStamped()
                 curr_pose_pub_frame.header.stamp = msg.header.stamp
                 curr_pose_pub_frame.header.frame_id = self.pub_frame_id
-                curr_pose_pub_frame.pose = self.pose_transform(curr_pose_cam, self.pub_frame_id, msg.header.frame_id)
+                curr_pose_pub_frame.pose = pose_transform(curr_pose_cam, self.pub_frame_id, msg.header.frame_id, self.tf_buffer)
                 # if transformed pose exists
                 if curr_pose_pub_frame.pose:             
                     self.new_object = True
@@ -112,23 +102,24 @@ class HumanTrackPublisher(Node):
                             if person.track_id == obj_id:
                                 self.get_logger().info(f'Track ID Matched: {person.track_id}, idx: {idx}')
                                 self.new_object = False
-                                self.interpolated_tracklets[idx].add_interpolated_point(curr_pose_pub_frame, self.get_clock().now())
-                                person.track.header.stamp = self.get_clock().now().to_msg()
+                                curr_time_ = self.get_clock().now()
+                                self.interpolated_tracklets[idx].add_interpolated_point(curr_pose_pub_frame, curr_time_)
+                                person.track.header.stamp = curr_time_.to_msg()
                                 self.idx = idx
                                 break
                             idx += 1
                     # In case this object does not belong to existing tracks
                     if self.new_object:
                         self.idx += 1
-                        curr_time_ = self.get_clock().now()
                         # Create a new person and append current person pose in map frame
                         tracked_person = TrackedPerson()
-                        tracked_person.track.header.stamp = curr_time_.to_msg()
+                        tracked_person.track.header.frame_id = self.pub_frame_id
                         tracked_person.tracking_state = 1
                         tracked_person.track_id = obj_id
                         tracked_person.current_pose = curr_pose_pub_frame
                         self.people.tracks.append(tracked_person)
                         self.get_logger().info(f'New person detected! ID: {obj_id}, idx: {self.idx}')
+                        curr_time_ = self.get_clock().now()
                         self.interpolated_tracklets.append(
                             interpolatedTracklet(curr_pose_pub_frame, curr_time_, self.max_history_length, self.interp_interval))
                     # Update person track
@@ -137,22 +128,29 @@ class HumanTrackPublisher(Node):
     def update_person_track(self, person_idx):
       # Get interpolated tracklet
       interpolated_tracklet = self.interpolated_tracklets[person_idx]
-      self.people.tracks[person_idx].track.header.stamp = self.get_clock().now().to_msg()
-      for i in range(self.max_history_length + 1):
-          pose_xy = Pose()
-          pose_xy.position.x = interpolated_tracklet.arr_interp_padded[i, 0]
-          pose_xy.position.y = interpolated_tracklet.arr_interp_padded[i, 1]
-          if self.new_object:
-              self.people.tracks[person_idx].track.poses.append(pose_xy)    
-          else:
-              self.people.tracks[person_idx].track.poses[i] = pose_xy 
 
-    """Visualization and pruning function independent of sensor callback"""
+      for i in range(self.max_history_length + 1):
+          pose_xy = PoseStamped()
+          pose_xy.header.frame_id = self.pub_frame_id
+          pose_xy.header.stamp.sec = int(self.interp_interval * i * 1000) # milliseconds
+          pose_xy.pose.position.x = interpolated_tracklet.arr_interp_padded[i, 0]
+          pose_xy.pose.position.y = interpolated_tracklet.arr_interp_padded[i, 1]
+          if self.new_object:
+              self.people.tracks[person_idx].track.poses.append(pose_xy)
+          else:
+              self.people.tracks[person_idx].track.poses[i] = pose_xy
+
+      self.people.tracks[person_idx].track.header.stamp = self.get_clock().now().to_msg()
+
+    """Publishing, pruning, and visualization function independent of sensor callback"""
     def timer_callback(self):
-        # Visualize markers for detected person(s) track and robot track
-        self.visualize_markers()
-        # Delete entries of interpolated points
-        self.prune_old_interpolated_points(self.get_clock().now())
+        if self.interpolated_tracklets:
+            # Publish human tracks
+            self.human_track_interpolated_pub.publish(self.people)
+            # Visualize markers for detected person(s) track and robot track
+            self.visualize_markers()
+            # Delete entries of interpolated points
+            self.prune_old_interpolated_points(self.get_clock().now())
 
     def prune_old_interpolated_points(self, timestamp_):
         idx_to_delete = []
@@ -181,14 +179,14 @@ class HumanTrackPublisher(Node):
                 person_marker_points = []
                 for i in range(self.max_history_length + 1):
                     point = Point()
-                    point.x = person.track.poses[i].position.x
-                    point.y = person.track.poses[i].position.y
+                    point.x = person.track.poses[i].pose.position.x
+                    point.y = person.track.poses[i].pose.position.y
                     # Append point to person_track
                     person_marker_points.append(point)
                 # Create new marker for each person track
                 marker = Marker()
                 marker.ns = "human"
-                marker.id = person.track_id + 1  # 0 is reserved for the robot
+                marker.id = person.track_id
                 marker.header.frame_id = self.pub_frame_id
                 marker.header.stamp = self.get_clock().now().to_msg()
                 marker.type = marker.LINE_STRIP
@@ -205,7 +203,7 @@ class HumanTrackPublisher(Node):
                 if self.visualize_bbox:
                     marker = Marker()
                     marker.ns = "human"
-                    marker.id = person.track_id + 1  # 0 is reserved for the robot
+                    marker.id = person.track_id + 1000
                     marker.header.frame_id = self.pub_frame_id
                     marker.header.stamp = self.get_clock().now().to_msg()
                     marker.type = marker.CUBE
@@ -220,7 +218,7 @@ class HumanTrackPublisher(Node):
                     marker.color.r = 0.0
                     marker.color.g = 0.9
                     marker.color.b = 0.0
-                    marker.lifetime = Duration(seconds=0.2).to_msg()
+                    marker.lifetime = Duration(seconds=0.1).to_msg()
                     bbox_marker_array.markers.append(marker)
         # Publish final marker array
         if pose_marker_array.markers is not None:
