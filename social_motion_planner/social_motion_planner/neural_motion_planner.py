@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 import os
 import rclpy
-from rclpy.time import Time
 import numpy as np
 from math import hypot
 from tf_transformations import euler_from_quaternion
@@ -10,13 +9,9 @@ from rclpy.qos import QoSDurabilityPolicy, QoSHistoryPolicy, QoSReliabilityPolic
 from rclpy.qos import QoSProfile
 from rclpy.node import Node
 from rclpy.duration import Duration
-# import message filters functionalities
-from message_filters import Subscriber, ApproximateTimeSynchronizer
 
-from action_msgs.msg import GoalStatus
-from nav_msgs.msg import OccupancyGrid
-from geometry_msgs.msg import Point, PointStamped, Twist, Pose, PoseStamped
-from nav_msgs.msg import Odometry, Path
+from nav_msgs.msg import OccupancyGrid, Odometry
+from geometry_msgs.msg import Point, PointStamped, Twist, PoseStamped
 from visualization_msgs.msg import Marker, MarkerArray
 from soloco_interfaces.msg import TrackedPersons
 
@@ -25,9 +20,6 @@ from social_motion_planner.models.CEM_policy_IAR import CEM_IAR
 from social_motion_planner.occupancy_grid_manager import OccupancyGridManager
 # from social_motion_planner.utils import point_transform, pose_transform
 from launch_ros.substitutions import FindPackageShare
-
-from tf2_geometry_msgs import do_transform_pose, do_transform_point
-from tf2_ros import Buffer, TransformListener, TransformException
 
 class NeuralMotionPlanner(Node):
     def __init__(self):
@@ -46,11 +38,11 @@ class NeuralMotionPlanner(Node):
         self.initialize_node()
         # Setup publishers and subscribers
         self.setup_publishers_and_subscribers()
-        
+
     def declare_ros_parameters(self):
         # Declare topic parameters
         self.declare_parameter('odom_topic', 'locobot/odom')
-        self.declare_parameter('goal_pose_topic', 'goal_pose')
+        self.declare_parameter('global_goal_topic', 'global_goal_republished')
         self.declare_parameter('subgoal_topic', 'subgoal_pose')
         self.declare_parameter('costmap_topic', 'local_costmap/costmap')
         self.declare_parameter('cmd_vel_topic', 'locobot/commands/vedlocity')
@@ -81,9 +73,6 @@ class NeuralMotionPlanner(Node):
         self.declare_parameter('max_history_length', 7) # [maximum history length]
         self.declare_parameter('interp_interval', 0.4) # [interpolation interval]
         self.declare_parameter('controller_frequency', 20.0) # [controller frequency]
-        # Create tf buffer and transform listener   
-        self.tf_buffer = Buffer()
-        self.transform_listener = TransformListener(self.tf_buffer, self)
 
     def initialize_node(self):
         # Device to use
@@ -113,7 +102,7 @@ class NeuralMotionPlanner(Node):
         self.ped_pos_xy_cem = np.ones((self.max_history_length + 1, self.max_num_agents + 1, 2)) * 500 # placeholder value
         self.new_goal = False
         self.global_goal = None
-        self.goal_pose = None
+        self.subgoal_pose = None
         self.goal_tolerance = self.get_parameter('goal_tolerance').get_parameter_value().double_value
         self.ogm = None
         # Initialize model
@@ -133,7 +122,7 @@ class NeuralMotionPlanner(Node):
     def setup_publishers_and_subscribers(self):
         # Get ROS parameters
         odom_topic = self.get_parameter('odom_topic').get_parameter_value().string_value
-        goal_pose_topic = self.get_parameter('goal_pose_topic').get_parameter_value().string_value
+        global_goal_topic = self.get_parameter('global_goal_topic').get_parameter_value().string_value
         subgoal_topic = self.get_parameter('subgoal_topic').get_parameter_value().string_value
         costmap_topic = self.get_parameter('costmap_topic').get_parameter_value().string_value
         cmd_vel_topic = self.get_parameter('cmd_vel_topic').get_parameter_value().string_value
@@ -145,7 +134,7 @@ class NeuralMotionPlanner(Node):
         self.cmd_vel_publisher = self.create_publisher(Twist, cmd_vel_topic, self.pose_qos)
         self.agent_future_publisher = self.create_publisher(MarkerArray, future_topic, self.pose_qos)
         # Subscribers
-        self.goal_pose_sub = self.create_subscription(PoseStamped, goal_pose_topic, self.goal_callback, self.pose_qos) 
+        self.global_goal_sub = self.create_subscription(PoseStamped, global_goal_topic, self.goal_callback, self.pose_qos) 
         self.subgoal_sub = self.create_subscription(PoseStamped, subgoal_topic, self.subgoal_callback, self.pose_qos) 
         # self.human_sub = self.create_subscription(TrackedPersons, human_track_topic, self.human_callback, self.pose_qos)
         self.marker_sub = self.create_subscription(MarkerArray, tracks_marker_topic, self.marker_callback, self.pose_qos)
@@ -158,23 +147,11 @@ class NeuralMotionPlanner(Node):
 
         self.timer = self.create_timer(self.timer_period, self.timer_callback)
 
-        # Subscriber for synced update
-        # self.ego_sub = Subscriber(self, Odometry, odom_topic)
-        # self.costmap_sub = Subscriber(self, OccupancyGrid, costmap_topic)
-        
-        # Sync messages with slop (max delay) = 0.1 seconds
-        # time_sync = ApproximateTimeSynchronizer([self.ego_sub, self.costmap_sub], queue_size=10, slop=0.1)
-        # time_sync.registerCallback(self.common_callback)
-
     def goal_callback(self, goal_msg):
         self.new_goal = True
         self.get_logger().info(f'New global goal received in {goal_msg.header.frame_id} frame.')
         curr_goal = PoseStamped()
-        if goal_msg.header.frame_id != self.pub_frame_id:
-            curr_goal.pose = self.pose_transform(goal_msg.pose, self.pub_frame_id, goal_msg.header.frame_id)
-            self.get_logger().info('Goal transformed to publishing frame.')
-        else:
-            curr_goal = goal_msg
+        curr_goal = goal_msg
 
         ori = curr_goal.pose.orientation
         quat = (ori.x, ori.y, ori.z, ori.w)
@@ -191,7 +168,7 @@ class NeuralMotionPlanner(Node):
         goal_yaw = euler_from_quaternion(quat)
         goal = [goal_msg.pose.position.x, goal_msg.pose.position.y, goal_yaw[2]]
         
-        self.goal_pose = np.array(goal)
+        self.subgoal_pose = np.array(goal)
 
     def marker_callback(self, marker_msg):
         self.ped_pos_xy_cem = np.ones((self.max_history_length + 1, self.max_num_agents + 1, 2)) * 99
@@ -227,9 +204,9 @@ class NeuralMotionPlanner(Node):
     def timer_callback(self):
         if self.global_goal is not None and self.ogm is not None:
             # If global goal is new
-            if self.new_goal == True and self.robot_model == 'differential_drive':
-                yaw_diff = self.global_goal[2] - self.robot_yaw[2]
-                self.spin_robot_in_subgoal_direction(yaw_diff)
+            # if self.new_goal == True and self.robot_model == 'differential_drive':
+            #     yaw_diff = self.global_goal[2] - self.robot_yaw[2]
+            #     self.spin_robot_in_subgoal_direction(yaw_diff)
 
             # Calculate euclidian distance to subgoal
             distance_to_goal = hypot((self.r_pos_xy[0]-self.global_goal[0]), 
@@ -265,29 +242,6 @@ class NeuralMotionPlanner(Node):
             self.new_goal = False
             self.get_logger().info("Spin in goal direction completed.")
 
-    def pose_transform(self, curr_pose, output_frame, input_frame):
-        transformed_pose = Pose()
-        success = False
-        while not success:
-            try:
-                tf = self.tf_buffer.lookup_transform(output_frame, input_frame, Time())
-                transformed_pose = do_transform_pose(curr_pose, tf)
-            except TransformException as ex:
-                self.get_logger().warning(f"Failed to transform: '{ex}'.")
-            if transformed_pose: success = True
-        
-        return transformed_pose
-
-    def point_transform(self, curr_point, output_frame, input_frame):
-        transformed_point = Point()
-        try:
-            tf = self.tf_buffer.lookup_transform(output_frame, input_frame, Time())
-            transformed_point = do_transform_point(curr_point, tf)
-        except TransformException as ex:
-            self.get_logger().warning(f"Failed to transform: '{ex}'.")
-            
-        return transformed_point if transformed_point else None
-
     def visualize_future(self, current_future):
         agent_marker = MarkerArray()
         for i, track in enumerate(current_future):
@@ -298,7 +252,7 @@ class NeuralMotionPlanner(Node):
             marker.header.stamp = self.get_clock().now().to_msg()
             marker.type = marker.LINE_STRIP
             marker.action = marker.ADD
-            marker.lifetime = Duration(seconds=1.0).to_msg()
+            marker.lifetime = Duration(seconds=0.05).to_msg()
             marker.scale.x = 0.05
             if i == 0:
                 marker.color.r = 0.0
@@ -317,7 +271,6 @@ class NeuralMotionPlanner(Node):
                 p = PointStamped()
                 p.point.x = float(point[0])
                 p.point.y = float(point[1])
-                pos = self.point_transform(p, "map", self.pub_frame_id)
                 track_points.append(p.point)
             marker.points = track_points
             agent_marker.markers.append(marker)
