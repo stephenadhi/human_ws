@@ -25,7 +25,7 @@ class interpolatedTracklet:
         self.max_history_length = max_history_length
         self.interp_interval = interp_interval
         # Deque object as cache for saving history
-        self.track = deque(maxlen=90)
+        self.track = deque(maxlen=200)
         # Create padding array to assign zeros for unknown future positions
         self.arr_interp_padded = np.zeros([self.max_history_length + 1, 2])
         # Add interpolated point
