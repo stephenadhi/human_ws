@@ -9,8 +9,8 @@ int8 tracking_state
 # 1 -> OK
 # 2 -> SEARCHING (occlusion occurred, trajectory is estimated)
 
-# The following fields are extracted from the Kalman state x and its covariance C
-geometry_msgs/PoseStamped  current_pose      # current pose of the track 
+# Current pose of the person
+geometry_msgs/PoseStamped  current_pose
 
 # Bounding box dimensions
 float32 bbox_x_length
@@ -18,4 +18,4 @@ float32 bbox_y_length
 float32 bbox_z_length
 
 # interpolated pose history of the track
-nav_msgs/Path track     
+nav_msgs/Path track
