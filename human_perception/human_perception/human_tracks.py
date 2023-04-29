@@ -24,7 +24,6 @@ class HumanTrackPublisher(Node):
             reliability=ReliabilityPolicy.RELIABLE,
             durability=DurabilityPolicy.VOLATILE)
         # Declare parameters
-        self.declare_parameter('robot_odom_topic', 'locobot/odom')
         self.declare_parameter('detected_obj_topic', 'zed2/zed_node/obj_det/objects')
         self.declare_parameter('human_track_topic', 'human/interpolated_history')
         self.declare_parameter('pose_marker_topic', 'visualization/human_tracks')
