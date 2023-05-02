@@ -6,7 +6,7 @@ human_perception:
       # Publisher topics
       human_track_topic: "human/interpolated_history"
       pose_marker_topic: "visualization/human_tracks"
-      bounding_box_topic: "visualization/bounding_boxes"
+      bounding_box_topic: "visualization/human_bounding_boxes"
       pub_frame_id: "locobot/odom"
       # Parameters
       pub_frame_rate: 10.0      # publishing rate of human tracks
