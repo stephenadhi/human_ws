@@ -13,7 +13,7 @@ from rclpy.duration import Duration
 from nav_msgs.msg import OccupancyGrid, Odometry
 from geometry_msgs.msg import Point, PointStamped, Twist, PoseStamped
 from visualization_msgs.msg import Marker, MarkerArray
-from soloco_interfaces.msg import TrackedPersons
+from soloco_interfaces.msg import TrackedPersons, EgoTrajectory
 
 from social_motion_planner.models.DWA import DWA
 from social_motion_planner.models.CEM_policy_IAR import CEM_IAR
@@ -46,8 +46,8 @@ class NeuralMotionPlanner(Node):
         self.declare_parameter('subgoal_topic', 'subgoal_pose')
         self.declare_parameter('costmap_topic', 'local_costmap/costmap')
         self.declare_parameter('cmd_vel_topic', 'locobot/commands/vedlocity')
-        self.declare_parameter('human_track_topic', 'human/tracks')
-        self.declare_parameter('tracks_marker_topic', 'visualization/tracks')       
+        self.declare_parameter('human_track_topic', 'human/interpolated_history')
+        self.declare_parameter('robot_track_topic', 'robot/ego_trajectory')      
         self.declare_parameter('future_topic', 'visualization/predicted_future')
         self.declare_parameter('pub_frame_id', 'locobot/odom')
         # Device to use: 'gpu' or 'cpu'
@@ -127,7 +127,7 @@ class NeuralMotionPlanner(Node):
         costmap_topic = self.get_parameter('costmap_topic').get_parameter_value().string_value
         cmd_vel_topic = self.get_parameter('cmd_vel_topic').get_parameter_value().string_value
         human_track_topic = self.get_parameter('human_track_topic').get_parameter_value().string_value
-        tracks_marker_topic = self.get_parameter('tracks_marker_topic').get_parameter_value().string_value
+        robot_track_topic = self.get_parameter('robot_track_topic').get_parameter_value().string_value
         future_topic = self.get_parameter('future_topic').get_parameter_value().string_value
         self.pub_frame_id = self.get_parameter("pub_frame_id").get_parameter_value().string_value
         # Publishers
@@ -136,8 +136,8 @@ class NeuralMotionPlanner(Node):
         # Subscribers
         self.global_goal_sub = self.create_subscription(PoseStamped, global_goal_topic, self.goal_callback, self.pose_qos) 
         self.subgoal_sub = self.create_subscription(PoseStamped, subgoal_topic, self.subgoal_callback, self.pose_qos) 
-        # self.human_sub = self.create_subscription(TrackedPersons, human_track_topic, self.human_callback, self.pose_qos)
-        self.marker_sub = self.create_subscription(MarkerArray, tracks_marker_topic, self.marker_callback, self.pose_qos)
+        self.human_sub = self.create_subscription(TrackedPersons, human_track_topic, self.human_callback, self.pose_qos)
+        self.trajectory_sub = self.create_subscription(EgoTrajectory, robot_track_topic, self.trajectory_callback, self.pose_qos)
         
         self.costmap_sub = self.create_subscription(OccupancyGrid, costmap_topic, self.costmap_callback, self.pose_qos)
         self.odom_sub = self.create_subscription(Odometry, odom_topic, self.odom_callback, self.pose_qos)
@@ -170,18 +170,16 @@ class NeuralMotionPlanner(Node):
         
         self.subgoal_pose = np.array(goal)
 
-    def marker_callback(self, marker_msg):
-        self.ped_pos_xy_cem = np.ones((self.max_history_length + 1, self.max_num_agents + 1, 2)) * 99
-        for i, ped in enumerate(marker_msg.markers):
-            coords_array = np.array([[e.x, e.y] for e in ped.points])
-            self.ped_pos_xy_cem[:, i] = coords_array[::-1]
+    def trajectory_callback(self, robot_msg):
+        # Update robot state (Robot ID: 0)
+        for pos_idx, past_pos in enumerate(robot_msg.track.poses):                
+            self.ped_pos_xy_cem[pos_idx, 0, :]  = np.array([past_pos.pose.position.x, past_pos.pose.position.y])
 
-    # def human_callback(self, human_msg):
-    #     # update people state
-    #     for person_idx, person in enumerate(human_msg.tracks):
-    #         for pos_idx, past_pos in enumerate(person.track):
-    #             coords_array = np.array([past_pos.position.x, past_pos.position.y])
-    #             self.ped_pos_xy_cem[pos_idx, person_idx, :] = coords_array[::-1]
+    def human_callback(self, human_msg):
+        # update people state (ID 0 is reserved for robot)
+        for person_idx, person in enumerate(human_msg.tracks):
+            for pos_idx, past_pos in enumerate(person.track.poses):
+                self.ped_pos_xy_cem[pos_idx, person_idx + 1, :] = np.array([past_pos.pose.position.x, past_pos.pose.position.y])
 
     def costmap_callback(self, costmap_msg):
         # Send costmap to occupancy grid manager
