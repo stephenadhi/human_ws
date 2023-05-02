@@ -103,6 +103,9 @@ class HumanTrackPublisher(Node):
                                 self.new_object = False
                                 curr_time_ = self.get_clock().now()
                                 self.interpolated_tracklets[idx].add_interpolated_point(curr_pose_pub_frame, curr_time_)
+                                # Update curent pose to the last interpolated pose
+                                person.current_pose = curr_pose_pub_frame
+                                # Stamp update time
                                 person.track.header.stamp = curr_time_.to_msg()
                                 self.idx = idx
                                 break
@@ -138,7 +141,7 @@ class HumanTrackPublisher(Node):
               self.people.tracks[person_idx].track.poses.append(pose_xy)
           else:
               self.people.tracks[person_idx].track.poses[i] = pose_xy
-
+      # Stamp update time
       self.people.tracks[person_idx].track.header.stamp = self.get_clock().now().to_msg()
 
     """Publishing, pruning, and visualization function independent of sensor callback"""
@@ -205,19 +208,19 @@ class HumanTrackPublisher(Node):
                     marker.id = person.track_id + 1000
                     marker.header.frame_id = self.pub_frame_id
                     marker.header.stamp = self.get_clock().now().to_msg()
-                    marker.type = marker.CUBE
+                    marker.type = marker.CYLINDER
                     marker.action = marker.ADD
                     marker.pose.position.x = person.current_pose.pose.position.x
                     marker.pose.position.y = person.current_pose.pose.position.y
                     marker.pose.position.z = 1.80 / 2.0
-                    marker.scale.x = 0.20
-                    marker.scale.y = 0.20
+                    marker.scale.x = 0.40
+                    marker.scale.y = 0.40
                     marker.scale.z = 1.80
-                    marker.color.a = 0.4
-                    marker.color.r = 0.0
-                    marker.color.g = 0.9
-                    marker.color.b = 0.0
-                    marker.lifetime = Duration(seconds=0.1).to_msg()
+                    marker.color.a = 1.0
+                    marker.color.r = 0.5
+                    marker.color.g = 0.5
+                    marker.color.b = 0.5
+                    marker.lifetime = Duration(seconds=0.11).to_msg()
                     bbox_marker_array.markers.append(marker)
         # Publish final marker array
         if pose_marker_array.markers is not None:
