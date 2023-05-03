@@ -1,4 +1,0 @@
-#ifndef TRACK_PUBLISHER_HPP_
-#define TRACK_PUBLISHER_HPP_
-
-#endif /* TRACK_PUBLISHER_HPP_ */

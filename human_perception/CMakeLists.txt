@@ -21,7 +21,28 @@ find_package(tf2_geometry_msgs REQUIRED)
 find_package(eigen3_cmake_module REQUIRED)
 find_package(Eigen3 REQUIRED)
 
-include_directories(${GSL_INCLUDE_DIRS})
+set(dependencies
+    rclcpp
+    soloco_interfaces
+    tf2_geometry_msgs
+    tf2_ros
+    tf2
+)
+
+include_directories(
+include
+${GSL_INCLUDE_DIRS}
+)
+
+add_executable(human_tf2_publisher src/human_tf2_publisher.cpp)
+ament_target_dependencies(human_tf2_publisher ${dependencies})
+
+install(TARGETS
+  human_tf2_publisher
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION lib/${PROJECT_NAME}
+)
 
 # Install Python modules
 ament_python_install_package(${PROJECT_NAME})
