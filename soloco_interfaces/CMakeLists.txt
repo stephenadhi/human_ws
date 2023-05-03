@@ -18,6 +18,8 @@ set(msg_files
   "msg/EgoTrajectory.msg"
   "msg/TrackedPerson.msg"
   "msg/TrackedPersons.msg"
+  "msg/TrackedAgent.msg"
+  "msg/TrackedAgents.msg"
   DEPENDENCIES builtin_interfaces zed_interfaces geometry_msgs std_msgs nav_msgs
 )
 
