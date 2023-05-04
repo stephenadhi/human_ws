@@ -171,15 +171,17 @@ class NeuralMotionPlanner(Node):
         self.subgoal_pose = np.array(goal)
 
     def trajectory_callback(self, robot_msg):
+        # self.get_logger().info('Robot trajectory received.')
         # Update robot state (Robot ID: 0)
-        for pos_idx, past_pos in enumerate(robot_msg.track.poses):                
-            self.ped_pos_xy_cem[pos_idx, 0, :]  = np.array([past_pos.pose.position.x, past_pos.pose.position.y])
+        coords_array = np.array([[e.pose.position.x, e.pose.position.y] for e in robot_msg.track.poses])
+        self.ped_pos_xy_cem[:, 0] = coords_array[::-1]
 
     def human_callback(self, human_msg):
+        # self.get_logger().info('Human trajectory received.')
         # update people state (ID 0 is reserved for robot)
         for person_idx, person in enumerate(human_msg.tracks):
-            for pos_idx, past_pos in enumerate(person.track.poses):
-                self.ped_pos_xy_cem[pos_idx, person_idx + 1, :] = np.array([past_pos.pose.position.x, past_pos.pose.position.y])
+            coords_array = np.array([[e.pose.position.x, e.pose.position.y] for e in person.track.poses])
+            self.ped_pos_xy_cem[:, person_idx+1] = coords_array[::-1]
 
     def costmap_callback(self, costmap_msg):
         # Send costmap to occupancy grid manager
