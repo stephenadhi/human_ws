@@ -66,15 +66,12 @@ class GlobalNav2Client(Node):
         goal_msg.start = start_pose
         goal_msg.planner_id = "GridBased"
 
-        while not self.compute_path_to_pose_client.wait_for_server(timeout_sec=1.0):
-            self.get_logger.info("'ComputePathToPose' action server not available, waiting...")
-
         send_goal_future = self.compute_path_to_pose_client.send_goal_async(goal=goal_msg)
-        # rclpy.spin_until_future_complete(self, send_goal_future)
-        # self.goal_handle = send_goal_future.result()
+        rclpy.spin_until_future_complete(self, send_goal_future)
+        self.goal_handle = send_goal_future.result()
 
-        # if not self.goal_handle.accepted:
-        #     self.get_logger().error('Get path was rejected!')
+        if not self.goal_handle.accepted:
+            self.get_logger().error('Get path was rejected!')
         #     return None
         # self.result_future = self.goal_handle.get_result_async()
         # rclpy.spin_until_future_complete(self, self.result_future)
