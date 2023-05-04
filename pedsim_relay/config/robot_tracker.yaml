@@ -1,0 +1,12 @@
+human_perception:
+  robot_tracker:
+    # Parameters for robot_track_publisher.cpp
+    ros_parameters:
+      odom_topic: "locobot/odom"
+      robot_track_topic: "robot/ego_trajectory"
+      robot_marker_topic: "visualization/robot_track"
+      pub_frame_id: "locobot/odom"
+      max_history_length: 7
+      interp_interval: 0.4
+      delay_tolerance: 0.1 # currently not used
+    
