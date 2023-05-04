@@ -99,7 +99,7 @@ class HumanTrackPublisher(Node):
                         idx = 0
                         for person in self.people.tracks:
                             if person.track_id == obj_id:
-                                self.get_logger().info(f'Track ID Matched: {person.track_id}, idx: {idx}')
+                                # self.get_logger().info(f'Track ID Matched: {person.track_id}, idx: {idx}')
                                 self.new_object = False
                                 curr_time_ = self.get_clock().now()
                                 self.interpolated_tracklets[idx].add_interpolated_point(curr_pose_pub_frame, curr_time_)
@@ -166,7 +166,7 @@ class HumanTrackPublisher(Node):
             idx += 1
         # Delete old tracks
         for id in idx_to_delete:
-            self.get_logger().info(f'Deleting old track with ID: {self.people.tracks[id].track_id}')
+            self.get_logger().info(f'Deleting old track with ID: {id}')
             del self.people.tracks[id]
             del self.interpolated_tracklets[id]
             
