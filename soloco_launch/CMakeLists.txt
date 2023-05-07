@@ -11,7 +11,7 @@ find_package(ament_cmake REQUIRED)
 
 # Install launch files and directories.
 install(DIRECTORY
-        config launch rviz worlds ${PROJECT_NAME}
+        config launch rviz worlds
         DESTINATION share/${PROJECT_NAME}
         )
 
