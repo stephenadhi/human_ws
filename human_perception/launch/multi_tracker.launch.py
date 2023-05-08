@@ -55,6 +55,13 @@ def generate_launch_description():
         parameters=[robot_tracker_config],
     )
 
+    multi_track_visualizer_cmd = Node(
+        package='human_perception',
+        executable='multi_track_visualizer.py', # 'robot_track_publisher'
+        name='multi_track_visualizer',
+        output='screen',
+    )
+
     multi_tracking_rviz2_cmd = Node(
         condition=IfCondition(use_rviz),
         package='rviz2',
@@ -69,6 +76,7 @@ def generate_launch_description():
     ld.add_action(declare_use_rviz_cmd)
     ld.add_action(human_track_publisher_cmd)
     ld.add_action(robot_track_publisher_cmd)
+    ld.add_action(multi_track_visualizer_cmd)
     ld.add_action(multi_tracking_rviz2_cmd)
     
     return ld

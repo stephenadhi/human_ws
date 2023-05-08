@@ -2,12 +2,10 @@
 
 import rclpy
 from rclpy.node import Node
-from rclpy.duration import Duration
 from rclpy.time import Time
 from rclpy.qos import QoSProfile, DurabilityPolicy, ReliabilityPolicy
 
-from geometry_msgs.msg import Point, Pose, PoseStamped, Quaternion
-from visualization_msgs.msg import Marker, MarkerArray
+from geometry_msgs.msg import Pose, PoseStamped, Quaternion
 from zed_interfaces.msg import ObjectsStamped
 from soloco_interfaces.msg import TrackedPerson, TrackedPersons
 
@@ -26,8 +24,6 @@ class HumanTrackPublisher(Node):
         # Declare parameters
         self.declare_parameter('detected_obj_topic', 'zed2/zed_node/obj_det/objects')
         self.declare_parameter('human_track_topic', 'human/interpolated_history')
-        self.declare_parameter('pose_marker_topic', 'visualization/human_tracks')
-        self.declare_parameter('bounding_box_topic', 'visualization/bounding_boxes')
         self.declare_parameter('pub_frame_id', 'locobot/odom')
         self.declare_parameter('pub_frame_rate', 15.0)
         self.declare_parameter('interp_interval', 0.4)
@@ -35,13 +31,10 @@ class HumanTrackPublisher(Node):
         self.declare_parameter('max_history_length', 7)
         self.declare_parameter('max_num_agents', 5)
         self.declare_parameter('track_timeout', 2.0)
-        self.declare_parameter('visualize_bbox', False) 
 
         # Get parameter values
         detected_obj_topic = self.get_parameter('detected_obj_topic').get_parameter_value().string_value
         human_track_topic = self.get_parameter('human_track_topic').get_parameter_value().string_value
-        pose_marker_topic = self.get_parameter('pose_marker_topic').get_parameter_value().string_value
-        bounding_box_topic = self.get_parameter('bounding_box_topic').get_parameter_value().string_value
         self.pub_frame_id = self.get_parameter("pub_frame_id").get_parameter_value().string_value
         self.pub_frame_rate = self.get_parameter("pub_frame_rate").get_parameter_value().double_value
         self.interp_interval = self.get_parameter("interp_interval").get_parameter_value().double_value
@@ -49,25 +42,18 @@ class HumanTrackPublisher(Node):
         self.max_history_length = self.get_parameter("max_history_length").get_parameter_value().integer_value
         self.max_num_agents = self.get_parameter('max_num_agents').get_parameter_value().integer_value
         self.track_timeout = self.get_parameter('track_timeout').get_parameter_value().double_value
-        self.visualize_bbox = self.get_parameter("visualize_bbox").get_parameter_value().bool_value    
-        # Create subscribers
+        # Create subscriber
         self.zed_sub = self.create_subscription(ObjectsStamped, detected_obj_topic, self.zed_callback, qos)
-        
-        # Create publishers
+        # Create publisher
         self.human_track_interpolated_pub = self.create_publisher(TrackedPersons, human_track_topic, qos)
-        self.pose_markers_pub = self.create_publisher(MarkerArray, pose_marker_topic, 10)
-        self.bbox_markers_pub = self.create_publisher(MarkerArray, bounding_box_topic, 10)
-        # Timer for publishing, visualization and pruning old data
+        # Create timer for publishing, visualization and pruning old data
         timer_period = 1/self.pub_frame_rate  # seconds
         self.timer = self.create_timer(timer_period, self.timer_callback)
-        
         # Create tf buffer and transform listener   
         self.tf_buffer = Buffer()
         self.transform_listener = TransformListener(self.tf_buffer, self)
-
         # Bool to check object ID
         self.new_object = True
-        
         # Create cache for updating people and robot history
         self.people = TrackedPersons()
         self.idx = len(self.people.tracks) - 1
@@ -144,13 +130,11 @@ class HumanTrackPublisher(Node):
       # Stamp update time
       self.people.tracks[person_idx].track.header.stamp = self.get_clock().now().to_msg()
 
-    """Publishing, pruning, and visualization function independent of sensor callback"""
+    """Publishing and pruning function independent of sensor callback"""
     def timer_callback(self):
         if self.interpolated_tracklets:
             # Publish human tracks
             self.human_track_interpolated_pub.publish(self.people)
-            # Visualize markers for detected person(s) track and robot track
-            self.visualize_markers()
             # Delete entries of interpolated points
             self.prune_old_interpolated_points(self.get_clock().now())
 
@@ -169,63 +153,6 @@ class HumanTrackPublisher(Node):
             self.get_logger().info(f'Deleting old track with ID: {id}')
             del self.people.tracks[id]
             del self.interpolated_tracklets[id]
-            
-    def visualize_markers(self):
-        pose_marker_array = MarkerArray() 
-        bbox_marker_array = MarkerArray()
-
-        if len(self.people.tracks) != 0:
-            # self.get_logger().info(f'There are {len(self.people.tracks)} person(s) detected')
-            for person in self.people.tracks:
-                # self.get_logger().info(f'Person has {len(person.track.poses)} poses')
-                person_marker_points = []
-                for i in range(self.max_history_length + 1):
-                    point = Point()
-                    point.x = person.track.poses[i].pose.position.x
-                    point.y = person.track.poses[i].pose.position.y
-                    # Append point to person_track
-                    person_marker_points.append(point)
-                # Create new marker for each person track
-                marker = Marker()
-                marker.ns = "human"
-                marker.id = person.track_id
-                marker.header.frame_id = self.pub_frame_id
-                marker.header.stamp = self.get_clock().now().to_msg()
-                marker.type = marker.LINE_STRIP
-                marker.action = marker.ADD
-                marker.color.a = 1.0
-                marker.color.r = 1.0
-                marker.color.g = 0.0
-                marker.color.b = 0.0
-                marker.scale.x = 0.05
-                marker.points = person_marker_points
-                marker.lifetime = Duration(seconds=0.1).to_msg()
-                pose_marker_array.markers.append(marker)
-                # Create bounding box marker for the person
-                if self.visualize_bbox:
-                    marker = Marker()
-                    marker.ns = "human"
-                    marker.id = person.track_id + 1000
-                    marker.header.frame_id = self.pub_frame_id
-                    marker.header.stamp = self.get_clock().now().to_msg()
-                    marker.type = marker.CYLINDER
-                    marker.action = marker.ADD
-                    marker.pose.position.x = person.current_pose.pose.position.x
-                    marker.pose.position.y = person.current_pose.pose.position.y
-                    marker.pose.position.z = 1.80 / 2.0
-                    marker.scale.x = 0.40
-                    marker.scale.y = 0.40
-                    marker.scale.z = 1.80
-                    marker.color.a = 1.0
-                    marker.color.r = 0.5
-                    marker.color.g = 0.5
-                    marker.color.b = 0.5
-                    marker.lifetime = Duration(seconds=0.11).to_msg()
-                    bbox_marker_array.markers.append(marker)
-        # Publish final marker array
-        if pose_marker_array.markers is not None:
-            self.pose_markers_pub.publish(pose_marker_array)
-            self.bbox_markers_pub.publish(bbox_marker_array)
 
 def main(args=None):
     rclpy.init(args=args)
