@@ -2,7 +2,7 @@
 
 import rclpy
 from nav_msgs.msg import OccupancyGrid
-from map_msgs.msg import OccupancyGridUpdate
+# from map_msgs.msg import OccupancyGridUpdate
 from nav_msgs.msg import Path
 from geometry_msgs.msg import PoseStamped
 import numpy as np
@@ -11,7 +11,7 @@ from itertools import product
 """
 Class to deal with OccupancyGrid in Python
 as in local / global costmaps.
-Author: Sammy Pfeiffer <Sammy.Pfeiffer at student.uts.edu.au>
+Author: Sammy Pfeiffer <Sammy.Pfeiffer at student.uts.edu.au> 
 """
 
 class OccupancyGridManager(object):
