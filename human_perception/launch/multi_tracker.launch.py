@@ -47,6 +47,14 @@ def generate_launch_description():
         parameters=[human_tracker_config],
     )
 
+    human_tf2_publisher_cmd = Node(
+        package='human_perception',
+        executable='human_tf2_publisher', # 'human_track_publisher',
+        name='human_tf2_publisher',
+        output='screen',
+        parameters=[human_tracker_config],
+    )
+
     robot_track_publisher_cmd = Node(
         package='human_perception',
         executable='robot_track.py', # 'robot_track_publisher'
@@ -75,6 +83,7 @@ def generate_launch_description():
     
     ld.add_action(declare_use_rviz_cmd)
     ld.add_action(human_track_publisher_cmd)
+    ld.add_action(human_tf2_publisher_cmd)
     ld.add_action(robot_track_publisher_cmd)
     # ld.add_action(multi_track_visualizer_cmd)
     ld.add_action(multi_tracking_rviz2_cmd)
