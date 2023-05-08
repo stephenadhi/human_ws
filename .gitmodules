@@ -4,3 +4,6 @@
 [submodule "3rdparty/zed-ros2-interfaces"]
 	path = 3rdparty/zed-ros2-interfaces
 	url = https://github.com/stereolabs/zed-ros2-interfaces.git
+[submodule "social_nav2"]
+	path = social_nav2
+	url = https://github.com/stephenadhi/social_nav2.git
