@@ -48,19 +48,9 @@ def generate_launch_description():
         default_value='',
         description='Top-level namespace')
 
-    zed_camera_launch_cmd = IncludeLaunchDescription(
+    zed_perception_launch_cmd = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(os.path.join(
-          human_perception_dir, 'launch', 'zed2.launch.py')),
-        launch_arguments={
-          'use_rviz': 'false',
-        }.items())
-
-    multi_tracker_launch_cmd = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(os.path.join(
-          human_perception_dir, 'launch', 'multi_tracker.launch.py')),
-        launch_arguments={
-          'use_rviz': 'false',
-        }.items())
+          human_perception_dir, 'launch', 'perception.launch.py')))
 
     social_motion_planner_launch_cmd = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(os.path.join(
@@ -80,8 +70,7 @@ def generate_launch_description():
     ld.add_action(declare_robot_name_cmd)
 
     # Add the actions to launch all of the nodes
-    ld.add_action(zed_camera_launch_cmd)
-    ld.add_action(multi_tracker_launch_cmd)
+    ld.add_action(zed_perception_launch_cmd)
     ld.add_action(social_motion_planner_launch_cmd)
 
     return ld
