@@ -15,7 +15,6 @@ def generate_launch_description():
     launch_neural_planner = LaunchConfiguration('launch_neural_planner')   
     map_file = LaunchConfiguration('map_file')
     namespace = LaunchConfiguration('namespace')
-    nav2_param_file = LaunchConfiguration('nav2_param_file')
     robot_model = LaunchConfiguration('robot_model')
     robot_name = LaunchConfiguration('robot_name')
 
@@ -23,10 +22,8 @@ def generate_launch_description():
     bringup_dir = get_package_share_directory('soloco_launch')
     human_perception_dir = get_package_share_directory('human_perception')
     social_motion_planner_dir = get_package_share_directory('social_motion_planner')
-    interbotix_nav_dir = get_package_share_directory('interbotix_xslocobot_nav')
 
     default_map_path = os.path.join(bringup_dir, 'maps', 'tb3_house_demo_crowd.yaml')
-    default_nav2_param_path = os.path.join(interbotix_nav_dir, 'config', 'smac_mppi_nav2_params.yaml')
     
     declare_robot_model_cmd = DeclareLaunchArgument(
         'robot_model',
@@ -45,10 +42,6 @@ def generate_launch_description():
     declare_map_file_cmd = DeclareLaunchArgument(
         'map_file',
         default_value=default_map_path)
-
-    declare_nav2_param_file_cmd = DeclareLaunchArgument(
-        'nav2_param_file',
-        default_value=default_nav2_param_path)
     
     declare_namespace_cmd = DeclareLaunchArgument(
         'namespace',
@@ -76,7 +69,6 @@ def generate_launch_description():
     ld.add_action(declare_launch_neural_planner_cmd)
     ld.add_action(declare_map_file_cmd)
     ld.add_action(declare_namespace_cmd)
-    ld.add_action(declare_nav2_param_file_cmd)
     ld.add_action(declare_robot_model_cmd)
     ld.add_action(declare_robot_name_cmd)
 
