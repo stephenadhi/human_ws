@@ -11,7 +11,8 @@ from launch.substitutions import LaunchConfiguration
 
 
 def generate_launch_description():
-    # Create the launch configuration variables specific to simulation
+    # Create the launch configuration variables
+    launch_neural_planner = LaunchConfiguration('launch_neural_planner')   
     map_file = LaunchConfiguration('map_file')
     namespace = LaunchConfiguration('namespace')
     nav2_param_file = LaunchConfiguration('nav2_param_file')
@@ -37,6 +38,10 @@ def generate_launch_description():
         default_value='locobot',
         description=('name of the robot (could be anything but defaults to `locobot`).'))
 
+    declare_launch_neural_planner_cmd = DeclareLaunchArgument(
+        'launch_neural_planner',
+        default_value='False')
+    
     declare_map_file_cmd = DeclareLaunchArgument(
         'map_file',
         default_value=default_map_path)
@@ -62,16 +67,18 @@ def generate_launch_description():
           social_motion_planner_dir, 'launch', 'social_planner.launch.py')),
         launch_arguments={
           'use_rviz': 'false',
-        }.items())
+        }.items(),
+        condition=IfCondition(launch_neural_planner))
      
     # Create the launch description and populate
     ld = LaunchDescription()
     # Declare the launch options
+    ld.add_action(declare_launch_neural_planner_cmd)
+    ld.add_action(declare_map_file_cmd)
     ld.add_action(declare_namespace_cmd)
     ld.add_action(declare_nav2_param_file_cmd)
     ld.add_action(declare_robot_model_cmd)
     ld.add_action(declare_robot_name_cmd)
-    ld.add_action(declare_map_file_cmd)
 
     # Add the actions to launch all of the nodes
     ld.add_action(zed_camera_launch_cmd)
