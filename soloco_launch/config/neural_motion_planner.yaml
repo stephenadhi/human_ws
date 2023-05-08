@@ -1,0 +1,34 @@
+social_motion_planner:
+  ros__parameters:
+    # Neural model
+    model_name: 'CEM_IAR'
+    use_robot_model: True   # Flag for robot param constrains usage
+    AR_checkpoint: 'models/weights/SIMNoGoal-univ_fast_AR2/checkpoint_with_model.pt'
+    IAR_checkpoint: 'models/weights/SIMNoGoal-univ_IAR_Full_trans/checkpoint_with_model.pt'
+    device: 'cpu'           # Options: 'cuda' or 'cpu'
+    # Goal tolerance
+    goal_tolerance: 0.5
+    lookahead_dist: 2.5
+    # Topic parameters
+    odom_topic: 'locobot/odom'
+    goal_pose_topic: 'global_goal_republished'
+    subgoal_topic: 'subgoal_pose'
+    costmap_topic: 'local_costmap/costmap'
+    cmd_vel_topic: 'locobot/commands/velocity'
+    robot_track_topic: 'robot/ego_trajectory'
+    human_track_topic: 'human/interpolated_history'
+    subgoal_marker_topic: 'visualization/subgoal'
+    future_topic: 'visualization/predicted_future'
+    pub_frame_id: 'locobot/odom'
+    # Robot parameters
+    robot_model: "differential_drive"
+    max_speed: 0.5          # [m/s] # 0.5 locobot
+    min_speed: -0.1         # [m/s]
+    max_yaw_rate: 1.0       # [rad/s]
+    max_accel: 0.5          # [m/s^2]
+    collision_dist: 0.3     # [m]
+    max_num_agents: 5       # [maximum number of people]
+    max_history_length: 7   # [maximum number of human past poses]
+    interp_interval: 0.4    # [s]
+
+    controller_frequency: 10.0 # [Hz]
