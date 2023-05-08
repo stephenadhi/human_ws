@@ -12,6 +12,7 @@ from launch.substitutions import LaunchConfiguration
 
 def generate_launch_description():
     # Create the launch configuration variables
+    launch_neural_planner = LaunchConfiguration('launch_neural_planner')
     map_file = LaunchConfiguration('map_file')
     namespace = LaunchConfiguration('namespace')
     nav2_param_file = LaunchConfiguration('nav2_param_file')
@@ -39,7 +40,7 @@ def generate_launch_description():
 
     declare_launch_neural_planner_cmd = DeclareLaunchArgument(
         'launch_neural_planner',
-        default_value='True')
+        default_value='False')
 
     declare_map_file_cmd = DeclareLaunchArgument(
         'map_file',
