@@ -71,7 +71,7 @@ class HumanTrackPublisher(Node):
                 curr_pose_cam.position.y = float(msg.objects[obj].position[1])
                 curr_pose_cam.position.z = 0.0
                 curr_pose_cam.orientation = Quaternion(x=0.0, y=0.0, z=0.0, w=1.0)
-                # Convert pose to poseStamped in publishing frame (default: 'map')
+                # Convert pose to poseStamped in publishing frame (default: 'odom')
                 curr_pose_pub_frame = PoseStamped()
                 curr_pose_pub_frame.header.stamp = msg.header.stamp
                 curr_pose_pub_frame.header.frame_id = self.pub_frame_id
@@ -112,29 +112,30 @@ class HumanTrackPublisher(Node):
                             interpolatedTracklet(curr_pose_pub_frame, curr_time_, self.max_history_length, self.interp_interval))
                     # Update person track
                     self.update_person_track(person_idx=self.idx)
-  
-    def update_person_track(self, person_idx):
-      # Get interpolated tracklet
-      interpolated_tracklet = self.interpolated_tracklets[person_idx]
-
-      for i in range(self.max_history_length + 1):
-          pose_xy = PoseStamped()
-          pose_xy.header.frame_id = self.pub_frame_id
-          pose_xy.header.stamp.sec = int(self.interp_interval * i * 1000) # milliseconds
-          pose_xy.pose.position.x = interpolated_tracklet.arr_interp_padded[i, 0]
-          pose_xy.pose.position.y = interpolated_tracklet.arr_interp_padded[i, 1]
-          if self.new_object:
-              self.people.tracks[person_idx].track.poses.append(pose_xy)
-          else:
-              self.people.tracks[person_idx].track.poses[i] = pose_xy
-      # Stamp update time
-      self.people.tracks[person_idx].track.header.stamp = self.get_clock().now().to_msg()
-
-    """Publishing and pruning function independent of sensor callback"""
-    def timer_callback(self):
         if self.interpolated_tracklets:
             # Publish human tracks
             self.human_track_interpolated_pub.publish(self.people)
+  
+    def update_person_track(self, person_idx):
+        # Get interpolated tracklet
+        interpolated_tracklet = self.interpolated_tracklets[person_idx]
+
+        for i in range(self.max_history_length + 1):
+            pose_xy = PoseStamped()
+            pose_xy.header.frame_id = self.pub_frame_id
+            pose_xy.header.stamp.sec = int(self.interp_interval * i * 1000) # milliseconds
+            pose_xy.pose.position.x = interpolated_tracklet.arr_interp_padded[i, 0]
+            pose_xy.pose.position.y = interpolated_tracklet.arr_interp_padded[i, 1]
+            if self.new_object:
+                self.people.tracks[person_idx].track.poses.append(pose_xy)
+            else:
+                self.people.tracks[person_idx].track.poses[i] = pose_xy
+        # Stamp update time
+        self.people.tracks[person_idx].track.header.stamp = self.get_clock().now().to_msg()
+
+    """Pruning function independent of sensor callback"""
+    def timer_callback(self):
+        if self.interpolated_tracklets:
             # Delete entries of interpolated points
             self.prune_old_interpolated_points(self.get_clock().now())
 

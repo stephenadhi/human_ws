@@ -24,9 +24,9 @@ class MultiTrackVisualizer(Node):
         self.declare_parameter('robot_marker_topic', 'visualization/robot_track')
         self.declare_parameter('human_track_topic', 'human/interpolated_history')
         self.declare_parameter('pose_marker_topic', 'visualization/human_tracks')
-        self.declare_parameter('bounding_box_topic', 'visualization/bounding_boxes')
+        self.declare_parameter('bounding_box_topic', 'visualization/human_bounding_boxes')
         self.declare_parameter('pub_frame_id', 'locobot/odom')
-        self.declare_parameter('visualize_bbox', False)
+        self.declare_parameter('visualize_bbox', True)
 
         # Get parameter values
         human_track_topic = self.get_parameter('human_track_topic').get_parameter_value().string_value
@@ -78,7 +78,7 @@ class MultiTrackVisualizer(Node):
         for person in msg.tracks:
             # self.get_logger().info(f'Person has {len(person.track.poses)} poses')
             person_marker_points = []
-            for i in range(self.max_history_length + 1):
+            for i in range(len(person.track.poses)):
                 point = Point()
                 point.x = person.track.poses[i].pose.position.x
                 point.y = person.track.poses[i].pose.position.y
@@ -98,10 +98,10 @@ class MultiTrackVisualizer(Node):
             marker.color.b = 0.0
             marker.scale.x = 0.05
             marker.points = person_marker_points
-            marker.lifetime = Duration(seconds=0.1).to_msg()
+            marker.lifetime = Duration(seconds=0.2).to_msg()
             pose_marker_array.markers.append(marker)
             # Create bounding box marker for the person
-            if self.visualize_bbox:
+            if self.visualize_bbox and person.current_pose.pose.position.x != 0.0:
                 marker = Marker()
                 marker.ns = "human"
                 marker.id = person.track_id + 1000
@@ -119,7 +119,7 @@ class MultiTrackVisualizer(Node):
                 marker.color.r = 0.5
                 marker.color.g = 0.5
                 marker.color.b = 0.5
-                marker.lifetime = Duration(seconds=0.11).to_msg()
+                marker.lifetime = Duration(seconds=0.4).to_msg()
                 bbox_marker_array.markers.append(marker)
         # Publish final marker array
         self.pose_markers_pub.publish(pose_marker_array)
