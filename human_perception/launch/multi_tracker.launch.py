@@ -76,7 +76,7 @@ def generate_launch_description():
     ld.add_action(declare_use_rviz_cmd)
     ld.add_action(human_track_publisher_cmd)
     ld.add_action(robot_track_publisher_cmd)
-    ld.add_action(multi_track_visualizer_cmd)
+    # ld.add_action(multi_track_visualizer_cmd)
     ld.add_action(multi_tracking_rviz2_cmd)
     
     return ld

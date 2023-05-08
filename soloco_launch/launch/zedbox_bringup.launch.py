@@ -55,6 +55,13 @@ def generate_launch_description():
           'use_rviz': 'false',
         }.items())
 
+    multi_tracker_launch_cmd = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(os.path.join(
+          human_perception_dir, 'launch', 'multi_tracker.launch.py')),
+        launch_arguments={
+          'use_rviz': 'false',
+        }.items())
+
     social_motion_planner_launch_cmd = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(os.path.join(
           social_motion_planner_dir, 'launch', 'social_planner.launch.py')),
@@ -74,6 +81,7 @@ def generate_launch_description():
 
     # Add the actions to launch all of the nodes
     ld.add_action(zed_camera_launch_cmd)
+    ld.add_action(multi_tracker_launch_cmd)
     ld.add_action(social_motion_planner_launch_cmd)
 
     return ld

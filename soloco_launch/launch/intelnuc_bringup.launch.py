@@ -72,12 +72,12 @@ def generate_launch_description():
           'use_sim_time': 'false',
         }.items())
 
-    multi_tracker_launch_cmd = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(os.path.join(
-          human_perception_dir, 'launch', 'multi_tracker.launch.py')),
-        launch_arguments={
-          'use_rviz': 'false',
-        }.items())
+    multi_track_visualizer_cmd = Node(
+        package='human_perception',
+        executable='multi_track_visualizer.py', # 'robot_track_publisher'
+        name='multi_track_visualizer',
+        output='screen',
+    )
 
     social_motion_planner_launch_cmd = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(os.path.join(
@@ -99,7 +99,7 @@ def generate_launch_description():
 
     # Add the actions to launch all of the nodes
     ld.add_action(slam_bringup_launch_cmd)
-    ld.add_action(multi_tracker_launch_cmd)
+    ld.add_action(multi_track_visualizer_cmd)
     ld.add_action(social_motion_planner_launch_cmd)
 
     return ld
