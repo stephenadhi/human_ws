@@ -79,6 +79,12 @@ def generate_launch_description():
         output='screen',
     )
 
+    human_tf2_publisher_cmd = Node(
+        package='human_perception',
+        executable='human_tf2_publisher', # 'human_track_publisher',
+        name='human_tf2_publisher',
+        output='screen')
+
     social_motion_planner_launch_cmd = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(os.path.join(
           social_motion_planner_dir, 'launch', 'social_planner.launch.py')),
@@ -100,6 +106,7 @@ def generate_launch_description():
     # Add the actions to launch all of the nodes
     ld.add_action(slam_bringup_launch_cmd)
     ld.add_action(multi_track_visualizer_cmd)
+    ld.add_action(human_tf2_publisher_cmd)
     ld.add_action(social_motion_planner_launch_cmd)
 
     return ld
