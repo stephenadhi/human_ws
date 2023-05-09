@@ -7,3 +7,6 @@
 [submodule "social_nav2"]
 	path = social_nav2
 	url = https://github.com/stephenadhi/social_nav2.git
+[submodule "3rdparty/pointcloud_to_laserscan"]
+	path = 3rdparty/pointcloud_to_laserscan
+	url = https://github.com/ros-perception/pointcloud_to_laserscan.git
