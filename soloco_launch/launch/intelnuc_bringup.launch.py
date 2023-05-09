@@ -27,7 +27,7 @@ def generate_launch_description():
     interbotix_nav_dir = get_package_share_directory('interbotix_xslocobot_nav')
 
     default_map_path = os.path.join(bringup_dir, 'maps', 'tb3_house_demo_crowd.yaml')
-    default_nav2_param_path = os.path.join(interbotix_nav_dir, 'config', 'smac_mppi_nav2_params.yaml')
+    default_nav2_param_path = os.path.join(bringup_dir, 'params', 'smac_mppi_nav2_params.yaml')
     
     declare_robot_model_cmd = DeclareLaunchArgument(
         'robot_model',
