@@ -61,7 +61,6 @@ def generate_launch_description():
         ]
     )
 
-
     social_motion_planner_launch_cmd = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(os.path.join(
           social_motion_planner_dir, 'launch', 'social_planner.launch.py')),
@@ -81,7 +80,7 @@ def generate_launch_description():
 
     # Add the actions to launch all of the nodes
     ld.add_action(zed_perception_launch_cmd)
-    ld.add_action(zed_pointcloud_to_laserscan_launch_cmd)
+    # ld.add_action(zed_pointcloud_to_laserscan_launch_cmd)
     ld.add_action(social_motion_planner_launch_cmd)
 
     return ld
