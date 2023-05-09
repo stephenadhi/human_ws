@@ -3,7 +3,7 @@ import os
 from ament_index_python.packages import get_package_share_directory
 
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, TimerAction
 from launch_ros.actions import Node
 from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
@@ -52,9 +52,15 @@ def generate_launch_description():
         PythonLaunchDescriptionSource(os.path.join(
           human_perception_dir, 'launch', 'perception.launch.py')))
 
-    zed_pointcloud_to_laserscan_launch_cmd = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(os.path.join(
-          bringup_dir, 'launch', 'zed_pointcloud_to_laserscan.launch.py')))
+    zed_pointcloud_to_laserscan_launch_cmd = TimerAction(
+        period=30.0,
+        actions=[
+            IncludeLaunchDescription(
+                PythonLaunchDescriptionSource(os.path.join(
+                    bringup_dir, 'launch', 'zed_pointcloud_to_laserscan.launch.py')))
+        ]
+    )
+
 
     social_motion_planner_launch_cmd = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(os.path.join(
