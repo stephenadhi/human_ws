@@ -13,6 +13,7 @@ from launch.substitutions import LaunchConfiguration
 def generate_launch_description():
     # Create the launch configuration variables
     launch_neural_planner = LaunchConfiguration('launch_neural_planner')
+    run_human_tf = LaunchConfiguration('run_human_tf')
     map_file = LaunchConfiguration('map_file')
     namespace = LaunchConfiguration('namespace')
     nav2_param_file = LaunchConfiguration('nav2_param_file')
@@ -41,7 +42,11 @@ def generate_launch_description():
     declare_launch_neural_planner_cmd = DeclareLaunchArgument(
         'launch_neural_planner',
         default_value='False')
-
+    
+    declare_run_human_tf_cmd = DeclareLaunchArgument(
+        'run_human_tf',
+        default_value='False')
+    
     declare_map_file_cmd = DeclareLaunchArgument(
         'map_file',
         default_value=default_map_path)
@@ -83,7 +88,8 @@ def generate_launch_description():
         package='human_perception',
         executable='human_tf2_publisher', # 'human_track_publisher',
         name='human_tf2_publisher',
-        output='screen')
+        output='screen',
+        condition=IfCondition(run_human_tf))
 
     social_motion_planner_launch_cmd = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(os.path.join(
@@ -97,6 +103,7 @@ def generate_launch_description():
     ld = LaunchDescription()
     # Declare the launch options
     ld.add_action(declare_launch_neural_planner_cmd)
+    ld.add_action(declare_run_human_tf_cmd)
     ld.add_action(declare_map_file_cmd)
     ld.add_action(declare_namespace_cmd)
     ld.add_action(declare_nav2_param_file_cmd)
