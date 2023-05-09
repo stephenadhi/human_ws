@@ -52,6 +52,10 @@ def generate_launch_description():
         PythonLaunchDescriptionSource(os.path.join(
           human_perception_dir, 'launch', 'perception.launch.py')))
 
+    zed_pointcloud_to_laserscan_launch_cmd = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(os.path.join(
+          bringup_dir, 'launch', 'zed_pointcloud_to_laserscan.launch.py')))
+
     social_motion_planner_launch_cmd = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(os.path.join(
           social_motion_planner_dir, 'launch', 'social_planner.launch.py')),
@@ -71,6 +75,7 @@ def generate_launch_description():
 
     # Add the actions to launch all of the nodes
     ld.add_action(zed_perception_launch_cmd)
+    ld.add_action(zed_pointcloud_to_laserscan_launch_cmd)
     ld.add_action(social_motion_planner_launch_cmd)
 
     return ld
