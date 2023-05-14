@@ -20,6 +20,7 @@ set(msg_files
   "msg/TrackedPersons.msg"
   "msg/TrackedAgent.msg"
   "msg/TrackedAgents.msg"
+  "msg/SetHumanAction.msg"
   DEPENDENCIES builtin_interfaces zed_interfaces geometry_msgs std_msgs nav_msgs
 )
 

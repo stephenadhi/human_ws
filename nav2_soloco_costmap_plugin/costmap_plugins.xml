@@ -1,0 +1,13 @@
+<class_libraries>
+  <library path="nav2_soloco_cosstmap">
+    <class name="nav2_soloco_costmap_plugin/SocialLayer" 
+      type="nav2_costmap_2d::SocialLayer"  base_class_type="nav2_costmap_2d::Layer">
+      <description>Layer to improve the human-robot interaction of the navigation2.</description>
+    </class>
+    <class name="nav2_soloco_costmap_plugin/PeopleFilterLayer" 
+      type="nav2_costmap_2d::PeopleFilterLayer"  base_class_type="nav2_costmap_2d::Layer">
+      <description>Layer to improve the human-robot interaction of the navigation2.</description>
+    </class>
+  </library>
+</class_libraries>
+
