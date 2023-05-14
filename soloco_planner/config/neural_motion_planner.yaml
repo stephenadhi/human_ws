@@ -1,4 +1,4 @@
-social_motion_planner:
+soloco_planner:
   ros__parameters:
     # Neural model
     model_name: 'CEM_IAR'

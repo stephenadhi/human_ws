@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from social_motion_planner.models.utils import Pooling_net, Hist_Encoder
+from soloco_planner.models.utils import Pooling_net, Hist_Encoder
 
 
 class TrajectoryGeneratorAR(nn.Module):

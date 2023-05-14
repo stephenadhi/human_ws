@@ -23,7 +23,7 @@ def generate_launch_description():
     # Get the launch directory
     bringup_dir = get_package_share_directory('soloco_launch')
     soloco_human_perception_dir = get_package_share_directory('soloco_human_perception')
-    social_motion_planner_dir = get_package_share_directory('social_motion_planner')
+    soloco_planner_dir = get_package_share_directory('soloco_planner')
     interbotix_nav_dir = get_package_share_directory('interbotix_xslocobot_nav')
 
     default_map_path = os.path.join(bringup_dir, 'maps', 'tb3_house_demo_crowd.yaml')
@@ -91,9 +91,9 @@ def generate_launch_description():
         output='screen',
         condition=IfCondition(run_human_tf))
 
-    social_motion_planner_launch_cmd = IncludeLaunchDescription(
+    soloco_planner_launch_cmd = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(os.path.join(
-          social_motion_planner_dir, 'launch', 'social_planner.launch.py')),
+          soloco_planner_dir, 'launch', 'social_planner.launch.py')),
         launch_arguments={
           'use_rviz': 'false',
         }.items(),
@@ -114,6 +114,6 @@ def generate_launch_description():
     ld.add_action(slam_bringup_launch_cmd)
     ld.add_action(multi_track_visualizer_cmd)
     ld.add_action(human_tf2_publisher_cmd)
-    ld.add_action(social_motion_planner_launch_cmd)
+    ld.add_action(soloco_planner_launch_cmd)
 
     return ld

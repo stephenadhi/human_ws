@@ -15,16 +15,16 @@ from geometry_msgs.msg import Point, PointStamped, Twist, PoseStamped
 from visualization_msgs.msg import Marker, MarkerArray
 from soloco_interfaces.msg import TrackedPersons, EgoTrajectory
 
-from social_motion_planner.models.DWA import DWA
-from social_motion_planner.models.CEM_policy_IAR import CEM_IAR
-from social_motion_planner.occupancy_grid_manager import OccupancyGridManager
-# from social_motion_planner.utils import point_transform, pose_transform
+from soloco_planner.models.DWA import DWA
+from soloco_planner.models.CEM_policy_IAR import CEM_IAR
+from soloco_planner.occupancy_grid_manager import OccupancyGridManager
+# from soloco_planner.utils import point_transform, pose_transform
 from launch_ros.substitutions import FindPackageShare
 
 class NeuralMotionPlanner(Node):
     def __init__(self):
         super().__init__('neural_motion_planner')
-        self.pkg_name = 'social_motion_planner'
+        self.pkg_name = 'soloco_planner'
         self.pkg_dir = FindPackageShare(package=self.pkg_name).find(self.pkg_name)
         # define quality of service
         self.pose_qos = QoSProfile(

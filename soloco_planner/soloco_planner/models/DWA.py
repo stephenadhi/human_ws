@@ -3,8 +3,8 @@ import math
 import numpy as np
 import torch
 import os
-from social_motion_planner.models.config import ConfigRobot, ConfigSim, RobotType
-from social_motion_planner.models.AR_fast import TrajectoryGeneratorAR
+from soloco_planner.models.config import ConfigRobot, ConfigSim, RobotType
+from soloco_planner.models.AR_fast import TrajectoryGeneratorAR
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 

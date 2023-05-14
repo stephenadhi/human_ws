@@ -7,15 +7,15 @@ import yaml
 def generate_launch_description():
     # get config file path and loading it
     config_file_path = os.path.join(
-        get_package_share_directory('social_motion_planner'),
+        get_package_share_directory('soloco_planner'),
         'config',
         'neural_motion_planner.yaml'
     )
     with open(config_file_path, 'r') as file:
-        planner_config = yaml.safe_load(file)['social_motion_planner']['ros__parameters']
+        planner_config = yaml.safe_load(file)['soloco_planner']['ros__parameters']
     
-    social_motion_planner_cmd = Node(
-        package='social_motion_planner',
+    soloco_planner_cmd = Node(
+        package='soloco_planner',
         executable='neural_motion_planner.py',
         name='neural_motion_planner',
         output='screen',
@@ -23,7 +23,7 @@ def generate_launch_description():
     )
 
     global_nav2_client_cmd = Node(
-        package='social_motion_planner',
+        package='soloco_planner',
         executable='global_nav2_client.py',
         name='global_nav2_client',
         output='screen',
@@ -31,7 +31,7 @@ def generate_launch_description():
     )
 
     subgoal_publisher_cmd = Node(
-        package='social_motion_planner',
+        package='soloco_planner',
         executable='subgoal_publisher',
         name='subgoal_publisher',
         output='screen',
@@ -41,6 +41,6 @@ def generate_launch_description():
     ld = LaunchDescription()
     ld.add_action(global_nav2_client_cmd)
     ld.add_action(subgoal_publisher_cmd)
-    ld.add_action(social_motion_planner_cmd)
+    ld.add_action(soloco_planner_cmd)
 
     return ld

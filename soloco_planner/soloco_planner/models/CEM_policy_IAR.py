@@ -5,11 +5,11 @@ from torch import nn
 import numpy as np
 import os
 
-from social_motion_planner.models.AR_fast import TrajectoryGeneratorAR
-from social_motion_planner.models.IAR_full_Tranf import TrajectoryGenerator
+from soloco_planner.models.AR_fast import TrajectoryGeneratorAR
+from soloco_planner.models.IAR_full_Tranf import TrajectoryGenerator
 
 torch.autograd.set_detect_anomaly(True)
-from social_motion_planner.data.utils import prepare_states, batched_Robot_coll_smoothed_loss, cart2pol, pol2cart, GaußNLL, actionXYtoROT
+from soloco_planner.data.utils import prepare_states, batched_Robot_coll_smoothed_loss, cart2pol, pol2cart, GaußNLL, actionXYtoROT
 
 
 class Prediction_Model(nn.Module):
