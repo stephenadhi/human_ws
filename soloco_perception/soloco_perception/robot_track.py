@@ -11,7 +11,7 @@ from soloco_interfaces.msg import EgoTrajectory
 
 from tf2_ros import Buffer, TransformListener
 
-from human_perception.utils import interpolatedTracklet, pose_transform
+from soloco_human_perception.utils import interpolatedTracklet, pose_transform
 
 class RobotTrackPublisher(Node):
     def __init__(self):

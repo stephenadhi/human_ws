@@ -20,7 +20,7 @@ def generate_launch_description():
 
     # Get the launch directory
     bringup_dir = get_package_share_directory('soloco_launch')
-    human_perception_dir = get_package_share_directory('human_perception')
+    soloco_human_perception_dir = get_package_share_directory('soloco_human_perception')
     social_motion_planner_dir = get_package_share_directory('social_motion_planner')
 
     default_map_path = os.path.join(bringup_dir, 'maps', 'tb3_house_demo_crowd.yaml')
@@ -50,7 +50,7 @@ def generate_launch_description():
 
     zed_perception_launch_cmd = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(os.path.join(
-          human_perception_dir, 'launch', 'perception.launch.py')))
+          soloco_human_perception_dir, 'launch', 'perception.launch.py')))
 
     zed_pointcloud_to_laserscan_launch_cmd = TimerAction(
         period=30.0,

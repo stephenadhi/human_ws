@@ -1,4 +1,4 @@
-human_perception:
+soloco_human_perception:
   robot_tracker:
     # Parameters for robot_track_publisher.cpp
     ros_parameters:
