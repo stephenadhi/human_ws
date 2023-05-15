@@ -17,7 +17,7 @@
 
 /* Modified by: stephenadhi stephenadhi@gmail.com */
 
-#include "soloco_human_perception/human_tf2_publisher.hpp"
+#include "soloco_perception/human_tf2_publisher.hpp"
 
 using std::placeholders::_1;
 using namespace std::chrono_literals;

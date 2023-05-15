@@ -22,7 +22,7 @@ def generate_launch_description():
 
     # Get the launch directory
     bringup_dir = get_package_share_directory('soloco_launch')
-    soloco_human_perception_dir = get_package_share_directory('soloco_human_perception')
+    soloco_perception_dir = get_package_share_directory('soloco_perception')
     soloco_planner_dir = get_package_share_directory('soloco_planner')
     interbotix_nav_dir = get_package_share_directory('interbotix_xslocobot_nav')
 
@@ -78,14 +78,14 @@ def generate_launch_description():
         }.items())
 
     multi_track_visualizer_cmd = Node(
-        package='soloco_human_perception',
+        package='soloco_perception',
         executable='multi_track_visualizer.py', # 'robot_track_publisher'
         name='multi_track_visualizer',
         output='screen',
     )
 
     human_tf2_publisher_cmd = Node(
-        package='soloco_human_perception',
+        package='soloco_perception',
         executable='human_tf2_publisher', # 'human_track_publisher',
         name='human_tf2_publisher',
         output='screen',

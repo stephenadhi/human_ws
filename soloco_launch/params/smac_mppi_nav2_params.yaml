@@ -4,6 +4,10 @@
 # including recovery.
 bt_navigator:
   ros__parameters:
+    
+    default_nav_to_pose_bt_xml: "/home/locobot/interbotix_ws/src/human_ws/soloco_launch/config/behavior_trees/navigate_to_pose_w_replanning_and_recovery.xml"
+    default_nav_through_poses_bt_xml: "/home/locobot/interbotix_ws/src/human_ws/soloco_launch/config/behavior_trees/navigate_through_poses_w_replanning_and_recovery.xml"
+    
     # Reference frame. (default: map)
     global_frame: locobot/odom
 
@@ -262,15 +266,15 @@ local_costmap:
       # List of mapped plugin names for parameter namespaces and names. Note: Each plugin namespace
       # defined in this list needs to have a plugin parameter defining the type of plugin to be
       # loaded in the namespace.
-      plugins: ["obstacle_layer", "inflation_layer"] # , "people_filter_layer", "social_layer"]
+      plugins: ["obstacle_layer", "inflation_layer", "people_filter_layer"] #, "social_layer"]
 
       people_filter_layer:
-        plugin: "social_nav2_plugins/PeopleFilterLayer"
+        plugin: "nav2_soloco_costmap_plugin/PeopleFilterLayer"
         enabled: True
         tf_prefix: "agent_"
         filter_radius: 0.45
       social_layer:
-        plugin: "social_nav2_plugins/SocialLayer"
+        plugin: "nav2_soloco_costmap_plugin/SocialLayer"
         enabled: True
         debug_only: False
         tf_prefix: "agent_"

@@ -1,4 +1,4 @@
-soloco_human_perception:
+soloco_perception:
   human_tracker:
     ros_parameters:
       # Subscriber topics
