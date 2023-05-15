@@ -11,7 +11,7 @@ from launch.substitutions import LaunchConfiguration
 
 def generate_launch_description():
     # Get the launch directory
-    bringup_dir = get_package_share_directory('human_perception')
+    bringup_dir = get_package_share_directory('soloco_perception')
     launch_dir = os.path.join(bringup_dir, 'launch')
 
     # Create the launch configuration variables

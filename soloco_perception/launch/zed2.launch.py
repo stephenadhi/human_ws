@@ -36,7 +36,7 @@ from launch_ros.actions import Node
 
 # ZED Configurations to be loaded by ZED Node
 default_config_common = os.path.join(
-    get_package_share_directory('human_perception'),
+    get_package_share_directory('soloco_perception'),
     'config',
     'zed',
     'common.yaml'
@@ -86,13 +86,13 @@ def launch_setup(context, *args, **kwargs):
 
     # Configurations to be loaded by ZED Node
     config_camera_path = os.path.join(
-        get_package_share_directory('human_perception'),
+        get_package_share_directory('soloco_perception'),
         'config',
         'zed',
         camera_model_val + '.yaml'
     )
     config_rviz2 = os.path.join(
-        get_package_share_directory('human_perception'),
+        get_package_share_directory('soloco_perception'),
         'rviz',
         camera_name_val + '.rviz'
     )

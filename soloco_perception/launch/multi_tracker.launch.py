@@ -11,26 +11,26 @@ def generate_launch_description():
     use_rviz = LaunchConfiguration('use_rviz')
 
     config_rviz2 = os.path.join(
-        get_package_share_directory('human_perception'),
+        get_package_share_directory('soloco_perception'),
         'rviz',
         'multi_tracking.rviz'
     )
     # get config file path and loading it
     human_config_file = os.path.join(
-        get_package_share_directory('human_perception'),
+        get_package_share_directory('soloco_perception'),
         'config',
         'human_tracker.yaml'
     )
     robot_config_file = os.path.join(
-        get_package_share_directory('human_perception'),
+        get_package_share_directory('soloco_perception'),
         'config',
         'robot_tracker.yaml'
     )
     with open(human_config_file, 'r') as file:
-        human_tracker_config = yaml.safe_load(file)['human_perception']['human_tracker']['ros_parameters']
+        human_tracker_config = yaml.safe_load(file)['soloco_perception']['human_tracker']['ros_parameters']
 
     with open(robot_config_file, 'r') as file:
-        robot_tracker_config = yaml.safe_load(file)['human_perception']['robot_tracker']['ros_parameters']
+        robot_tracker_config = yaml.safe_load(file)['soloco_perception']['robot_tracker']['ros_parameters']
 
     declare_use_rviz_cmd = DeclareLaunchArgument(
         'use_rviz',
@@ -40,7 +40,7 @@ def generate_launch_description():
     )
 
     human_track_publisher_cmd = Node(
-        package='human_perception',
+        package='soloco_perception',
         executable='human_tracks.py', # 'human_track_publisher',
         name='human_track_publisher',
         output='screen',
@@ -48,7 +48,7 @@ def generate_launch_description():
     )
 
     human_tf2_publisher_cmd = Node(
-        package='human_perception',
+        package='soloco_perception',
         executable='human_tf2_publisher', # 'human_track_publisher',
         name='human_tf2_publisher',
         output='screen',
@@ -56,7 +56,7 @@ def generate_launch_description():
     )
 
     robot_track_publisher_cmd = Node(
-        package='human_perception',
+        package='soloco_perception',
         executable='robot_track.py', # 'robot_track_publisher'
         name='robot_track_publisher',
         output='screen',
@@ -64,7 +64,7 @@ def generate_launch_description():
     )
 
     multi_track_visualizer_cmd = Node(
-        package='human_perception',
+        package='soloco_perception',
         executable='multi_track_visualizer.py', # 'robot_track_publisher'
         name='multi_track_visualizer',
         output='screen',
