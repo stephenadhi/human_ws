@@ -83,6 +83,7 @@ PeopleFilterLayer::onInitialize()
 
   PeopleFilterLayer::matchSize();
   current_ = true;
+  was_reset_ = false;
 
   tf_buffer_ = std::make_shared<tf2_ros::Buffer>(node->get_clock());
   auto timer_interface = std::make_shared<tf2_ros::CreateTimerROS>(
@@ -113,6 +114,7 @@ PeopleFilterLayer::updateBounds(
   auto node = node_.lock();
   (void) robot_yaw;
 
+  std::lock_guard<Costmap2D::mutex_t> guard(*getMutex());
   if (rolling_window_) {
     updateOrigin(robot_x - getSizeInMetersX() / 2, robot_y - getSizeInMetersY() / 2);
   }
@@ -129,24 +131,12 @@ PeopleFilterLayer::updateBounds(
 
   // update the global current status
   current_ = current;
-  if (agents.size() == 0) {
-    RCLCPP_WARN(node->get_logger(), "Agents vector size is 0");
-  }
-
-  for (auto agent : agents) {
-    agentFilter(agent, filter_radius_);
-    doTouch(agent, min_x, min_y, max_x, max_y);
-  }
-}
-
-void
-PeopleFilterLayer::updateFootprint(
-  double robot_x, double robot_y, double robot_yaw,
-  double * min_x, double * min_y, double * max_x, double * max_y)
-{
-  transformFootprint(robot_x, robot_y, robot_yaw, getFootprint(), transformed_footprint_);
-  for (unsigned int i = 0; i < transformed_footprint_.size(); i++) {
-    touch(transformed_footprint_[i].x, transformed_footprint_[i].y, min_x, min_y, max_x, max_y);
+  if (agents.size() != 0) {
+    for (auto agent : agents) {
+      agentFilter(agent, filter_radius_);
+      doTouch(agent, min_x, min_y, max_x, max_y);
+    }
+    // RCLCPP_INFO(node->get_logger(), "Agents vector size is %li", agents.size());
   }
 }
 
@@ -156,7 +146,15 @@ PeopleFilterLayer::updateCosts(
   int max_i,
   int max_j)
 {
+  std::lock_guard<Costmap2D::mutex_t> guard(*getMutex());
   if (!enabled_) {return;}
+
+  // if not current due to reset, set current now after clearing
+  if (!current_ && was_reset_) {
+    was_reset_ = false;
+    current_ = true;
+  }
+
   // master_array - is a direct pointer to the resulting master_grid.
   // master_grid - is a resulting costmap combined from all layers.
   // By using this pointer all layers will be overwritten!
@@ -169,17 +167,17 @@ PeopleFilterLayer::updateCosts(
   // - updateWithTrueOverwrite()
   // In this case using master_array pointer is equal to modifying local costmap_
   // pointer and then calling updateWithTrueOverwrite():
-  unsigned int size_x = master_grid.getSizeInCellsX(), size_y = master_grid.getSizeInCellsY();
+  // unsigned int size_x = master_grid.getSizeInCellsX(), size_y = master_grid.getSizeInCellsY();
 
   // {min_i, min_j} - {max_i, max_j} - are update-window coordinates.
   // These variables are used to update the costmap only within this window
   // avoiding the updates of whole area.
   //
   // Fixing window coordinates with map size if necessary.
-  min_i = std::max(0, min_i);
-  min_j = std::max(0, min_j);
-  max_i = std::min(static_cast<int>(size_x), max_i);
-  max_j = std::min(static_cast<int>(size_y), max_j);
+  // min_i = std::max(0, min_i);
+  // min_j = std::max(0, min_j);
+  // max_i = std::min(static_cast<int>(size_x), max_i);
+  // max_j = std::min(static_cast<int>(size_y), max_j);
 
   updateWithOverwrite(master_grid, min_i, min_j, max_i, max_j);
 }
@@ -253,7 +251,8 @@ void
 PeopleFilterLayer::reset()
 {
   resetMaps();
-  current_ = true;
+  current_ = false;
+  was_reset_ = true;
 }
 
 }  // namespace nav2_costmap_2d

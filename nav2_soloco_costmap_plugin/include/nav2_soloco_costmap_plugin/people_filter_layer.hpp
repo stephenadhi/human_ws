@@ -125,6 +125,7 @@ protected:
   rclcpp::Subscription<tf2_msgs::msg::TFMessage>::SharedPtr tf_sub_;
   std::string global_frame_;  ///< @brief The global frame for the costmap
   bool rolling_window_;
+  bool was_reset_;
   std::string tf_prefix_;
   float filter_radius_;
   std::shared_ptr<tf2_ros::TransformListener> tf_listener_;

@@ -266,11 +266,11 @@ local_costmap:
       # List of mapped plugin names for parameter namespaces and names. Note: Each plugin namespace
       # defined in this list needs to have a plugin parameter defining the type of plugin to be
       # loaded in the namespace.
-      plugins: ["obstacle_layer", "inflation_layer", "people_filter_layer"] #, "social_layer"]
+      plugins: ["obstacle_layer", "inflation_layer", "people_filter_layer", "social_layer"]
 
       people_filter_layer:
         plugin: "nav2_soloco_costmap_plugin/PeopleFilterLayer"
-        enabled: True
+        enabled: False
         tf_prefix: "agent_"
         filter_radius: 0.45
       social_layer:
@@ -320,7 +320,7 @@ local_costmap:
         max_obstacle_height: 2.0
 
         # Enum for method to add data to master costmap, default to maximum. (default: 1)
-        combination_method: 1
+        combination_method: 0
 
         # namespace of sources of data.
         observation_sources: scan #, zed_camera
