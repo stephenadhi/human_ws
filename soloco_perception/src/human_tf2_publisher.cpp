@@ -74,7 +74,7 @@ void HumanTF2Publisher::step() {
   }
 }
 
-}; // namespace human_tf2_publisher
+} // namespace human_tf2_publisher
 
 int main(int argc, char *argv[]) {
   rclcpp::init(argc, argv);
