@@ -160,8 +160,6 @@ class NeuralMotionPlanner(Node):
         
         self.global_goal = np.array(goal)
 
-        self.get_logger().info(f'Heading towards x:{goal[0]}, y: {goal[1]}')
-
     def subgoal_callback(self, goal_msg):
         ori = goal_msg.pose.orientation
         quat = (ori.x, ori.y, ori.z, ori.w)
@@ -169,6 +167,7 @@ class NeuralMotionPlanner(Node):
         goal = [goal_msg.pose.position.x, goal_msg.pose.position.y, goal_yaw[2]]
         
         self.subgoal_pose = np.array(goal)
+        self.get_logger().info(f'Heading towards x:{goal[0]}, y: {goal[1]}')
 
     def trajectory_callback(self, robot_msg):
         # self.get_logger().info('Robot trajectory received.')
@@ -213,7 +212,7 @@ class NeuralMotionPlanner(Node):
                                  (self.r_pos_xy[1]-self.global_goal[1]))
             
             # Concatenate information about people track, robot state, and goal
-            x = np.concatenate([self.ped_pos_xy_cem.flatten(), self.neigh_matrix.flatten(), self.r_state, self.global_goal[:2]])
+            x = np.concatenate([self.ped_pos_xy_cem.flatten(), self.neigh_matrix.flatten(), self.r_state, self.subgoal_pose[:2]])
             
             # Get command from neural model forward pass, given costmap object
             u, current_future = self.model.predict(x, costmap_obj=self.ogm)
