@@ -225,12 +225,12 @@ class NeuralMotionPlanner(Node):
                 cmd_vel.linear.x = float(u[0])
                 cmd_vel.angular.z = float(u[1])
                 self.cmd_vel_publisher.publish(cmd_vel)
-                self.get_logger().debug(f'Navigating with velocity linear: {u[0]} and angular {u[1]}.')          
+                self.get_logger().info(f'Navigating with velocity linear: {u[0]} and angular {u[1]}.')          
             else:
                 cmd_vel.linear.x = 0.0
                 cmd_vel.angular.z = 0.0
                 self.cmd_vel_publisher.publish(cmd_vel)
-                self.get_logger().debug(f'Distance to goal: {distance_to_goal} Goal pose achieved.')
+                self.get_logger().info(f'Distance to goal: {distance_to_goal} Goal pose achieved.')
                 self.global_goal = None
 
             self.visualize_future(current_future)

@@ -1,0 +1,15 @@
+<!--
+  This Behavior Tree replans the global path through an array of poses 
+  only when the goal is updated. Not using FollowPath controller.
+-->
+
+<root main_tree_to_execute="MainTree">
+  <BehaviorTree ID="MainTree">
+    <PipelineSequence name="NavigateWithReplanning">
+      <GoalUpdatedController>
+        <ComputePathThroughPoses goals="{goals}" path="{path}" planner_id="GridBased"/>
+      </GoalUpdatedController>
+      <RemovePassedGoals input_goals="{goals}" output_goals="{goals}" radius="0.7"/>
+    </PipelineSequence>
+  </BehaviorTree>
+</root>
