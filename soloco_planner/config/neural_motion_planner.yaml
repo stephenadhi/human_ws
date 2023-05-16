@@ -7,7 +7,7 @@ soloco_planner:
     IAR_checkpoint: 'models/weights/SIMNoGoal-univ_IAR_Full_trans/checkpoint_with_model.pt'
     device: 'cpu'           # Options: 'cuda' or 'cpu'
     # Goal tolerance
-    goal_tolerance: 0.5
+    goal_tolerance: 0.25
     lookahead_dist: 2.5
     # Topic parameters
     odom_topic: 'locobot/odom'
