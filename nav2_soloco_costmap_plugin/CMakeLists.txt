@@ -58,6 +58,7 @@ add_library(${library_name} SHARED
   src/geometry/geometry.cpp
   plugins/social_layer.cpp
   plugins/people_filter_layer.cpp
+  plugins/obstacle_people_filtered_layer.cpp
 )
 ament_target_dependencies(${library_name}
   ${dependencies}

@@ -8,6 +8,10 @@
       type="nav2_costmap_2d::PeopleFilterLayer"  base_class_type="nav2_costmap_2d::Layer">
       <description>Layer to improve the human-robot interaction of the navigation2.</description>
     </class>
+    <class name="nav2_soloco_costmap_plugin/ObstaclePeopleFilteredLayer" 
+      type="nav2_costmap_2d::ObstaclePeopleFilteredLayer"  base_class_type="nav2_costmap_2d::Layer">
+      <description>Layer that combines a custom people filter layer and obstacle layer of the navigation2.</description>
+    </class>
   </library>
 </class_libraries>
 

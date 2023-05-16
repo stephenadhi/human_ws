@@ -235,96 +235,40 @@ local_costmap:
     ros__parameters:
       # Whether to send full costmap every update, rather than updates. (default: false)
       always_send_full_costmap: True
-
       # Costmap update frequency. (default 5.0)
       update_frequency: 5.0
-
       # Frequency to publish costmap to topic. (default 1.0)
       publish_frequency: 10.0
-
       # Reference frame. (default: odom)
       global_frame: locobot/odom
-
       # Robot base frame. (default: base_link)
       robot_base_frame: locobot/base_link
-
       # Whether costmap should roll with robot base frame. (default: False)
       rolling_window: True
-
       # Height of costmap (m). (default: 5)
       width: 8
-
       # Width of costmap (m). (default: 5)
       height: 8
-
       # Resolution of 1 pixel of the costmap, in meters. (default: 0.1)
       resolution: 0.05
-
       # Robot radius to use, if footprint coordinates not provided. (default: 0.1)
       robot_radius: 0.175
-
       # List of mapped plugin names for parameter namespaces and names. Note: Each plugin namespace
       # defined in this list needs to have a plugin parameter defining the type of plugin to be
       # loaded in the namespace.
-      plugins: ["obstacle_layer", "inflation_layer", "people_filter_layer", "social_layer"]
-
-      people_filter_layer:
-        plugin: "nav2_soloco_costmap_plugin/PeopleFilterLayer"
-        enabled: False
-        tf_prefix: "agent_"
-        filter_radius: 0.45
-      social_layer:
-        plugin: "nav2_soloco_costmap_plugin/SocialLayer"
+      plugins: ["obstacle_people_filtered_layer", "inflation_layer"] #, "social_layer"]
+      obstacle_people_filtered_layer:
+        plugin: "nav2_soloco_costmap_plugin/ObstaclePeopleFilteredLayer"
+        # Whether the plugin is enabled. (default: True)
         enabled: True
-        debug_only: False
-        tf_prefix: "agent_"
-        intimate_z_radius: 0.4
-        personal_z_radius: 1.2  # Must be lower than half width and half height
-        orientation_info: True
-        action_names: ["following", "escorting", "approaching", "default"]
-        escorting:
-          var_h: 1.0
-          var_s: 1.0
-          var_r: 1.0
-          n_activity_zones: 0
-          activity_zone_phi: 1.5707
-        following:
-          var_h: 1.0
-          var_s: 1.0
-          var_r: 0.7
-          n_activity_zones: 1
-          activity_zone_alpha: 0.7853
-          activity_zone_phi: 3.1415
-        approaching:
-          var_h: 1.0
-          var_s: 1.0
-          var_r: 1.0
-          n_activity_zones: 1
-          activity_zone_alpha: 0.7853
-          activity_zone_phi: 0.0
-      inflation_layer:
-        plugin: "nav2_costmap_2d::InflationLayer"
-        cost_scaling_factor: 5.0
-        inflation_radius: 0.55
-      obstacle_layer:
-        plugin: "nav2_costmap_2d::ObstacleLayer"
-        # https://navigation.ros.org/configuration/packages/costmap-plugins/obstacle.html
-
-        # Whether the obstacle_layer plugin is enabled. (default: True)
-        enabled: True
-
         # Clear any occupied cells under robot footprint.
         footprint_clearing_enabled: True
-
         # Maximum height to add return to occupancy grid. (default: 2.0)
         max_obstacle_height: 2.0
-
         # Enum for method to add data to master costmap, default to maximum. (default: 1)
         combination_method: 0
-
         # namespace of sources of data.
         observation_sources: scan #, zed_camera
-
         scan:
           # Topic of data.
           topic: /locobot/scan
@@ -387,6 +331,46 @@ local_costmap:
           raytrace_max_range: 13.0
           # Minimum range to raytrace clear obstacles from costmap. (default: 0.0)
           raytrace_min_range: 0.0
+        tf_prefix: "agent_"
+        filter_radius: 0.45
+      people_filter_layer:
+        plugin: "nav2_soloco_costmap_plugin/PeopleFilterLayer"
+        enabled: False
+        tf_prefix: "agent_"
+        filter_radius: 0.45
+      social_layer:
+        plugin: "nav2_soloco_costmap_plugin/SocialLayer"
+        enabled: True
+        debug_only: False
+        tf_prefix: "agent_"
+        intimate_z_radius: 0.4
+        personal_z_radius: 1.2  # Must be lower than half width and half height
+        orientation_info: True
+        action_names: ["following", "escorting", "approaching", "default"]
+        escorting:
+          var_h: 1.0
+          var_s: 1.0
+          var_r: 1.0
+          n_activity_zones: 0
+          activity_zone_phi: 1.5707
+        following:
+          var_h: 1.0
+          var_s: 1.0
+          var_r: 0.7
+          n_activity_zones: 1
+          activity_zone_alpha: 0.7853
+          activity_zone_phi: 3.1415
+        approaching:
+          var_h: 1.0
+          var_s: 1.0
+          var_r: 1.0
+          n_activity_zones: 1
+          activity_zone_alpha: 0.7853
+          activity_zone_phi: 0.0
+      inflation_layer:
+        plugin: "nav2_costmap_2d::InflationLayer"
+        cost_scaling_factor: 5.0
+        inflation_radius: 0.55
 
       static_layer:
         plugin: "nav2_costmap_2d::StaticLayer"
