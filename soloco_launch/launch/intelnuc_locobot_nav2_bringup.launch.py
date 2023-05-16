@@ -1,5 +1,5 @@
 import os
-
+import yaml
 from ament_index_python.packages import get_package_share_directory
 
 from launch import LaunchDescription
@@ -32,7 +32,12 @@ def generate_launch_description():
     interbotix_nav_dir = get_package_share_directory('interbotix_xslocobot_nav')
 
     default_map_path = os.path.join(bringup_dir, 'maps', 'tb3_house_demo_crowd.yaml')
-    
+    # get config file path and loading it
+    neural_config_file_path = os.path.join(
+        bringup_dir, 'config', 'neural_motion_planner.yaml')
+    with open(neural_config_file_path, 'r') as file:
+        planner_config = yaml.safe_load(file)['soloco_planner']['ros__parameters']
+
     declare_robot_model_cmd = DeclareLaunchArgument(
         'robot_model',
         default_value='locobot_base',
@@ -88,6 +93,7 @@ def generate_launch_description():
     locobot_nav2_bringup_slam_launch_cmd = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(os.path.join(
           interbotix_nav_dir, 'launch', 'xslocobot_slam_toolbox.launch.py')),
+        condition=IfCondition(PythonExpression(['not ', launch_neural_planner])),
         launch_arguments={
           'cmd_vel_topic': '/locobot/commands/velocity',
           'launch_driver': 'true',
@@ -100,9 +106,7 @@ def generate_launch_description():
           'use_lidar': 'true',
           'use_rviz': 'false',
           'use_sim_time': 'false',
-        }.items(),
-        condition=IfCondition(PythonExpression(['not ', launch_neural_planner]))
-        )
+        }.items())
     
     locobot_control_only_launch_cmd = IncludeLaunchDescription(
         condition=IfCondition(launch_neural_planner),
@@ -131,7 +135,8 @@ def generate_launch_description():
         PythonLaunchDescriptionSource(os.path.join(
           bringup_dir, 'launch', 'nav2_planner_server_slam.launch.py')),
         launch_arguments={
-          'use_rviz': 'false',
+          'nav2_params_file': nav2_param_file,
+          'slam_toolbox_mode': 'online_async',
         }.items(),
         condition=IfCondition(launch_neural_planner))
 

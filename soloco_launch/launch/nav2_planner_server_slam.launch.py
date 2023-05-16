@@ -348,29 +348,6 @@ def generate_launch_description():
     )
     declared_arguments.append(
         DeclareLaunchArgument(
-            'slam_toolbox_params_file',
-            default_value=PathJoinSubstitution([
-                FindPackageShare("soloco_launch"),
-                'config',
-                LaunchConfiguration('slam_toolbox_params_filename'),
-            ]),
-            description='full path to the ROS 2 parameters file to use for the slam_toolbox node',
-        )
-    )
-    declared_arguments.append(
-        DeclareLaunchArgument(
-            'use_sim_time',
-            default_value='false',
-            choices=('true', 'false'),
-            description=(
-                'tells ROS nodes asking for time to get the Gazebo-published simulation time, '
-                'published over the ROS topic /clock; this value is automatically set to `true` if'
-                ' using Gazebo hardware.'
-            )
-        )
-    )
-    declared_arguments.append(
-        DeclareLaunchArgument(
             'use_slam_toolbox',
             default_value='true',
             choices=('true', 'false'),
@@ -394,6 +371,35 @@ def generate_launch_description():
                 "the node to launch the SLAM in using the slam_toolbox. Currently only "
                 "'localization', 'online_sync', and 'online_async' modes are supported."
             ),
+        )
+    )
+    declared_arguments.append(
+        DeclareLaunchArgument(
+            'slam_toolbox_params_filename',
+            default_value=('slam_toolbox_', LaunchConfiguration('slam_toolbox_mode'), '.yaml')
+        )
+    )
+    declared_arguments.append(
+        DeclareLaunchArgument(
+            'slam_toolbox_params_file',
+            default_value=PathJoinSubstitution([
+                FindPackageShare("soloco_launch"),
+                'config',
+                LaunchConfiguration('slam_toolbox_params_filename'),
+            ]),
+            description='full path to the ROS 2 parameters file to use for the slam_toolbox node',
+        )
+    )
+    declared_arguments.append(
+        DeclareLaunchArgument(
+            'use_sim_time',
+            default_value='false',
+            choices=('true', 'false'),
+            description=(
+                'tells ROS nodes asking for time to get the Gazebo-published simulation time, '
+                'published over the ROS topic /clock; this value is automatically set to `true` if'
+                ' using Gazebo hardware.'
+            )
         )
     )
     declared_arguments.append(
