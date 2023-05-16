@@ -261,6 +261,12 @@ local_costmap:
         plugin: "nav2_soloco_costmap_plugin/ObstaclePeopleFilteredLayer"
         # Whether the plugin is enabled. (default: True)
         enabled: True
+        # Whether the people filtering is enabled. (default: True)
+        people_filtering_enabled_: True
+        # Tf prefix of detected people. (default: True)
+        tf_prefix: "agent_"
+        # People filter radius. (default: 0.25)
+        filter_radius: 0.25
         # Clear any occupied cells under robot footprint.
         footprint_clearing_enabled: True
         # Maximum height to add return to occupancy grid. (default: 2.0)
