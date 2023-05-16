@@ -258,9 +258,9 @@ global_costmap:
         # Whether the inflation_layer plugin is enabled. (default: True)
         enabled: True
         # Radius to inflate costmap around lethal obstacles. (default: 0.55)
-        inflation_radius: 0.55
+        inflation_radius: 0.3
         # Exponential decay factor across inflation radius. (default: 10.0)
-        cost_scaling_factor: 10.0
+        cost_scaling_factor: 5.0
         # Whether to inflate unknown cells as if lethal. (default: False)
         inflate_unknown: False
         # Whether to inflate unknown cells. (default: False)
