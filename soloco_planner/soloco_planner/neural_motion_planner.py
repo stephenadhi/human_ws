@@ -224,15 +224,19 @@ class NeuralMotionPlanner(Node):
             if distance_to_goal > self.goal_tolerance:
                 cmd_vel.linear.x = float(u[0])
                 cmd_vel.angular.z = float(u[1])
-                self.cmd_vel_publisher.publish(cmd_vel)            
+                self.cmd_vel_publisher.publish(cmd_vel)
+                self.get_logger().debug(f'Navigating with velocity linear: {u[0]} and angular {u[1]}.')          
             else:
                 cmd_vel.linear.x = 0.0
                 cmd_vel.angular.z = 0.0
                 self.cmd_vel_publisher.publish(cmd_vel)
-                self.get_logger().info(f'Distance to goal: {distance_to_goal} Goal pose achieved.')
+                self.get_logger().debug(f'Distance to goal: {distance_to_goal} Goal pose achieved.')
                 self.global_goal = None
 
             self.visualize_future(current_future)
+
+            # Reset human data
+            self.ped_pos_xy_cem = np.ones((self.max_history_length + 1, self.max_num_agents + 1, 2)) * 500 # placeholder value
     
     def spin_robot_in_subgoal_direction(self, yaw_diff):
         cmd_vel = Twist()
