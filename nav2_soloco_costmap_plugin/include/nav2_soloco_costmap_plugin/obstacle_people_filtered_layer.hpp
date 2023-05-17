@@ -54,6 +54,7 @@
 #include "tf2_ros/message_filter.h"
 #pragma GCC diagnostic pop
 #include "message_filters/subscriber.h"
+#include "geometry_msgs/msg/pose_stamped.hpp"
 #include "nav_msgs/msg/occupancy_grid.hpp"
 #include "sensor_msgs/msg/laser_scan.hpp"
 #include "sensor_msgs/msg/point_cloud.hpp"
@@ -62,7 +63,7 @@
 #include "nav2_costmap_2d/layered_costmap.hpp"
 #include "nav2_costmap_2d/observation_buffer.hpp"
 #include "nav2_costmap_2d/footprint.hpp"
-
+#include <soloco_interfaces/msg/tracked_persons.hpp>
 #include "nav2_soloco_costmap_plugin/geometry/geometry.hpp"
 #include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
 #include "tf2/transform_datatypes.h"
@@ -275,14 +276,19 @@ protected:
   int combination_method_;
 
   bool people_filtering_enabled_;
+  bool use_people_tf_;
+  std::string people_topic_;
   std::string tf_prefix_;
   float filter_radius_;
   std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
   std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
 
   std::vector<std::string> agent_ids_;
+  std::vector<geometry_msgs::msg::PoseStamped> agent_states_;
   rclcpp::Subscription<tf2_msgs::msg::TFMessage>::SharedPtr tf_sub_;
+  rclcpp::Subscription<soloco_interfaces::msg::TrackedPersons>::SharedPtr people_sub_;
 
+  void agentsCallback(const soloco_interfaces::msg::TrackedPersons::SharedPtr msg);
   void doTouch(
     tf2::Transform agent, double * min_x, double * min_y,
     double * max_x, double * max_y);

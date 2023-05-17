@@ -247,11 +247,15 @@ local_costmap:
         # Whether the plugin is enabled. (default: True)
         enabled: True
         # Whether the people filtering is enabled. (default: True)
-        people_filtering_enabled_: True
-        # Tf prefix of detected people. (default: True)
+        people_filtering_enabled: True
+        # Whether the people transformation is used. (default: False)
+        use_people_tf: True        
+        # Tf prefix of detected people. (if using people_tf)
         tf_prefix: "agent_"
+        # Topic name of detected people. (if using soloco_interfaces TrackedPersons.msg isntead of people tf)
+        people_topic: "human/interpolated_history"
         # People filter radius. (default: 0.25)
-        filter_radius: 0.25
+        filter_radius: 0.5
         # Clear any occupied cells under robot footprint.
         footprint_clearing_enabled: True
         # Maximum height to add return to occupancy grid. (default: 2.0)
@@ -360,11 +364,15 @@ global_costmap:
         # Whether the plugin is enabled. (default: True)
         enabled: True
         # Whether the people filtering is enabled. (default: True)
-        people_filtering_enabled_: True
-        # Tf prefix of detected people. (default: True)
+        people_filtering_enabled: True
+        # Whether the people transformation is used. (default: False)
+        use_people_tf: True        
+        # Tf prefix of detected people. (if using people_tf)
         tf_prefix: "agent_"
+        # Topic name of detected people. (if not using people_tf)
+        people_topic: "human/interpolated_history"
         # People filter radius. (default: 0.25)
-        filter_radius: 0.25
+        filter_radius: 0.5
         # Clear any occupied cells under robot footprint.
         footprint_clearing_enabled: True
         # Maximum height to add return to occupancy grid. (default: 2.0)

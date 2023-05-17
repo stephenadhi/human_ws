@@ -89,7 +89,9 @@ void ObstaclePeopleFilteredLayer::onInitialize()
   declareParameter("observation_sources", rclcpp::ParameterValue(std::string("")));
 
   declareParameter("people_filtering_enabled", rclcpp::ParameterValue(true));
+  declareParameter("use_people_tf", rclcpp::ParameterValue(false));
   declareParameter("filter_radius", rclcpp::ParameterValue(0.32));
+  declareParameter("people_topic", rclcpp::ParameterValue(std::string("")));
   declareParameter("tf_prefix", rclcpp::ParameterValue("agent_"));
 
   auto node = node_.lock();
@@ -107,6 +109,8 @@ void ObstaclePeopleFilteredLayer::onInitialize()
   node->get_parameter(name_ + "." + "observation_sources", topics_string);
 
   node->get_parameter(name_ + "." + "people_filtering_enabled", people_filtering_enabled_);
+  node->get_parameter(name_ + "." + "use_people_tf", use_people_tf_);
+  node->get_parameter(name_ + "." + "people_topic", people_topic_);
   node->get_parameter(name_ + "." + "tf_prefix", tf_prefix_);
   node->get_parameter(name_ + "." + "filter_radius", filter_radius_);
 
@@ -132,12 +136,19 @@ void ObstaclePeopleFilteredLayer::onInitialize()
   current_ = true;
   was_reset_ = false;
 
-  tf_buffer_ = std::make_shared<tf2_ros::Buffer>(node->get_clock());
-  auto timer_interface = std::make_shared<tf2_ros::CreateTimerROS>(
-    node->get_node_base_interface(),
-    node->get_node_timers_interface());
-  tf_buffer_->setCreateTimerInterface(timer_interface);
-  tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
+  if (use_people_tf_) {
+    tf_buffer_ = std::make_shared<tf2_ros::Buffer>(node->get_clock());
+    auto timer_interface = std::make_shared<tf2_ros::CreateTimerROS>(
+      node->get_node_base_interface(),
+      node->get_node_timers_interface());
+    tf_buffer_->setCreateTimerInterface(timer_interface);
+    tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
+  } else {
+    // Subscribe to tracked people
+    people_sub_ = node->create_subscription<soloco_interfaces::msg::TrackedPersons>(
+        people_topic_, rclcpp::SensorDataQoS(),
+        std::bind(&ObstaclePeopleFilteredLayer::agentsCallback, this, std::placeholders::_1));
+  }
 
   global_frame_ = layered_costmap_->getGlobalFrameID();
 
@@ -303,6 +314,15 @@ void ObstaclePeopleFilteredLayer::onInitialize()
       target_frames.push_back(sensor_frame);
       observation_notifiers_.back()->setTargetFrames(target_frames);
     }
+  }
+}
+
+void 
+ObstaclePeopleFilteredLayer::agentsCallback(
+    const soloco_interfaces::msg::TrackedPersons::SharedPtr msg) {
+  agent_states_.clear();
+  for (auto person : msg->tracks){
+    agent_states_.push_back(person.current_pose);
   }
 }
 
@@ -553,6 +573,10 @@ ObstaclePeopleFilteredLayer::updateBounds(
     }
     // update the global current status
     current_ = current;
+    if (!use_people_tf_) {
+      // Clear vector to prevent old people data being used if subsription fails
+      agent_states_.clear();
+    }
   }
 }
 
@@ -575,20 +599,44 @@ bool
 ObstaclePeopleFilteredLayer::getAgentTFs(std::vector<tf2::Transform> & agents) const
 {
   auto node = node_.lock();
-  geometry_msgs::msg::TransformStamped global2agent;
-  for (auto id : agent_ids_) {
-    try {
-      // Check if the transform is available
-      global2agent = tf_buffer_->lookupTransform(global_frame_, id, tf2::TimePointZero);
-    } catch (tf2::TransformException & e) {
-      RCLCPP_WARN(node->get_logger(), "%s", e.what());
-      return false;
+  if (use_people_tf_) {
+    geometry_msgs::msg::TransformStamped global2agent;
+    for (auto id : agent_ids_) {
+      try {
+        // Check if the transform is available
+        global2agent = tf_buffer_->lookupTransform(global_frame_, id, tf2::TimePointZero);
+      } catch (tf2::TransformException & e) {
+        RCLCPP_WARN(node->get_logger(), "%s", e.what());
+        return false;
+      }
+      tf2::Transform global2agent_tf2;
+      tf2::impl::Converter<true, false>::convert(global2agent.transform, global2agent_tf2);
+      agents.push_back(global2agent_tf2);
     }
-    tf2::Transform global2agent_tf2;
-    tf2::impl::Converter<true, false>::convert(global2agent.transform, global2agent_tf2);
-    agents.push_back(global2agent_tf2);
+    return true;
+  } else {
+      tf2::Transform transform;
+      for (auto person : agent_states_) {
+        try {
+          transform.setOrigin(
+            tf2::Vector3(person.pose.position.x, person.pose.position.y, person.pose.position.z)
+          );
+          transform.setRotation(
+            tf2::Quaternion(
+              person.pose.orientation.x,
+              person.pose.orientation.y,
+              person.pose.orientation.z,
+              person.pose.orientation.w
+            )
+          );
+        } catch(...) { 
+          RCLCPP_WARN(node->get_logger(), "Failed to get person pose");
+          return false;
+        }
+      agents.push_back(transform);
+    }
+    return true;
   }
-  return true;
 }
 
 void
