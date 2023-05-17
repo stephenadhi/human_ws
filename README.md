@@ -26,6 +26,7 @@ You need to have the following installed on your machine:
 1. Make a ROS 2 workspace folder and clone this repository inside src/ folder
     ```
     mkdir -p workspaces/humble/src
+    git clone --recursive https://git.uni-due.de/locobot/human_ws.git
     ```
 2. Install ROS dependencies
     ```
@@ -34,8 +35,9 @@ You need to have the following installed on your machine:
     ```
 3. Build everything inside the workspace
    ```
-    colcon build --packages-select soloco_interfaces
+    colcon build --packages-select zed_interfaces
     . install/setup.bash
+    colcon build --packages-select soloco_interfaces
     colcon build
    ```
 
@@ -48,10 +50,14 @@ For launching LoCoBot, navigation2 stack + SLAM, and visualization:
    ```
 For launching LoCoBot, nav2_planner_server + SLAM, neural planner, human tf publisher, and visualization:
    ```
+    # SSH to the Intel NUC computer
+    cd ~/interbotix_ws
+    . install/setup.bash && . /opt/ros/humble/setup.bash
     ros2 launch intelnuc_bringup.launch.py launch_neural_planner:=True run_human_tf:=True
    ```
 For launching ZED human perception and multi-tracking module:
    ```
+    # SSH to the ZED Box 
     ./docker_zedbox_bringup.sh
    ```
 <!-- For launching visualization in remote PC:
