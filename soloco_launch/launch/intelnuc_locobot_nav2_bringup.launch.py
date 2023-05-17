@@ -93,7 +93,6 @@ def generate_launch_description():
     locobot_nav2_bringup_slam_launch_cmd = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(os.path.join(
           interbotix_nav_dir, 'launch', 'xslocobot_slam_toolbox.launch.py')),
-        condition=IfCondition(PythonExpression(['not ', launch_neural_planner])),
         launch_arguments={
           'cmd_vel_topic': '/locobot/commands/velocity',
           'launch_driver': 'true',
@@ -107,38 +106,6 @@ def generate_launch_description():
           'use_rviz': 'false',
           'use_sim_time': 'false',
         }.items())
-    
-    locobot_control_only_launch_cmd = IncludeLaunchDescription(
-        condition=IfCondition(launch_neural_planner),
-        launch_description_source=PythonLaunchDescriptionSource([
-            PathJoinSubstitution([
-                FindPackageShare('interbotix_xslocobot_control'),
-                'launch',
-                'xslocobot_control.launch.py',
-            ])
-        ]),
-        launch_arguments={
-            'robot_model':robot_model,
-            'robot_name':robot_name,
-            'use_lidar': 'true',
-            'use_rviz': 'false',
-            'rviz_frame': 'locobot/odom',
-            'use_camera': 'false',
-            'rs_camera_align_depth': 'true',
-            'use_base': 'true',
-            # 'use_dock': 'true',
-            'use_sim_time':'false',
-        }.items(),
-    )
-
-    nav2_planner_server_slam_launch_cmd = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(os.path.join(
-          bringup_dir, 'launch', 'nav2_planner_server_slam.launch.py')),
-        launch_arguments={
-          'nav2_params_file': nav2_param_file,
-          'slam_toolbox_mode': 'online_async',
-        }.items(),
-        condition=IfCondition(launch_neural_planner))
 
     soloco_planner_launch_cmd = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(os.path.join(
@@ -165,8 +132,6 @@ def generate_launch_description():
     ld.add_action(multi_track_visualizer_cmd)
     ld.add_action(human_tf2_publisher_cmd)
     ld.add_action(locobot_nav2_bringup_slam_launch_cmd)
-    ld.add_action(locobot_control_only_launch_cmd)
-    ld.add_action(nav2_planner_server_slam_launch_cmd)
     ld.add_action(soloco_planner_launch_cmd)
 
     return ld
