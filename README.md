@@ -25,15 +25,17 @@ You need to have the following installed on your machine:
 ## Installation
 1. Make a ROS 2 workspace folder and clone this repository inside src/ folder
     ```
-    mkdir -p /workspaces/humble/src
+    mkdir -p workspaces/humble/src
     ```
 2. Install ROS dependencies
     ```
-    cd /workspaces/humble/
+    cd workspaces/humble/
     rosdep install -i -y -r --from-paths src --rosdistro humble
     ```
 3. Build everything inside the workspace
    ```
+    colcon build --packages-select soloco_interfaces
+    . install/setup.bash
     colcon build
    ```
 
