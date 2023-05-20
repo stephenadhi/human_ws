@@ -10,7 +10,8 @@ You need to have the following installed on your machine:
 
 ## Folder structure
 
-
+    ├── 3rdparty
+    ├── docker
     ├── nav2_soloco_costmap_plugin
     ├── soloco_interfaces           
     ├── soloco_launch               
