@@ -45,6 +45,10 @@ You need to have the following installed on your machine:
 ## Launching Examples
 We provide general launch files for perception and navigation. Our modified version of the LoCoBot have two computing device onboard: Intel NUC and ZED Box (Jetson Xavier NX).
 
+Choose unique domain ID to prevent interference from other running ROS 2 system
+    ```
+    export ROS_DOMAIN_ID=2 # Adjust to your settings, default=0
+    ```
 For launching LoCoBot, navigation2 stack + SLAM, and visualization:
    ```
     ros2 launch intelnuc_bringup.launch.py
@@ -61,7 +65,10 @@ For launching ZED human perception and multi-tracking module:
     # SSH to the ZED Box 
     ./docker_zedbox_bringup.sh
    ```
-<!-- For launching visualization in remote PC:
+For launching visualization in remote PC:
     ```
+    export ROS_DOMAIN_ID=2 # Adjust to your settings, default=0
     source install/setup.bash
-    ``` -->
+    colcon build --packages-select soloco_launch # If not build
+    ros2 launch soloco_launch remote_view.launch.py
+    ```
