@@ -103,6 +103,7 @@ def generate_launch_description():
           'slam_toolbox_mode': 'online_async',
           'use_camera': 'false', # Not using Intel camera
           'use_lidar': 'true',
+          'lidar_type': 'rplidar_a2m8',
           'use_rviz': 'false',
           'use_sim_time': 'false',
         }.items())
