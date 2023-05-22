@@ -21,11 +21,12 @@ class GlobalNav2Client(Node):
 
         self.declare_parameter('pub_frame_id', 'locobot/odom')
         self.declare_parameter('global_goal_topic', 'global_goal_republished')
+        self.declare_parameter('republish_global_goal', False)
         self.declare_parameter('invoke_global_planner', False)
         self.pub_frame_id = self.get_parameter("pub_frame_id").get_parameter_value().string_value
         global_goal_topic = self.get_parameter("global_goal_topic").get_parameter_value().string_value
         self.invoke_global_planner = self.get_parameter('invoke_global_planner').get_parameter_value().bool_value
-        
+        self.republish_global_goal = self.get_parameter('republish_global_goal').get_parameter_value().bool_value
         self.goal_sub = self.create_subscription(PoseStamped, 'goal_pose', self.goal_callback, 10) 
         self.odom_sub = self.create_subscription(Odometry, 'locobot/odom', self.odom_callback, 10) 
 
@@ -88,7 +89,8 @@ class GlobalNav2Client(Node):
         except AttributeError:
             # no message received yet
             return
-        self.publisher.publish(self.goal_pose)
+        if self.republish_global_goal:
+            self.publisher.publish(self.goal_pose)
         # self.get_logger().info('Getting path...')
         if self.invoke_global_planner:
             start_pose = PoseStamped()
