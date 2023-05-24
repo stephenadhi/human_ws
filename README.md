@@ -28,6 +28,8 @@ You need to have the following installed on your machine:
     ```
     mkdir -p workspaces/humble/src
     git clone --recursive https://git.uni-due.de/locobot/human_ws.git
+    # Build Navigation2 from source (optional, necessary for using MPPI controller)
+    git clone -b humble https://github.com/ros-planning/navigation2.git
     ```
 2. Install ROS dependencies
     ```
@@ -71,4 +73,9 @@ For launching visualization in remote PC:
     source install/setup.bash
     colcon build --packages-select soloco_launch # If not build
     ros2 launch soloco_launch remote_view.launch.py
+    ```
+## Simulation Example
+Launch Locobot in Gazebo
+    ```
+    ros2 launch interbotix_xslocobot_sim xslocobot_gz_classic.launch.py robot_model:=locobot_base robot_name:=locobot use_lidar:=true use_rviz:=true use_gazebo_gui:=true 
     ```
