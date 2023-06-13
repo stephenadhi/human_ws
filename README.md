@@ -69,12 +69,12 @@ For launching LoCoBot, navigation2 stack + SLAM, and visualization:
    ```
     ros2 launch intelnuc_bringup.launch.py
    ```
-For launching LoCoBot, nav2_planner_server + SLAM, neural planner, human tf publisher, and visualization:
+Default LoCoBot with Nav2 + SLAM:
    ```
     # SSH to the Intel NUC computer
     cd ~/interbotix_ws
     source install/setup.bash && source /opt/ros/humble/setup.bash
-    ros2 launch intelnuc_bringup.launch.py launch_neural_planner:=True run_human_tf:=True
+    ros2 launch soloco_launch intelnuc_locobot_nav2_bringup.launch.py nav2_param_filename:=smac_mppi_nav2_params.yaml
    ```
 For launching ZED human perception and multi-tracking module:
    ```
