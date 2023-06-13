@@ -43,6 +43,11 @@ You need to have the following installed on your machine:
     colcon build --packages-select soloco_interfaces
     colcon build
    ```
+4. Define robot base type and model
+   ```
+   export INTERBOTIX_XSLOCOBOT_BASE_TYPE=kobuki
+   export INTERBOTIX_XSLOCOBOT_ROBOT_MODEL=locobot_base
+   ```
 
 ## Launching Examples
 We provide general launch files for perception and navigation. Our modified version of the LoCoBot have two computing device onboard: Intel NUC and ZED Box (Jetson Xavier NX).
