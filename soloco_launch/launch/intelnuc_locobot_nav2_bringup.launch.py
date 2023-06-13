@@ -11,7 +11,8 @@ from launch.substitutions import (
     LaunchConfiguration, 
     PythonExpression,
     PathJoinSubstitution,
-    LaunchConfiguration
+    LaunchConfiguration,
+    NotSubstitution
 )
 from launch_ros.substitutions import FindPackageShare
 
@@ -106,7 +107,8 @@ def generate_launch_description():
           'lidar_type': 'rplidar_a2m8',
           'use_rviz': 'false',
           'use_sim_time': 'false',
-        }.items())
+        }.items(),
+        condition=IfCondition(NotSubstitution(launch_neural_planner)))
 
     soloco_planner_launch_cmd = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(os.path.join(
