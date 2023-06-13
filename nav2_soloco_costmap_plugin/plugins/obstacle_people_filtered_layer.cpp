@@ -136,11 +136,6 @@ void ObstaclePeopleFilteredLayer::onInitialize()
   current_ = true;
   was_reset_ = false;
 
-  global_frame_ = layered_costmap_->getGlobalFrameID();
-
-  auto sub_opt = rclcpp::SubscriptionOptions();
-  sub_opt.callback_group = callback_group_;
-
   if (use_people_tf_) {
     tf_buffer_ = std::make_shared<tf2_ros::Buffer>(node->get_clock());
     auto timer_interface = std::make_shared<tf2_ros::CreateTimerROS>(
@@ -150,20 +145,15 @@ void ObstaclePeopleFilteredLayer::onInitialize()
     tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
   } else {
     // Subscribe to tracked people
-      auto sub = std::make_shared<message_filters::Subscriber<soloco_interfaces::msg::TrackedPersons,
-          rclcpp_lifecycle::LifecycleNode>>(node, people_topic_, rmw_qos_profile_sensor_data, sub_opt);
-      sub->unsubscribe();
-
-      auto filter = std::make_shared<tf2_ros::MessageFilter<soloco_interfaces::msg::TrackedPersons>>(
-        *sub, *tf_, global_frame_, 50,
-        node->get_node_logging_interface(),
-        node->get_node_clock_interface(),
-        tf2::durationFromSec(transform_tolerance));
-
-      filter->registerCallback(
-        std::bind(
-          &ObstaclePeopleFilteredLayer::agentsCallback, this, std::placeholders::_1));
+    people_sub_ = node->create_subscription<soloco_interfaces::msg::TrackedPersons>(
+        people_topic_, rclcpp::SensorDataQoS(),
+        std::bind(&ObstaclePeopleFilteredLayer::agentsCallback, this, std::placeholders::_1));
   }
+
+  global_frame_ = layered_costmap_->getGlobalFrameID();
+
+  auto sub_opt = rclcpp::SubscriptionOptions();
+  sub_opt.callback_group = callback_group_;
 
   // now we need to split the topics based on whitespace which we can use a stringstream for
   std::stringstream ss(topics_string);
@@ -329,10 +319,8 @@ void ObstaclePeopleFilteredLayer::onInitialize()
 
 void 
 ObstaclePeopleFilteredLayer::agentsCallback(
-    soloco_interfaces::msg::TrackedPersons::ConstSharedPtr msg) {
+    const soloco_interfaces::msg::TrackedPersons::SharedPtr msg) {
   agent_states_.clear();
-  //auto node = node_.lock();
-  //RCLCPP_INFO(node->get_logger(), "There are %li agents detected", msg->tracks.size());
   for (auto person : msg->tracks){
     agent_states_.push_back(person.current_pose);
   }
@@ -626,10 +614,8 @@ ObstaclePeopleFilteredLayer::getAgentTFs(std::vector<tf2::Transform> & agents) c
       agents.push_back(global2agent_tf2);
     }
     return true;
-  } 
-  else {
-    tf2::Transform transform;
-    if(!agent_states_.empty()){
+  } else {
+      tf2::Transform transform;
       for (auto person : agent_states_) {
         try {
           transform.setOrigin(
@@ -648,7 +634,6 @@ ObstaclePeopleFilteredLayer::getAgentTFs(std::vector<tf2::Transform> & agents) c
           return false;
         }
       agents.push_back(transform);
-      }
     }
     return true;
   }

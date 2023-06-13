@@ -286,8 +286,9 @@ protected:
   std::vector<std::string> agent_ids_;
   std::vector<geometry_msgs::msg::PoseStamped> agent_states_;
   rclcpp::Subscription<tf2_msgs::msg::TFMessage>::SharedPtr tf_sub_;
+  rclcpp::Subscription<soloco_interfaces::msg::TrackedPersons>::SharedPtr people_sub_;
 
-  void agentsCallback(soloco_interfaces::msg::TrackedPersons::ConstSharedPtr msg);
+  void agentsCallback(const soloco_interfaces::msg::TrackedPersons::SharedPtr msg);
   void doTouch(
     tf2::Transform agent, double * min_x, double * min_y,
     double * max_x, double * max_y);
