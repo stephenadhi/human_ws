@@ -31,19 +31,28 @@ You need to have the following installed on your machine:
     # Build Navigation2 from source (optional, necessary for using MPPI controller)
     git clone -b humble https://github.com/ros-planning/navigation2.git
     ```
-2. Install ROS dependencies
+
+2. Pulling new changes
+    ```
+    git pull --recurse-submodules
+    git submodule update --init --recursive
+    ```
+
+3. Install ROS dependencies
     ```
     cd workspaces/humble/
     rosdep install -i -y -r --from-paths src --rosdistro humble
     ```
-3. Build everything inside the workspace
+
+4. Build everything inside the workspace
    ```
     colcon build --packages-select zed_interfaces
-    . install/setup.bash
+    source install/setup.bash
     colcon build --packages-select soloco_interfaces
     colcon build
    ```
-4. Define robot base type and model
+
+5. Define robot base type and model
    ```
    export INTERBOTIX_XSLOCOBOT_BASE_TYPE=kobuki
    export INTERBOTIX_XSLOCOBOT_ROBOT_MODEL=locobot_base
@@ -64,7 +73,7 @@ For launching LoCoBot, nav2_planner_server + SLAM, neural planner, human tf publ
    ```
     # SSH to the Intel NUC computer
     cd ~/interbotix_ws
-    . install/setup.bash && . /opt/ros/humble/setup.bash
+    source install/setup.bash && source /opt/ros/humble/setup.bash
     ros2 launch intelnuc_bringup.launch.py launch_neural_planner:=True run_human_tf:=True
    ```
 For launching ZED human perception and multi-tracking module:
@@ -73,14 +82,17 @@ For launching ZED human perception and multi-tracking module:
     ./docker_zedbox_bringup.sh
    ```
 For launching visualization in remote PC:
-    ```
+
     export ROS_DOMAIN_ID=2 # Adjust to your settings, default=0
     source install/setup.bash
     colcon build --packages-select soloco_launch # If not build
     ros2 launch soloco_launch remote_view.launch.py
-    ```
+
 ## Simulation Example
-Launch Locobot in Gazebo
-    ```
+Launch Locobot in Gazebo with GUI
+
     ros2 launch interbotix_xslocobot_sim xslocobot_gz_classic.launch.py robot_model:=locobot_base robot_name:=locobot use_lidar:=true use_rviz:=true use_gazebo_gui:=true 
-    ```
+
+Launch simultaneous localization and mapping using Nav2 and slam_toolbox
+
+    ros2 launch interbotix_xslocobot_nav xslocobot_slam_toolbox.launch.py launch_driver:=false slam_mode:=online_async use_sim_time:=true cmd_vel_topic:=/locobot/diffdrive_controller/cmd_vel_unstamped
