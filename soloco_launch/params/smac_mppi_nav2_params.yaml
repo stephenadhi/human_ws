@@ -253,7 +253,7 @@ local_costmap:
         # Tf prefix of detected people. (if using people_tf)
         tf_prefix: "agent_"
         # Topic name of detected people. (if not using people_tf)
-        people_topic: "human/interpolated_history"
+        people_topic: "/human/interpolated_history"
         # People filter radius. (default: 0.25)
         filter_radius: 0.5
         # Clear any occupied cells under robot footprint.
@@ -370,7 +370,7 @@ global_costmap:
         # Tf prefix of detected people. (if using people_tf)
         tf_prefix: "agent_"
         # Topic name of detected people. (if not using people_tf)
-        people_topic: "human/interpolated_history"
+        people_topic: "/human/interpolated_history"
         # People filter radius. (default: 0.25)
         filter_radius: 0.5
         # Clear any occupied cells under robot footprint.
