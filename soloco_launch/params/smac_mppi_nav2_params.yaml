@@ -249,10 +249,10 @@ local_costmap:
         # Whether the people filtering is enabled. (default: True)
         people_filtering_enabled: True
         # Whether the people transformation is used. (default: False)
-        use_people_tf: True        
+        use_people_tf: False        
         # Tf prefix of detected people. (if using people_tf)
         tf_prefix: "agent_"
-        # Topic name of detected people. (if using soloco_interfaces TrackedPersons.msg isntead of people tf)
+        # Topic name of detected people. (if not using people_tf)
         people_topic: "human/interpolated_history"
         # People filter radius. (default: 0.25)
         filter_radius: 0.5
@@ -366,7 +366,7 @@ global_costmap:
         # Whether the people filtering is enabled. (default: True)
         people_filtering_enabled: True
         # Whether the people transformation is used. (default: False)
-        use_people_tf: True        
+        use_people_tf: False        
         # Tf prefix of detected people. (if using people_tf)
         tf_prefix: "agent_"
         # Topic name of detected people. (if not using people_tf)
