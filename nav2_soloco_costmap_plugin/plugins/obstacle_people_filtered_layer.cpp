@@ -562,7 +562,9 @@ ObstaclePeopleFilteredLayer::updateBounds(
   if (people_filtering_enabled_) {
     // get the transform from the agents
     std::vector<tf2::Transform> agents;
-    getFrameNames();
+    if(use_people_tf_){
+      getFrameNames();
+    }
     current = current && getAgentTFs(agents);
     if (agents.size() != 0) {
         for (auto agent : agents) {
@@ -573,10 +575,10 @@ ObstaclePeopleFilteredLayer::updateBounds(
     }
     // update the global current status
     current_ = current;
-    if (!use_people_tf_) {
-      // Clear vector to prevent old people data being used if subsription fails
-      agent_states_.clear();
-    }
+    // if (!use_people_tf_) {
+    //   // Clear vector to prevent old people data being used if subsription fails
+    //   agent_states_.clear();
+    // }
   }
 }
 
@@ -614,7 +616,8 @@ ObstaclePeopleFilteredLayer::getAgentTFs(std::vector<tf2::Transform> & agents) c
       agents.push_back(global2agent_tf2);
     }
     return true;
-  } else {
+  } 
+  else {
       tf2::Transform transform;
       for (auto person : agent_states_) {
         try {
