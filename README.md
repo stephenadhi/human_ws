@@ -58,34 +58,47 @@ You need to have the following installed on your machine:
    export INTERBOTIX_XSLOCOBOT_ROBOT_MODEL=locobot_base
    ```
 
-## Launching Examples
+## Custom Launch Examples
 We provide general launch files for perception and navigation. Our modified version of the LoCoBot have two computing device onboard: Intel NUC and ZED Box (Jetson Xavier NX).
 
-Choose unique domain ID to prevent interference from other running ROS 2 system
-    ```
+First, SSH to the Intel NUC computer
+    
+    ssh locobot@locobot
+    
+Optional: choose unique domain ID to prevent interference from other running ROS 2 system
+
     export ROS_DOMAIN_ID=2 # Adjust to your settings, default=0
-    ```
-For launching LoCoBot, navigation2 stack + SLAM, and visualization:
-   ```
-    ros2 launch intelnuc_bringup.launch.py
-   ```
-Default LoCoBot with Nav2 + SLAM:
-   ```
-    # SSH to the Intel NUC computer
+
+Go to the directory and source installation
+
     cd ~/interbotix_ws
     source install/setup.bash && source /opt/ros/humble/setup.bash
+    
+### Default LoCoBot launch with navigation2 stack + SLAM, and visualization:
+
     ros2 launch soloco_launch intelnuc_locobot_nav2_bringup.launch.py nav2_param_filename:=smac_mppi_nav2_params.yaml
-   ```
-For launching ZED human perception and multi-tracking module:
-   ```
-    # SSH to the ZED Box 
+
+### LoCoBot launch with custom neural motion planner as controller:
+
+    ros2 launch soloco_launch intelnuc_locobot_nav2_bringup.launch.py nav2_param_filename:=smac_mppi_nav2_params.yaml launch_neural_planner:=True
+
+### For launching ZED human perception and multi-tracking module:
+SSH to the ZED Box
+
+    ssh zedbox@10.42.0.230
+    
+Run the shell script to bringup our ROS modules inside a docker container
+
     ./docker_zedbox_bringup.sh
-   ```
-For launching visualization in remote PC:
+
+### Visualization in remote PC:
+Source installation and set the same ROS domain ID.
 
     export ROS_DOMAIN_ID=2 # Adjust to your settings, default=0
     source install/setup.bash
-    colcon build --packages-select soloco_launch # If not build
+
+Launch RViZ:
+
     ros2 launch soloco_launch remote_view.launch.py
 
 ## Simulation Example

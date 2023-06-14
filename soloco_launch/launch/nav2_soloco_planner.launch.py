@@ -28,6 +28,8 @@
 This launch script borrows heavily from the original Nav2 bringup launch file:
     https://github.com/ros-planning/navigation2/blob/humble/nav2_bringup/launch/bringup_launch.py
 """
+import os
+from ament_index_python.packages import get_package_share_directory
 
 from launch import LaunchDescription
 from launch.actions import (
@@ -73,6 +75,7 @@ def launch_setup(context, *args, **kwargs):
 
     lifecycle_nodes_navigation = [
         'planner_server',
+        'controller_server',
         'behavior_server',
         'bt_navigator',
         'waypoint_follower'
@@ -110,10 +113,50 @@ def launch_setup(context, *args, **kwargs):
         convert_types=True,
     )
 
+    xslocobot_control_launch_cmd = IncludeLaunchDescription(
+        launch_description_source=PythonLaunchDescriptionSource([
+            PathJoinSubstitution([
+                FindPackageShare('interbotix_xslocobot_control'),
+                'launch',
+                'xslocobot_control.launch.py',
+            ])
+        ]),
+        launch_arguments={
+            'robot_name': 'locobot',
+            'use_lidar': 'true',
+            'lidar_type': 'rplidar_a2m8',
+            'use_rviz': 'false',
+            'rviz_frame': 'map',
+            'use_camera': 'false',
+            'rs_camera_align_depth': 'true',
+            'use_base': 'true',
+            # 'use_dock': 'true',
+            'use_sim_time': 'false',
+        }.items(),
+    )
+
+    soloco_planner_launch_cmd = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(os.path.join(
+          get_package_share_directory('soloco_planner'), 'launch', 'social_planner.launch.py')),
+        launch_arguments={
+          'use_rviz': 'false',
+        }.items()
+    )
+
     planner_server_node = Node(
         package='nav2_planner',
         executable='planner_server',
         name='planner_server',
+        output='screen',
+        parameters=[
+            configured_params
+        ],
+        remappings=tf_remappings,
+    )
+
+    controller_server_node = Node(
+        package='nav2_controller',
+        executable='controller_server',
         output='screen',
         parameters=[
             configured_params
@@ -297,7 +340,10 @@ def launch_setup(context, *args, **kwargs):
 
     return [
         set_logging_env_var,
+        soloco_planner_launch_cmd,
+        xslocobot_control_launch_cmd,
         planner_server_node,
+        controller_server_node,
         behavior_server_node,
         bt_navigator_node,
         waypoint_follower_node,
@@ -339,7 +385,7 @@ def generate_launch_description():
             default_value=PathJoinSubstitution([
                 FindPackageShare('soloco_launch'),
                 'params',
-                'nav2_params.yaml'
+                'smac_mppi_nav2_params.yaml'
             ]),
             description=(
                 'full path to the ROS 2 parameters file to use when configuring the Nav2 stack.'

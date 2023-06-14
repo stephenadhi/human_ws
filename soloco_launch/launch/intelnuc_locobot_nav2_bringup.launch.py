@@ -112,10 +112,7 @@ def generate_launch_description():
 
     soloco_planner_launch_cmd = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(os.path.join(
-          soloco_planner_dir, 'launch', 'social_planner.launch.py')),
-        launch_arguments={
-          'use_rviz': 'false',
-        }.items(),
+          bringup_dir, 'launch', 'nav2_soloco_planner.launch.py')),
         condition=IfCondition(launch_neural_planner))
 
 
