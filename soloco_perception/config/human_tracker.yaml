@@ -14,5 +14,5 @@ soloco_perception:
       delay_tolerance: 0.2      # delay tolerance [s] # Currently not used
       max_history_length: 7     # maximum number of history points (without current)
       max_num_agents: 5         # currently not used
-      track_timeout: 2.0        # maximum time to keep old tracks before deleting it [s]
+      track_timeout: 1.0        # maximum time to keep old tracks before deleting it [s]
       visualize_bbox: true      # Whether to visualize bounding boxes for the current human poses

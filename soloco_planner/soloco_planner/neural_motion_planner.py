@@ -42,7 +42,7 @@ class NeuralMotionPlanner(Node):
     def declare_ros_parameters(self):
         # Declare topic parameters
         self.declare_parameter('odom_topic', 'locobot/odom')
-        self.declare_parameter('global_goal_topic', 'global_goal_republished')
+        self.declare_parameter('global_goal_topic', 'goal_pose')
         self.declare_parameter('subgoal_topic', 'subgoal_pose')
         self.declare_parameter('costmap_topic', 'local_costmap/costmap')
         self.declare_parameter('cmd_vel_topic', 'locobot/commands/vedlocity')
@@ -167,7 +167,6 @@ class NeuralMotionPlanner(Node):
         goal = [goal_msg.pose.position.x, goal_msg.pose.position.y, goal_yaw[2]]
         
         self.subgoal_pose = np.array(goal)
-        self.get_logger().info(f'Heading towards x:{goal[0]}, y: {goal[1]}')
 
     def trajectory_callback(self, robot_msg):
         # self.get_logger().info('Robot trajectory received.')
@@ -211,8 +210,10 @@ class NeuralMotionPlanner(Node):
             distance_to_goal = hypot((self.r_pos_xy[0]-self.global_goal[0]), 
                                  (self.r_pos_xy[1]-self.global_goal[1]))
             
+            # self.get_logger().info(f'Heading towards x:{self.subgoal_pose[0]}, y: {self.subgoal_pose[1]}')
+
             # Concatenate information about people track, robot state, and goal
-            x = np.concatenate([self.ped_pos_xy_cem.flatten(), self.neigh_matrix.flatten(), self.r_state, self.subgoal_pose[:2]])
+            x = np.concatenate([self.ped_pos_xy_cem.flatten(), self.neigh_matrix.flatten(), self.r_state, self.global_goal[:2]])
             
             # Get command from neural model forward pass, given costmap object
             u, current_future = self.model.predict(x, costmap_obj=self.ogm)

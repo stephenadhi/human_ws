@@ -116,7 +116,7 @@ class Prediction_Model(nn.Module):
             goal_clamped = torch.cat([x_g, y_g], dim=-1) + obs_traj_pos[-1, robot_idx]
             # plot_traj(obs_traj_pos, pred_traj_abs, goal_clamped, robot_idx)
             self.plot_list.append([obs_traj_pos, pred_traj_abs, goal_clamped, robot_idx])
-            goal_cost = torch.sqrt(((goal_clamped - pred_traj_abs[:4, robot_idx]) ** 2).sum(dim=-1)).sum(0)
+            goal_cost = torch.sqrt(((goal_clamped - pred_traj_abs[:, robot_idx]) ** 2).sum(dim=-1)).sum(0)
             speed_cost = (0.5 - r_pose[:, 3])
             costmap_cost = self.calc_cost_map_cost(pred_traj_abs[:, robot_idx], costmap_obj, opt_count)
            # goal_cost = self.calc_to_goal_cost(pred_traj_abs[:, robot_idx], goal[robot_idx], r_pose )

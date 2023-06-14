@@ -1,7 +1,7 @@
 soloco_planner:
   ros__parameters:
     controller_frequency: 10.0 # [Hz]
-    republish_global_goal: True
+    republish_global_goal: False
     republish_goal_period: 0.5
     # Neural model
     model_name: 'CEM_IAR'
@@ -14,7 +14,7 @@ soloco_planner:
     lookahead_dist: 2.5
     # Topic parameters
     odom_topic: 'locobot/odom'
-    global_goal_topic: 'global_goal_republished' #  'goal_pose' #  
+    global_goal_topic: 'goal_pose' # 'global_goal_republished' #   
     subgoal_topic: 'subgoal_pose'
     costmap_topic: 'local_costmap/costmap'
     cmd_vel_topic: 'locobot/commands/velocity'

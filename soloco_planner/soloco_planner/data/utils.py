@@ -27,7 +27,9 @@ def batched_Robot_coll_smoothed_loss(pred_batch, sample_batch, predictions_steps
 def actionXYtoROT(actionXY, robot_state, dt):
     # robot_state state[v_x(m), v_y(m), yaw(rad), v(m / s), omega(rad / s)] x and y are displacments to last state
     v, yaw = cart2pol(actionXY[:, 0], actionXY[:, 1])
-    omega_t = (yaw - robot_state[:, 2].unsqueeze(1)) / dt
+    yaw_r = robot_state[:,2]
+    diff = torch.atan2(torch.sin(yaw - yaw_r), torch.cos(yaw-yaw_r))
+    omega_t = (diff) / dt
     v_t = v / dt
     return torch.cat([v_t, omega_t], dim=-1)
 

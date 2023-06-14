@@ -98,7 +98,7 @@ class MultiTrackVisualizer(Node):
             marker.color.b = 0.0
             marker.scale.x = 0.05
             marker.points = person_marker_points
-            marker.lifetime = Duration(seconds=0.2).to_msg()
+            marker.lifetime = Duration(seconds=0.1).to_msg()
             pose_marker_array.markers.append(marker)
             # Create bounding box marker for the person
             if self.visualize_bbox and person.current_pose.pose.position.x != 0.0:
@@ -119,7 +119,7 @@ class MultiTrackVisualizer(Node):
                 marker.color.r = 0.5
                 marker.color.g = 0.5
                 marker.color.b = 0.5
-                marker.lifetime = Duration(seconds=0.4).to_msg()
+                marker.lifetime = Duration(seconds=0.1).to_msg()
                 bbox_marker_array.markers.append(marker)
         # Publish final marker array
         self.pose_markers_pub.publish(pose_marker_array)
