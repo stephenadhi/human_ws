@@ -236,7 +236,7 @@ class NeuralMotionPlanner(Node):
             self.visualize_future(current_future)
 
             # Reset human data
-            self.ped_pos_xy_cem = np.ones((self.max_history_length + 1, self.max_num_agents + 1, 2)) * 500 # placeholder value
+            # self.ped_pos_xy_cem = np.ones((self.max_history_length + 1, self.max_num_agents + 1, 2)) * 500 # placeholder value
     
     def spin_robot_in_subgoal_direction(self, yaw_diff):
         cmd_vel = Twist()

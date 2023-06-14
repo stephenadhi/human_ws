@@ -19,6 +19,7 @@ def batched_Robot_coll_smoothed_loss(pred_batch, sample_batch, predictions_steps
         currSzene = pred_batch.contiguous().reshape(sample_batch, -1, 2)
     dist_mat = torch.sqrt(((currSzene[:, 0].unsqueeze(dim=1) - currSzene[:, 1:] ) ** 2).sum(dim=-1))#.sum(dim=0)
     dist_mat = 1. - torch.sigmoid((dist_mat - collision_dist) * 35.)
+    dist_mat = torch.where(dist_mat >= 0.8, torch.tensor(100000, device=dist_mat.device), dist_mat)
     # dist_mat = torch.logical_and(0. != dist_mat, dist_mat < collision_dist)
     dist_mat = dist_mat.sum(dim=-1).unsqueeze(dim=1)  # get number of coll for every pedestrian traj
 

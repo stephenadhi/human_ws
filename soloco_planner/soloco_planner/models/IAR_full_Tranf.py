@@ -26,7 +26,7 @@ class TrajectoryGenerator(nn.Module):
 
         batch = traj_rel.shape[1] #/ 12
 
-        noise_sampled = torch.randn(12, batch, 2, device=self.device)
+        noise_sampled = torch.randn(self.predictions_steps, batch, 2, device=self.device)
         noise_sampled[:, robotID] = z
         if calc_new:
             enc_hist = self.hist_encoder(traj_rel[: self.obs_len])

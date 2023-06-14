@@ -137,7 +137,7 @@ class CEM_IAR(nn.Module):
         super(CEM_IAR, self).__init__()
         self.device = device
         self.sample_batch = 400
-        self.predictions_steps = 12
+        self.predictions_steps = 20
         self.init_mean = torch.zeros([self.predictions_steps, self.sample_batch, 2], device=self.device)
         self.init_var = torch.ones([self.predictions_steps, self.sample_batch, 2], device=self.device)
         self.max_iters = 5 # eval without robot constrains 1 53 success, 2- 84.7, 3- 0.9548, 4- 0.9703, 5- 0.9857 , 6- same
