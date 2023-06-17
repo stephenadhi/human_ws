@@ -44,6 +44,7 @@ class HumanTrackPublisher(Node):
         self.zed_sub = self.create_subscription(ObjectsStamped, detected_obj_topic, self.zed_callback, qos)
         # Create publisher
         self.human_track_interpolated_pub = self.create_publisher(TrackedPersons, human_track_topic, qos)
+        self.timer = self.create_timer(0.05, self.timer_callback)
         # Create tf buffer and transform listener   
         self.tf_buffer = Buffer()
         self.transform_listener = TransformListener(self.tf_buffer, self)
@@ -53,6 +54,12 @@ class HumanTrackPublisher(Node):
         self.people = TrackedPersons()
         self.idx = len(self.people.tracks) - 1
         self.interpolated_tracklets = []
+
+    def timer_callback(self):
+        if not self.interpolated_tracklets:
+            # Publish empty human tracks
+            self.people.header.stamp = self.get_clock().now().to_msg()
+            self.human_track_interpolated_pub.publish(self.people)
 
     def zed_callback(self, msg):
         # Loop through all detected objects, only consider valid tracking
