@@ -25,7 +25,6 @@ class RobotTrackPublisher(Node):
         self.declare_parameter('robot_odom_topic', 'locobot/odom')
         self.declare_parameter('robot_track_topic', 'robot/ego_trajectory')
         self.declare_parameter('pub_frame_id', 'locobot/odom')
-        self.declare_parameter('pub_frame_rate', 15.0)
         self.declare_parameter('interp_interval', 0.4)
         self.declare_parameter('delay_tolerance', 2.0)
         self.declare_parameter('max_history_length', 7)
@@ -34,7 +33,6 @@ class RobotTrackPublisher(Node):
         robot_odom_topic = self.get_parameter('robot_odom_topic').get_parameter_value().string_value
         robot_track_topic = self.get_parameter('robot_track_topic').get_parameter_value().string_value
         self.pub_frame_id = self.get_parameter("pub_frame_id").get_parameter_value().string_value
-        self.pub_frame_rate = self.get_parameter("pub_frame_rate").get_parameter_value().integer_value
         self.interp_interval = self.get_parameter("interp_interval").get_parameter_value().double_value
         self.delay_tolerance = self.get_parameter("delay_tolerance").get_parameter_value().double_value
         self.max_history_length = self.get_parameter("max_history_length").get_parameter_value().integer_value 

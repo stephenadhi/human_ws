@@ -25,7 +25,6 @@ class HumanTrackPublisher(Node):
         self.declare_parameter('detected_obj_topic', 'zed2/zed_node/obj_det/objects')
         self.declare_parameter('human_track_topic', 'human/interpolated_history')
         self.declare_parameter('pub_frame_id', 'locobot/odom')
-        self.declare_parameter('pub_frame_rate', 15.0)
         self.declare_parameter('interp_interval', 0.4)
         self.declare_parameter('delay_tolerance', 2.0)
         self.declare_parameter('max_history_length', 7)
@@ -36,7 +35,6 @@ class HumanTrackPublisher(Node):
         detected_obj_topic = self.get_parameter('detected_obj_topic').get_parameter_value().string_value
         human_track_topic = self.get_parameter('human_track_topic').get_parameter_value().string_value
         self.pub_frame_id = self.get_parameter("pub_frame_id").get_parameter_value().string_value
-        self.pub_frame_rate = self.get_parameter("pub_frame_rate").get_parameter_value().double_value
         self.interp_interval = self.get_parameter("interp_interval").get_parameter_value().double_value
         self.delay_tolerance = self.get_parameter("delay_tolerance").get_parameter_value().double_value
         self.max_history_length = self.get_parameter("max_history_length").get_parameter_value().integer_value
@@ -46,9 +44,6 @@ class HumanTrackPublisher(Node):
         self.zed_sub = self.create_subscription(ObjectsStamped, detected_obj_topic, self.zed_callback, qos)
         # Create publisher
         self.human_track_interpolated_pub = self.create_publisher(TrackedPersons, human_track_topic, qos)
-        # Create timer for publishing, visualization and pruning old data
-        timer_period = 1/self.pub_frame_rate  # seconds
-        self.timer = self.create_timer(timer_period, self.timer_callback)
         # Create tf buffer and transform listener   
         self.tf_buffer = Buffer()
         self.transform_listener = TransformListener(self.tf_buffer, self)
@@ -115,6 +110,8 @@ class HumanTrackPublisher(Node):
         if self.interpolated_tracklets:
             # Publish human tracks
             self.human_track_interpolated_pub.publish(self.people)
+            # Delete entries of interpolated points
+            self.prune_old_interpolated_points(self.get_clock().now())
   
     def update_person_track(self, person_idx):
         # Get interpolated tracklet
@@ -133,12 +130,6 @@ class HumanTrackPublisher(Node):
         # Stamp update time
         self.people.tracks[person_idx].track.header.stamp = self.get_clock().now().to_msg()
 
-    """Pruning function independent of sensor callback"""
-    def timer_callback(self):
-        if self.interpolated_tracklets:
-            # Delete entries of interpolated points
-            self.prune_old_interpolated_points(self.get_clock().now())
-
     def prune_old_interpolated_points(self, timestamp_):
         idx_to_delete = []
         idx = 0
@@ -151,7 +142,7 @@ class HumanTrackPublisher(Node):
             idx += 1
         # Delete old tracks
         for id in idx_to_delete:
-            self.get_logger().info(f'Deleting old track with ID: {id}')
+            self.get_logger().info(f'Deleting old track with ID: {self.people.tracks.track_id}')
             del self.people.tracks[id]
             del self.interpolated_tracklets[id]
 
