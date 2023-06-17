@@ -174,12 +174,16 @@ class NeuralMotionPlanner(Node):
         coords_array = np.array([[e.pose.position.x, e.pose.position.y] for e in robot_msg.track.poses])
         self.ped_pos_xy_cem[:, 0] = coords_array[::-1]
 
+    '''update people state (ID 0 is reserved for robot)'''
     def human_callback(self, human_msg):
         # self.get_logger().info('Human trajectory received.')
-        # update people state (ID 0 is reserved for robot)
-        for person_idx, person in enumerate(human_msg.tracks):
-            coords_array = np.array([[e.pose.position.x, e.pose.position.y] for e in person.track.poses])
-            self.ped_pos_xy_cem[:, person_idx+1] = coords_array[::-1]
+        if human_msg.tracks:
+            for person_idx, person in enumerate(human_msg.tracks):
+                coords_array = np.array([[e.pose.position.x, e.pose.position.y] for e in person.track.poses])
+                self.ped_pos_xy_cem[:, person_idx+1] = coords_array[::-1]
+        else:
+            # Reset human data
+            self.ped_pos_xy_cem[:, 1:] = np.ones((self.max_history_length + 1, self.max_num_agents, 2)) * 500 # placeholder value
 
     def costmap_callback(self, costmap_msg):
         # Send costmap to occupancy grid manager
@@ -235,9 +239,6 @@ class NeuralMotionPlanner(Node):
 
             self.visualize_future(current_future)
 
-            # Reset human data
-            # self.ped_pos_xy_cem = np.ones((self.max_history_length + 1, self.max_num_agents + 1, 2)) * 500 # placeholder value
-    
     def spin_robot_in_subgoal_direction(self, yaw_diff):
         cmd_vel = Twist()
         cmd_vel.angular.z = 0.8 if yaw_diff > 0 else -0.8
