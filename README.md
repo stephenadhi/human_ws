@@ -32,19 +32,29 @@ You need to have the following installed on your machine:
     git clone -b humble https://github.com/ros-planning/navigation2.git
     ```
 
-2. Pulling new changes
+2. Pulling new changes locally
     ```
     git pull --recurse-submodules
     git submodule update --init --recursive
     ```
+3. Applying new changes inside docker container
+    ```
+    # Run container
+    sudo docker run --runtime nvidia -it --rm --network host --privileged -v /dev:/dev -v /home/zedbox/ros2_ws:/home/zedbox/ros2_ws stephenadhi/ros2:humble-l4t-r35.2-zedsdk-4.0
+    # Pull new changes
+    cd home/zedbox/ros2_ws/src/human_ws
+    git pull
+    cd home/zedbox/ros2_ws
+    colcon build --packages-select soloco_perception soloco_planner soloco_launch soloco_interfaces
+    ```
 
-3. Install ROS dependencies
+4. Install ROS dependencies
     ```
     cd workspaces/humble/
     rosdep install -i -y -r --from-paths src --rosdistro humble
     ```
 
-4. Build everything inside the workspace
+5. Build everything inside the workspace
    ```
     colcon build --packages-select zed_interfaces
     source install/setup.bash
@@ -52,7 +62,7 @@ You need to have the following installed on your machine:
     colcon build
    ```
 
-5. Define robot base type and model
+6. Define robot base type and model
    ```
    export INTERBOTIX_XSLOCOBOT_BASE_TYPE=kobuki
    export INTERBOTIX_XSLOCOBOT_ROBOT_MODEL=locobot_base
