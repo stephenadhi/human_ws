@@ -51,6 +51,7 @@
 #include "pluginlib/class_list_macros.hpp"
 #include "sensor_msgs/point_cloud2_iterator.hpp"
 #include "nav2_costmap_2d/costmap_math.hpp"
+#include "nav2_util/geometry_utils.hpp"
 
 PLUGINLIB_EXPORT_CLASS(nav2_costmap_2d::ObstaclePeopleFilteredLayer, nav2_costmap_2d::Layer)
 
@@ -90,9 +91,11 @@ void ObstaclePeopleFilteredLayer::onInitialize()
 
   declareParameter("people_filtering_enabled", rclcpp::ParameterValue(true));
   declareParameter("use_people_tf", rclcpp::ParameterValue(false));
-  declareParameter("filter_radius", rclcpp::ParameterValue(0.32));
-  declareParameter("people_topic", rclcpp::ParameterValue(std::string("")));
   declareParameter("tf_prefix", rclcpp::ParameterValue("agent_"));
+  declareParameter("people_topic", rclcpp::ParameterValue(std::string("")));
+  declareParameter("odom_topic", rclcpp::ParameterValue(std::string("")));
+  declareParameter("filter_radius", rclcpp::ParameterValue(0.32));
+  declareParameter("filter_min_distance", rclcpp::ParameterValue(0.0));
 
   auto node = node_.lock();
   if (!node) {
@@ -111,8 +114,10 @@ void ObstaclePeopleFilteredLayer::onInitialize()
   node->get_parameter(name_ + "." + "people_filtering_enabled", people_filtering_enabled_);
   node->get_parameter(name_ + "." + "use_people_tf", use_people_tf_);
   node->get_parameter(name_ + "." + "people_topic", people_topic_);
+  node->get_parameter(name_ + "." + "odom_topic", odom_topic_);
   node->get_parameter(name_ + "." + "tf_prefix", tf_prefix_);
   node->get_parameter(name_ + "." + "filter_radius", filter_radius_);
+  node->get_parameter(name_ + "." + "filter_min_distance", filter_min_distance_);
 
   dyn_params_handler_ = node->add_on_set_parameters_callback(
     std::bind(
@@ -149,6 +154,10 @@ void ObstaclePeopleFilteredLayer::onInitialize()
         people_topic_, rclcpp::SensorDataQoS(),
         std::bind(&ObstaclePeopleFilteredLayer::agentsCallback, this, std::placeholders::_1));
   }
+  // Subscribe to robot pose
+  odom_sub_ = node->create_subscription<nav_msgs::msg::Odometry>(
+      odom_topic_, rclcpp::SensorDataQoS(),
+      std::bind(&ObstaclePeopleFilteredLayer::odomCallback, this, std::placeholders::_1));
 
   global_frame_ = layered_costmap_->getGlobalFrameID();
 
@@ -318,12 +327,27 @@ void ObstaclePeopleFilteredLayer::onInitialize()
 }
 
 void 
+ObstaclePeopleFilteredLayer::odomCallback(
+    const nav_msgs::msg::Odometry::SharedPtr msg) {
+  robot_pose_2d_ = msg->pose.pose;
+}
+
+void 
 ObstaclePeopleFilteredLayer::agentsCallback(
     const soloco_interfaces::msg::TrackedPersons::SharedPtr msg) {
   agent_states_.clear();
+  agent_distances_.clear();
   for (auto person : msg->tracks){
     agent_states_.push_back(person.current_pose);
+    double dist = calculateRobotAgentDistance(person.current_pose.pose);
+    agent_distances_.push_back(dist);
   }
+}
+
+double
+ObstaclePeopleFilteredLayer::calculateRobotAgentDistance(geometry_msgs::msg::Pose agent_pose){
+  // Default is only in 2D, Z-axis not considered
+  return nav2_util::geometry_utils::euclidean_distance(robot_pose_2d_, agent_pose);
 }
 
 void
@@ -619,31 +643,35 @@ ObstaclePeopleFilteredLayer::getAgentTFs(std::vector<tf2::Transform> & agents) c
   } 
   else {
       tf2::Transform transform;
+      int count = 0;
       for (auto person : agent_states_) {
-        try {
-          transform.setOrigin(
-            tf2::Vector3(person.pose.position.x, person.pose.position.y, person.pose.position.z)
-          );
-          transform.setRotation(
-            tf2::Quaternion(
-              person.pose.orientation.x,
-              person.pose.orientation.y,
-              person.pose.orientation.z,
-              person.pose.orientation.w
-            )
-          );
-        } catch(...) { 
-          RCLCPP_WARN(node->get_logger(), "Failed to get person pose");
-          return false;
+        if (agent_distances_[count] > filter_min_distance_){
+          try {
+            transform.setOrigin(
+              tf2::Vector3(person.pose.position.x, person.pose.position.y, person.pose.position.z)
+            );
+            transform.setRotation(
+              tf2::Quaternion(
+                person.pose.orientation.x,
+                person.pose.orientation.y,
+                person.pose.orientation.z,
+                person.pose.orientation.w
+              )
+            );
+          } catch(...) { 
+            RCLCPP_WARN(node->get_logger(), "Failed to get person pose");
+            return false;
+          }
+          agents.push_back(transform);
         }
-      agents.push_back(transform);
+      count++;
     }
     return true;
   }
 }
 
 void
-ObstaclePeopleFilteredLayer::agentFilter(tf2::Transform agent, float r)
+ObstaclePeopleFilteredLayer::agentFilter(tf2::Transform agent, double r)
 {
   std::vector<geometry_msgs::msg::Point> agent_footprint;
   transformFootprint(
