@@ -148,8 +148,8 @@ class HumanTrackPublisher(Node):
                 idx_to_delete.append(idx)
             idx += 1
         # Delete old tracks
-        for id in idx_to_delete:
-            self.get_logger().info(f'Deleting old track with ID: {self.people.tracks[id].track_id}')
+        for id in sorted(idx_to_delete, reverse=True):
+            # self.get_logger().info(f'Deleting old track with ID: {self.people.tracks[id].track_id}')
             del self.people.tracks[id]
             del self.interpolated_tracklets[id]
 
