@@ -26,11 +26,11 @@ class TrajectoryGenerator(nn.Module):
 
         batch = traj_rel.shape[1] #/ 12
 
-        noise_sampled = torch.randn(self.predictions_steps, batch, 2, device=self.device)
+        noise_sampled = torch.zeros(self.predictions_steps, batch, 2, device=self.device)
         noise_sampled[:, robotID] = z
         if calc_new:
             enc_hist = self.hist_encoder(traj_rel[: self.obs_len])
-            mu, scale = self.decoder(noise_sampled, enc_hist)
+            mu, scale = self.decoder(torch.zeros_like(noise_sampled), enc_hist)
             scale = torch.clamp(scale, min=-9, max=4)
             self.mu = mu
             self.scale = scale
