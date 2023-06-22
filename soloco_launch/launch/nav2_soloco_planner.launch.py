@@ -340,7 +340,7 @@ def launch_setup(context, *args, **kwargs):
 
     return [
         set_logging_env_var,
-        soloco_planner_launch_cmd,
+        # soloco_planner_launch_cmd,
         xslocobot_control_launch_cmd,
         planner_server_node,
         controller_server_node,

@@ -37,7 +37,7 @@ def generate_launch_description():
 
     declare_launch_neural_planner_cmd = DeclareLaunchArgument(
         'launch_neural_planner',
-        default_value='False')
+        default_value='True')
     
     declare_map_file_cmd = DeclareLaunchArgument(
         'map_file',
