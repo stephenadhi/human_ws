@@ -1,6 +1,8 @@
 #include <rclcpp/rclcpp.hpp>
 #include <nav_msgs/msg/path.hpp>
+#include <nav_msgs/msg/odometry.hpp>
 #include <geometry_msgs/msg/point.hpp>
+#include <geometry_msgs/msg/pose.hpp>
 #include <geometry_msgs/msg/pose_stamped.hpp>
 #include <visualization_msgs/msg/marker.hpp>
 #include <algorithm>
@@ -11,18 +13,22 @@ public:
     SubGoalPublisher()
         : Node("subgoal_publisher") {
         // Declare parameters
-        std::string global_plan_topic, subgoal_topic, subgoal_marker_topic;
+        std::string global_plan_topic, subgoal_topic, subgoal_marker_topic, odom_topic;
+        this->declare_parameter<std::string>("odom_topic", "locobot/odom");
         this->declare_parameter<std::string>("global_plan_topic", "plan");
         this->declare_parameter<std::string>("subgoal_topic", "subgoal_pose");
         this->declare_parameter<std::string>("subgoal_marker_topic", "visualization/subgoal");
         this->declare_parameter<double>("lookahead_dist", 3.0);
         this->declare_parameter<double>("goal_tolerance", 0.5);
+        this->get_parameter("odom_topic", odom_topic);
         this->get_parameter("global_plan_topic", global_plan_topic);
         this->get_parameter("subgoal_topic", subgoal_topic);
         this->get_parameter("subgoal_marker_topic", subgoal_marker_topic);
         this->get_parameter("lookahead_dist", lookahead_dist);
         this->get_parameter("goal_tolerance", goal_tolerance);
         //Subscribers
+        odom_sub_ = this->create_subscription<nav_msgs::msg::Odometry>(
+            odom_topic, 10, std::bind(&SubGoalPublisher::odomCallback, this, std::placeholders::_1));
         global_plan_sub_ = this->create_subscription<nav_msgs::msg::Path>(
             global_plan_topic, 10, std::bind(&SubGoalPublisher::globalPlanCallback, this, std::placeholders::_1));
         // Publisher
@@ -31,12 +37,17 @@ public:
     }
 
 private:
+    void odomCallback(const nav_msgs::msg::Odometry::SharedPtr msg){
+        robot_pose = msg->pose.pose;
+    }
+
     void globalPlanCallback(const nav_msgs::msg::Path::SharedPtr msg){
         // Find the first pose which is at a distance greater than the lookahead distance
         auto goal_pose_it = std::find_if(
             msg->poses.begin(), msg->poses.end(), [&](const auto & ps) {
-            return std::hypot(ps.pose.position.x, ps.pose.position.y) >= lookahead_dist;
-            });
+            return std::hypot(ps.pose.position.x- robot_pose.position.x, ps.pose.position.y - robot_pose.position.y) >= lookahead_dist;
+            }
+        );
         // If the no pose is not far enough, take the last pose
         if (goal_pose_it == msg->poses.end()) {
             goal_pose_it = std::prev(msg->poses.end());
@@ -76,6 +87,8 @@ private:
     
 private:
     double lookahead_dist, goal_tolerance;
+    geometry_msgs::msg::Pose robot_pose;
+    rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_sub_;
     rclcpp::Subscription<nav_msgs::msg::Path>::SharedPtr global_plan_sub_;
     rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr subgoal_pub_;
     rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr marker_pub_;
