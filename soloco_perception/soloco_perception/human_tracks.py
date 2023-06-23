@@ -26,10 +26,11 @@ class HumanTrackPublisher(Node):
         self.declare_parameter('human_track_topic', 'human/interpolated_history')
         self.declare_parameter('pub_frame_id', 'locobot/odom')
         self.declare_parameter('interp_interval', 0.4)
-        self.declare_parameter('delay_tolerance', 2.0)
+        self.declare_parameter('delay_tolerance', 0.05)
         self.declare_parameter('max_history_length', 7)
         self.declare_parameter('max_num_agents', 5)
-        self.declare_parameter('track_timeout', 2.0)
+        self.declare_parameter('track_timeout', 0.1)
+        self.declare_parameter('pruning_rate', 20)
 
         # Get parameter values
         detected_obj_topic = self.get_parameter('detected_obj_topic').get_parameter_value().string_value
@@ -40,11 +41,12 @@ class HumanTrackPublisher(Node):
         self.max_history_length = self.get_parameter("max_history_length").get_parameter_value().integer_value
         self.max_num_agents = self.get_parameter('max_num_agents').get_parameter_value().integer_value
         self.track_timeout = self.get_parameter('track_timeout').get_parameter_value().double_value
+        self.pruning_rate = self.get_parameter('pruning_rate').get_parameter_value().double_value
         # Create subscriber
         self.zed_sub = self.create_subscription(ObjectsStamped, detected_obj_topic, self.zed_callback, qos)
         # Create publisher
         self.human_track_interpolated_pub = self.create_publisher(TrackedPersons, human_track_topic, qos)
-        self.timer = self.create_timer(0.05, self.timer_callback)
+        self.timer = self.create_timer(1/self.pruning_rate, self.timer_callback)
         # Create tf buffer and transform listener   
         self.tf_buffer = Buffer()
         self.transform_listener = TransformListener(self.tf_buffer, self)
@@ -144,7 +146,7 @@ class HumanTrackPublisher(Node):
             det_time = Time.from_msg(person.track.header.stamp)
             time_diff = (timestamp_.nanoseconds - det_time.nanoseconds)/10**9
             # self.get_logger().info(f'Track time difference: {time_diff}s')
-            if ((time_diff) > self.track_timeout):
+            if ((time_diff) > self.track_timeout + self.delay_tolerance):
                 idx_to_delete.append(idx)
             idx += 1
         # Delete old tracks
