@@ -86,7 +86,7 @@ bt_navigator:
 controller_server:
   ros__parameters:
     # Frequency to run controller (Hz). (default 20.0)
-    controller_frequency: 10.0
+    controller_frequency: 20.0
     # The controller server filters the velocity portion of the odometry messages received before
     # sending them to the controller plugin. Odometry values below this threshold (in m/s) will be
     # set to 0.0. (default: 0.0001)
@@ -133,20 +133,21 @@ controller_server:
       yaw_goal_tolerance: 0.1
     # MPPI parameters
     FollowPath:
+FollowPath:
       plugin: "nav2_mppi_controller::MPPIController"
-      time_steps: 30
-      model_dt: 0.1
-      batch_size: 2000
+      time_steps: 96
+      model_dt: 0.05
+      batch_size: 1000
       vx_std: 0.2
       vy_std: 0.2
       wz_std: 0.4
-      vx_max: 0.8
+      vx_max: 0.5
       vx_min: -0.35
-      vy_max: 0.0
+      vy_max: 0.5
       wz_max: 1.9
       iteration_count: 1
       prune_distance: 4.0
-      transform_tolerance: 0.3
+      transform_tolerance: 0.2
       temperature: 0.3
       gamma: 0.015
       motion_model: "DiffDrive"

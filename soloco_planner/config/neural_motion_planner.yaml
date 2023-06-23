@@ -1,6 +1,6 @@
 soloco_planner:
   ros__parameters:
-    controller_frequency: 10.0 # [Hz]
+    controller_frequency: 20.0 # [Hz]
     republish_global_goal: False
     republish_goal_period: 0.5
     # Neural model

@@ -63,7 +63,7 @@ def generate_launch_description():
 
     declare_nav2_param_filename_cmd = DeclareLaunchArgument(
         'nav2_param_filename',
-        default_value='smac_mppi_nav2_params.yaml')
+        default_value='')
 
     declare_nav2_param_file_cmd = DeclareLaunchArgument(
         'nav2_param_file',
