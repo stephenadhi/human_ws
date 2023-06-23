@@ -30,7 +30,7 @@ class HumanTrackPublisher(Node):
         self.declare_parameter('max_history_length', 7)
         self.declare_parameter('max_num_agents', 5)
         self.declare_parameter('track_timeout', 0.1)
-        self.declare_parameter('pruning_rate', 20)
+        self.declare_parameter('pruning_rate', 20.0)
 
         # Get parameter values
         detected_obj_topic = self.get_parameter('detected_obj_topic').get_parameter_value().string_value

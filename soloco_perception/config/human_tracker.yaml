@@ -14,5 +14,5 @@ soloco_perception:
       max_num_agents: 5         # currently not used
       track_timeout: 0.15       # maximum time to keep old tracks before deleting it [s]
       delay_tolerance: 0.05     # delay tolerance for track timeout [s]
-      pruning_rate: 25          # Rate at which to check whether a track is old [Hz]
+      pruning_rate: 20.0        # Rate at which to check whether a track is old [Hz]
       visualize_bbox: true      # Whether to visualize bounding boxes for the current human poses
