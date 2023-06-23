@@ -122,8 +122,8 @@ def dynamic_window(robot_state, u, params_dict, dt):
     # Dynamic window from motion model
     Vd = [v_t - params_dict["max_accel"] * dt,
           v_t + params_dict["max_accel"] * dt,
-          omega - filler * params_dict["max_delta_yaw_rate"] * dt*5,
-          omega + filler * params_dict["max_delta_yaw_rate"] * dt*5]
+          omega - filler * params_dict["max_delta_yaw_rate"] * dt,
+          omega + filler * params_dict["max_delta_yaw_rate"] * dt]
 
     v_min = torch.max(torch.cat([Vs[0], Vd[0]], dim=1), dim=1)[0].unsqueeze(dim=1)
     v_max = torch.min(torch.cat([Vs[1], Vd[1]], dim=1), dim=1)[0].unsqueeze(dim=1)

@@ -1,6 +1,6 @@
 soloco_planner:
   ros__parameters:
-    controller_frequency: 30.0 # [Hz]
+    controller_frequency: 20.0 # [Hz]
     republish_global_goal: False
     republish_goal_period: 0.5
     # Neural model
@@ -11,7 +11,7 @@ soloco_planner:
     device: 'cpu'           # Options: 'cuda' or 'cpu'
     # Goal tolerance
     goal_tolerance: 0.25
-    lookahead_dist: 1.82 # max_speed * interp_interval * prediction_steps
+    lookahead_dist: 1.9 # max_speed * interp_interval * prediction_steps + collision_dist
     # Topic parameters
     odom_topic: 'locobot/odom'
     global_goal_topic: 'goal_pose' # 'global_goal_republished' #   
@@ -25,11 +25,12 @@ soloco_planner:
     pub_frame_id: 'locobot/odom'
     # Robot parameters
     robot_model: "differential_drive"
-    max_speed: 0.65         # [m/s] # 0.7 locobot kobuki base
+    max_speed: 0.5          # [m/s] # 0.7 locobot kobuki base
     min_speed: -0.1         # [m/s]
-    max_yaw_rate: 1.0       # [rad/s] may_yaw_acel = max_yaw_rate * interp_interval * 5 # TODO: make param 
-    max_accel: 0.8          # [m/s^2] 0.8 kobuki base
-    collision_dist: 0.65    # [m]
+    max_yaw_rate: 1.0       # [rad/s]
+    max_delta_yaw_rate: 3.2 # [rad/s^2]
+    max_accel: 0.7          # [m/s^2] 0.8 kobuki base
+    collision_dist: 0.5     # [m]
     max_num_agents: 5       # [maximum number of people]
     max_history_length: 7   # [maximum number of human past poses]
     prediction_steps: 7     # Steps to predict into the future
