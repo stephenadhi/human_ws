@@ -34,7 +34,7 @@ class GlobalNav2Client(Node):
 
         self.publisher = self.create_publisher(PoseStamped, global_goal_topic, 10)
         self.timer = self.create_timer(self.republish_goal_period, self.timer_callback)
-
+        self.init_pub = False
         # Create ComputePathToPose Client
         self.compute_path_to_pose_client = ActionClient(self, ComputePathToPose,
                                                         '/compute_path_to_pose')
@@ -46,6 +46,7 @@ class GlobalNav2Client(Node):
         self.transform_listener = TransformListener(self.tf_buffer, self)
 
     def goal_callback(self, goal_msg):
+        self.init_pub = False
         self.goal_pose = PoseStamped()
         if goal_msg.header.frame_id != self.pub_frame_id:
             self.goal_pose.pose = self.pose_transform(goal_msg.pose, self.pub_frame_id, goal_msg.header.frame_id)
@@ -91,8 +92,9 @@ class GlobalNav2Client(Node):
         except AttributeError:
             # no message received yet
             return
-        if self.republish_global_goal:
+        if self.republish_global_goal and self.init_pub == False:
             self.publisher.publish(self.goal_pose)
+            self.init_pub = True
         # self.get_logger().info('Getting path...')
         if self.invoke_global_planner:
             start_pose = PoseStamped()
