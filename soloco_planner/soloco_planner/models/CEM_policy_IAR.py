@@ -128,16 +128,16 @@ class Prediction_Model(nn.Module):
 
 
 class CEM_IAR(nn.Module):
-    def __init__(self, robot_params_dict, dt, hist=8,
-                 num_agent=5, obstacle_cost_gain=1000,
+    def __init__(self, robot_params_dict, dt=0.4, hist=8, sample_batch=400,
+                 num_agent=5, obstacle_cost_gain=1000, prediction_steps=12,
                  soft_update= False, bc = False,
                  AR_checkpoint='weights/SIMNoGoal-univ_fast_AR2/checkpoint_with_model.pt',
                  IAR_checkpoint='weights/SIMNoGoal-univ_IAR_Full_trans/checkpoint_with_model.pt',
                  device='cuda'):
         super(CEM_IAR, self).__init__()
         self.device = device
-        self.sample_batch = 400
-        self.predictions_steps = 20
+        self.sample_batch = sample_batch
+        self.predictions_steps = prediction_steps
         self.init_mean = torch.zeros([self.predictions_steps, self.sample_batch, 2], device=self.device)
         self.init_var = torch.ones([self.predictions_steps, self.sample_batch, 2], device=self.device)
         self.max_iters = 5 # eval without robot constrains 1 53 success, 2- 84.7, 3- 0.9548, 4- 0.9703, 5- 0.9857 , 6- same

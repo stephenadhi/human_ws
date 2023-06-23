@@ -71,8 +71,13 @@ class NeuralMotionPlanner(Node):
         self.declare_parameter('max_num_agents', 5)     # [maximum number of people]
         # Declare maximum history length
         self.declare_parameter('max_history_length', 7) # [maximum history length]
+        self.declare_parameter('prediction_steps', 12) # [maximum history length]
+        self.declare_parameter('sample_batch', 200) # [maximum history length]
         self.declare_parameter('interp_interval', 0.4) # [interpolation interval]
         self.declare_parameter('controller_frequency', 20.0) # [controller frequency]
+        self.declare_parameter('debug_log', False)
+        
+        self.debug_log = self.get_parameter('debug_log').get_parameter_value().bool_value
 
     def initialize_node(self):
         # Device to use
@@ -89,8 +94,10 @@ class NeuralMotionPlanner(Node):
         self.robot_params_dict['collision_dist'] = self.get_parameter('collision_dist').get_parameter_value().double_value
         # Initialize maximum number of agents, history length, and interpolation interval
         self.max_num_agents = self.get_parameter('max_num_agents').get_parameter_value().integer_value  
-        self.max_history_length = self.get_parameter('max_history_length').get_parameter_value().integer_value  
+        self.max_history_length = self.get_parameter('max_history_length').get_parameter_value().integer_value
+        self.prediction_steps = self.get_parameter('prediction_steps').get_parameter_value().integer_value
         self.interp_interval = self.get_parameter('interp_interval').get_parameter_value().double_value
+        self.sample_batch = self.get_parameter('sample_batch').get_parameter_value().integer_value
         # Initialize neighboring matrix
         self.neigh_matrix = np.ones((6, 6), int)
         np.fill_diagonal(self.neigh_matrix, 0)
@@ -113,8 +120,8 @@ class NeuralMotionPlanner(Node):
 
     def switch_case_model(self, model_name):
         if model_name == 'CEM_IAR':
-            return CEM_IAR(self.robot_params_dict, self.interp_interval, hist=self.max_history_length, 
-                           num_agent=self.max_num_agents, AR_checkpoint=self.AR_checkpoint,
+            return CEM_IAR(robot_params_dict=self.robot_params_dict, dt=self.interp_interval, sample_batch=self.sample_batch, hist=self.max_history_length, 
+                           prediction_steps=self.prediction_steps, num_agent=self.max_num_agents, AR_checkpoint=self.AR_checkpoint,
                            IAR_checkpoint=self.IAR_checkpoint, device=self.device)
         else:
             raise Exception('An error occurred')
@@ -229,7 +236,8 @@ class NeuralMotionPlanner(Node):
                 cmd_vel.linear.x = float(u[0])
                 cmd_vel.angular.z = float(u[1])
                 self.cmd_vel_publisher.publish(cmd_vel)
-                self.get_logger().info(f'Navigating with velocity linear: {u[0]} and angular {u[1]}.')          
+                if self.debug_log:
+                    self.get_logger().info(f'Navigating with velocity linear: {u[0]} and angular {u[1]}.')          
             else:
                 cmd_vel.linear.x = 0.0
                 cmd_vel.angular.z = 0.0
