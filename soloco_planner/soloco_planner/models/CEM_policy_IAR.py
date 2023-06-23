@@ -168,7 +168,7 @@ class CEM_IAR(nn.Module):
     def get_pred_traj_abs(self):
         agent_future = self.pred_model.pred_traj_abs.cpu().numpy().transpose(1, 0, 2)
         agent_future = agent_future.reshape(self.sample_batch, -1, self.predictions_steps, 2)
-        agent_future = agent_future[self.best_id].mean(axis=0)
+        agent_future = agent_future[self.best_id.cpu().numpy()].mean(axis=0)
         return agent_future
 
     def predict(self, x, costmap_obj=None):
@@ -191,6 +191,7 @@ class CEM_IAR(nn.Module):
                                                                                                       calc_new=calc_new,
                                                                                                       costmap_obj=costmap_obj)
                 calc_new = False
+                costmap_cost = torch.tensor(costmap_cost, device=self.device)
                 cost = 1* goal_cost + 1000.* coll_cost + 1* costmap_cost + 1.*nll#+ self.obstacle_cost_gain*coll_cost #+ nll
                 best_ids = torch.argsort(cost, descending=False)
                 elites = samples[:, best_ids][:, :self.num_elites]
