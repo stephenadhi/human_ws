@@ -211,20 +211,18 @@ class NeuralMotionPlanner(Node):
         self.r_state[4] = odom_msg.twist.twist.angular.z
 
     def timer_callback(self):
-        if self.global_goal is not None and self.ogm is not None:
+        if self.global_goal is not None and self.subgoal_pose is not None and self.ogm is not None:
             # If global goal is new
             # if self.new_goal == True and self.robot_model == 'differential_drive':
             #     yaw_diff = self.global_goal[2] - self.robot_yaw[2]
             #     self.spin_robot_in_subgoal_direction(yaw_diff)
 
-            # Calculate euclidian distance to subgoal
+            # Calculate euclidian distance to goal
             distance_to_goal = hypot((self.r_pos_xy[0]-self.global_goal[0]), 
                                  (self.r_pos_xy[1]-self.global_goal[1]))
-            
-            # self.get_logger().info(f'Heading towards x:{self.subgoal_pose[0]}, y: {self.subgoal_pose[1]}')
 
             # Concatenate information about people track, robot state, and goal
-            x = np.concatenate([self.ped_pos_xy_cem.flatten(), self.neigh_matrix.flatten(), self.r_state, self.global_goal[:2]])
+            x = np.concatenate([self.ped_pos_xy_cem.flatten(), self.neigh_matrix.flatten(), self.r_state, self.subgoal_pose[:2]])
             
             # Get command from neural model forward pass, given costmap object
             u, current_future = self.model.predict(x, costmap_obj=self.ogm)
@@ -237,6 +235,7 @@ class NeuralMotionPlanner(Node):
                 cmd_vel.angular.z = float(u[1])
                 self.cmd_vel_publisher.publish(cmd_vel)
                 if self.debug_log:
+                    self.get_logger().info(f'Heading towards x:{self.subgoal_pose[0]}, y: {self.subgoal_pose[1]}')
                     self.get_logger().info(f'Navigating with velocity linear: {u[0]} and angular {u[1]}.')          
             else:
                 cmd_vel.linear.x = 0.0
