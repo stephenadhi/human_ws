@@ -70,6 +70,8 @@ def launch_setup(context, *args, **kwargs):
     slam_toolbox_params_file_launch_arg = LaunchConfiguration('slam_toolbox_params_file')
     use_slam_toolbox_launch_arg = LaunchConfiguration('use_slam_toolbox')
     map_yaml_file_launch_arg = LaunchConfiguration('map')
+    default_nav_to_pose_bt_xml_launch_arg = LaunchConfiguration('default_nav_to_pose_bt_xml')
+    default_nav_through_poses_bt_xml_launch_arg = LaunchConfiguration('default_nav_through_poses_bt_xml')
     # Set env var to print messages to stdout immediately
     set_logging_env_var = SetEnvironmentVariable('RCUTILS_LOGGING_BUFFERED_STREAM', '1')
 
@@ -104,6 +106,8 @@ def launch_setup(context, *args, **kwargs):
     param_substitutions = {
         'use_sim_time': use_sim_time_launch_arg,
         'autostart': autostart_launch_arg,
+        'default_nav_to_pose_bt_xml' : default_nav_to_pose_bt_xml_launch_arg,
+        'default_nav_through_poses_bt_xml' : default_nav_through_poses_bt_xml_launch_arg
     }
 
     configured_params = RewrittenYaml(
@@ -340,7 +344,7 @@ def launch_setup(context, *args, **kwargs):
 
     return [
         set_logging_env_var,
-        # soloco_planner_launch_cmd,
+        soloco_planner_launch_cmd,
         xslocobot_control_launch_cmd,
         planner_server_node,
         controller_server_node,
@@ -356,6 +360,24 @@ def launch_setup(context, *args, **kwargs):
 
 def generate_launch_description():
     declared_arguments = []
+    declared_arguments.append(
+        DeclareLaunchArgument(
+            'default_nav_to_pose_bt_xml',
+            default_value=os.path.join(
+                get_package_share_directory('soloco_launch'),
+                'config', 'behavior_trees', 'soloco_nav_to_pose_global.xml'),
+            description='Full path to the behavior tree xml file to use'
+        )
+    ),
+    declared_arguments.append(
+        DeclareLaunchArgument(
+            'default_nav_through_poses_bt_xml',
+            default_value=os.path.join(
+                get_package_share_directory('soloco_launch'),
+                'config', 'behavior_trees', 'soloco_nav_through_poses_global.xml'),
+            description='Full path to the behavior tree xml file to use'
+        )
+    ),
     declared_arguments.append(
         DeclareLaunchArgument(
             'namespace',

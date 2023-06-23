@@ -4,10 +4,8 @@
 # including recovery.
 bt_navigator:
   ros__parameters:
-    # default_nav_to_pose_bt_xml: "/home/locobot/interbotix_ws/src/human_ws/soloco_launch/config/behavior_trees/navigate_to_pose_w_replanning_and_recovery.xml"
-    # default_nav_through_poses_bt_xml: "/home/locobot/interbotix_ws/src/human_ws/soloco_launch/config/behavior_trees/navigate_through_poses_w_replanning_and_recovery.xml"
-    default_nav_to_pose_bt_xml: "/home/locobot/interbotix_ws/src/human_ws/soloco_launch/config/behavior_trees/soloco_nav_to_pose_global.xml"
-    default_nav_through_poses_bt_xml: "/home/locobot/interbotix_ws/src/human_ws/soloco_launch/config/behavior_trees/soloco_nav_through_poses_global.xml"
+    default_nav_to_pose_bt_xml: "/home/locobot/interbotix_ws/src/human_ws/soloco_launch/config/behavior_trees/navigate_to_pose_w_replanning_and_recovery.xml"
+    default_nav_through_poses_bt_xml: "/home/locobot/interbotix_ws/src/human_ws/soloco_launch/config/behavior_trees/navigate_through_poses_w_replanning_and_recovery.xml"
     # Reference frame. (default: map)
     global_frame: locobot/odom
     # Path to behavior tree XML description. (default: base_link)
@@ -133,7 +131,6 @@ controller_server:
       yaw_goal_tolerance: 0.1
     # MPPI parameters
     FollowPath:
-FollowPath:
       plugin: "nav2_mppi_controller::MPPIController"
       time_steps: 96
       model_dt: 0.05
