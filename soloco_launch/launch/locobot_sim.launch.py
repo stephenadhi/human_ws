@@ -3,21 +3,23 @@ import os
 from ament_index_python.packages import get_package_share_directory
 
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, TimerAction
 from launch_ros.actions import Node
 from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.substitutions import LaunchConfiguration
-
+from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
+from launch_ros.substitutions import FindPackageShare
 
 def generate_launch_description():
     # Create the launch configuration variables specific to simulation
     namespace = LaunchConfiguration('namespace')
     robot_model = LaunchConfiguration('robot_model')
     robot_name = LaunchConfiguration('robot_name')
+    use_pedsim = LaunchConfiguration('use_pedsim')
     use_gazebo_gui = LaunchConfiguration('use_gazebo_gui')
     world_file = LaunchConfiguration('world_file')
     map_file = LaunchConfiguration('map_file')
+    nav2_params_file = LaunchConfiguration('nav2_params_file')
     pedsim_scene_file = LaunchConfiguration('pedsim_scene_file')
     pedsim_config_file = LaunchConfiguration('pedsim_config_file')
 
@@ -38,9 +40,14 @@ def generate_launch_description():
         description=('Interbotix LoCoBot model such as `locobot_base` or `locobot_wx250s`.'))
 
     declare_robot_name_cmd = DeclareLaunchArgument(
-        'robot_model',
+        'robot_name',
         default_value='locobot',
         description=('name of the robot (could be anything but defaults to `locobot`).'))
+
+    declare_use_pedsim_cmd = DeclareLaunchArgument(
+        'use_pedsim',
+        default_value='false',
+        description='Whether to use pedestrian simulator')
 
     declare_use_gazebo_gui_cmd = DeclareLaunchArgument(
         'use_gazebo_gui',
@@ -54,6 +61,18 @@ def generate_launch_description():
     declare_map_file_cmd = DeclareLaunchArgument(
         'map_file',
         default_value=default_map_path)
+
+    declare_nav2_params_file_cmd = DeclareLaunchArgument(
+        'nav2_params_file',
+        default_value=PathJoinSubstitution([
+            FindPackageShare('soloco_launch'),
+            'params',
+            'smac_mppi_nav2_params_sim.yaml'
+        ]),
+        description=(
+            'full path to the ROS 2 parameters file to use when configuring the Nav2 stack.'
+        ),
+    )
 
     declare_pedsim_scene_file_cmd = DeclareLaunchArgument(
         'pedsim_scene_file', 
@@ -81,16 +100,22 @@ def generate_launch_description():
           'world_file_path': world_file,
         }.items())
 
-    slam_toolbox_launch_cmd = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(os.path.join(
-          interbotix_nav_dir, 'launch', 'xslocobot_slam_toolbox.launch.py')),
-        launch_arguments={
-          'launch_driver': 'false',
-          'robot_name':robot_name,
-          'use_lidar': 'true',
-          'use_sim_time': 'true',
-          'map': map_file,
-        }.items())
+    slam_toolbox_launch_cmd = TimerAction(
+        period=10.0, # wait 10 seconds for simulator until launching nav2
+        actions=[
+            IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(os.path.join(
+            interbotix_nav_dir, 'launch', 'xslocobot_slam_toolbox.launch.py')),
+            launch_arguments={
+            'launch_driver': 'false',
+            'cmd_vel_topic': 'locobot/diffdrive_controller/cmd_vel_unstamped',
+            'robot_name':robot_name,
+            'use_lidar': 'true',
+            'use_sim_time': 'true',
+            'map': map_file,
+            'nav2_params_file': nav2_params_file,
+            }.items())
+        ])
 
     pedsim_launch_cmd = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(os.path.join(
@@ -99,13 +124,15 @@ def generate_launch_description():
           'scene_file': pedsim_scene_file,
           'config_file': pedsim_config_file,
           'namespace': namespace,
-        }.items())
+        }.items(),
+        condition=IfCondition(use_pedsim))
 
     pedsim_gazebo_spawner_cmd = Node(
         package='pedsim_gazebo_plugin',
         executable='spawn_pedsim_agents.py',
         name='spawn_pedsim_agents',
-        output='screen')
+        output='screen',
+        condition=IfCondition(use_pedsim))
 
     # Create the launch description and populate
     ld = LaunchDescription()
@@ -113,9 +140,11 @@ def generate_launch_description():
     ld.add_action(declare_namespace_cmd)
     ld.add_action(declare_robot_model_cmd)
     ld.add_action(declare_robot_name_cmd)
+    ld.add_action(declare_use_pedsim_cmd)
     ld.add_action(declare_use_gazebo_gui_cmd)
     ld.add_action(declare_world_file_cmd)
     ld.add_action(declare_map_file_cmd)
+    ld.add_action(declare_nav2_params_file_cmd)
     ld.add_action(declare_pedsim_scene_file_cmd)
     ld.add_action(declare_pedsim_config_file_cmd)
     # Add the actions to launch all of the nodes

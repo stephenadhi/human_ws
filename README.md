@@ -112,10 +112,7 @@ Launch RViZ:
     ros2 launch soloco_launch remote_view.launch.py
 
 ## Simulation Example
-Launch Locobot in Gazebo with GUI
+Launch Locobot in Gazebo with GUI and optionally pedestrian simulator
 
-    ros2 launch interbotix_xslocobot_sim xslocobot_gz_classic.launch.py robot_model:=locobot_base robot_name:=locobot use_lidar:=true use_rviz:=true use_gazebo_gui:=true 
+    ros2 launch soloco_launch locobot_sim.launch.py use_gazebo_gui:=true use_pedsim:=false
 
-Launch simultaneous localization and mapping using Nav2 and slam_toolbox
-
-    ros2 launch interbotix_xslocobot_nav xslocobot_slam_toolbox.launch.py launch_driver:=false slam_mode:=online_async use_sim_time:=true cmd_vel_topic:=/locobot/diffdrive_controller/cmd_vel_unstamped
