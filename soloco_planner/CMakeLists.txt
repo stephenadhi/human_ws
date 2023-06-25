@@ -18,6 +18,8 @@ find_package(visualization_msgs REQUIRED)
 find_package(soloco_interfaces REQUIRED)
 find_package(zed_interfaces REQUIRED)
 
+include_directories(include)
+
 add_executable(subgoal_publisher src/subgoal_publisher.cpp)
 ament_target_dependencies(subgoal_publisher
        rclcpp
