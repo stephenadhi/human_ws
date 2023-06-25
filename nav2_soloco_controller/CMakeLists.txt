@@ -5,12 +5,17 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
 
-# find dependencies
+add_definitions(-DXTENSOR_ENABLE_XSIMD)
+add_definitions(-DXTENSOR_USE_XSIMD)
+
+set(XTENSOR_USE_TBB 0)
+set(XTENSOR_USE_OPENMP 0)
+
+
 find_package(ament_cmake REQUIRED)
-find_package(rclcpp REQUIRED)
+find_package(xtensor REQUIRED)
+find_package(ament_cmake REQUIRED)
 find_package(rclpy REQUIRED)
-find_package(geometry_msgs REQUIRED)
-find_package(nav_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(action_msgs REQUIRED)
@@ -19,6 +24,72 @@ find_package(soloco_interfaces REQUIRED)
 find_package(zed_interfaces REQUIRED)
 
 include_directories(include)
+
+set(dependencies_pkgs
+  rclcpp
+  nav2_common
+  pluginlib
+  tf2
+  geometry_msgs
+  visualization_msgs
+  nav_msgs
+  nav2_core
+  nav2_costmap_2d
+  nav2_util
+  tf2_geometry_msgs
+  tf2_eigen
+  tf2_ros
+)
+
+foreach(pkg IN LISTS dependencies_pkgs)
+  find_package(${pkg} REQUIRED)
+endforeach()
+
+nav2_package()
+
+include(CheckCXXCompilerFlag)
+
+check_cxx_compiler_flag("-mavx2" COMPILER_SUPPORTS_AVX2)
+check_cxx_compiler_flag("-mfma" COMPILER_SUPPORTS_FMA)
+
+if(COMPILER_SUPPORTS_AVX2)
+  add_compile_options(-mavx2)
+endif()
+
+if(COMPILER_SUPPORTS_FMA)
+  add_compile_options(-mfma)
+endif()
+
+add_compile_options(-O3 -finline-limit=1000000 -ffp-contract=fast -ffast-math)
+
+add_library(soloco_controller SHARED
+  src/controller.cpp
+#   src/optimizer.cpp
+#   src/critic_manager.cpp
+#   src/trajectory_visualizer.cpp
+#   src/path_handler.cpp
+#   src/parameters_handler.cpp
+#   src/noise_generator.cpp
+)
+
+set(libraries soloco_controller)
+
+foreach(lib IN LISTS libraries)
+  target_compile_options(${lib} PUBLIC -fconcepts)
+  target_include_directories(${lib} PUBLIC include ${xsimd_INCLUDE_DIRS} ${OpenMP_INCLUDE_DIRS})
+  target_link_libraries(${lib} xtensor xtensor::optimize xtensor::use_xsimd)
+  ament_target_dependencies(${lib} ${dependencies_pkgs})
+endforeach()
+
+install(TARGETS soloco_controller
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION bin
+)
+
+install(DIRECTORY include/
+  DESTINATION include/
+)
 
 add_executable(subgoal_publisher src/subgoal_publisher.cpp)
 ament_target_dependencies(subgoal_publisher
@@ -51,9 +122,15 @@ install(DIRECTORY
         
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
+  find_package(ament_cmake_gtest REQUIRED)
   set(ament_cmake_copyright_FOUND TRUE)
   set(ament_cmake_cpplint_FOUND TRUE)
   ament_lint_auto_find_test_dependencies()
 endif()
+
+ament_export_libraries(${libraries})
+ament_export_dependencies(${dependencies_pkgs})
+ament_export_include_directories(include)
+pluginlib_export_plugin_description_file(nav2_core solococ.xml)
 
 ament_package()

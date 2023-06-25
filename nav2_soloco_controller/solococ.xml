@@ -1,0 +1,7 @@
+<class_libraries>
+  <library path="soloco_controller">
+    <class type="nav2_soloco_controller::SolocoController" base_class_type="nav2_core::Controller">
+      <description>Soloco Controller for Nav2</description>
+    </class>
+  </library>
+</class_libraries>
