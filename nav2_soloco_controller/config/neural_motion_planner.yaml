@@ -10,8 +10,10 @@ nav2_soloco_controller:
     IAR_checkpoint: 'models/weights/SIMNoGoal-univ_IAR_Full_trans/checkpoint_with_model.pt'
     device: 'cpu'           # Options: 'cuda' or 'cpu'
     # Goal tolerance
-    goal_tolerance: 0.25
-    lookahead_dist: 1.9 # max_speed * interp_interval * prediction_steps + collision_dist
+    goal_tolerance: 0.2
+    use_velocity_scaled_lookahead_distance: True # max_lookahead_dist scaled by speed / max_speed
+    min_lookahead_dist: 0.4 # Minimum distance to subgoal pose if robot is at very low speed
+    max_lookahead_dist: 3.0 # At least max_speed * interp_interval * prediction_steps, must be less than costmap size / 2
     # Topic parameters
     odom_topic: 'locobot/odom'
     global_goal_topic: 'goal_pose' # 'global_goal_republished' #   

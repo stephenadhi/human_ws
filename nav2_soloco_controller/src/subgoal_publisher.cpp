@@ -8,13 +8,19 @@ SubGoalPublisher::SubGoalPublisher()
     this->declare_parameter<std::string>("global_plan_topic", "plan");
     this->declare_parameter<std::string>("subgoal_topic", "subgoal_pose");
     this->declare_parameter<std::string>("subgoal_marker_topic", "visualization/subgoal");
-    this->declare_parameter<double>("lookahead_dist", 3.0);
+    this->declare_parameter<double>("max_speed", 0.5);
+    this->declare_parameter<double>("min_lookahead_dist", 0.5);
+    this->declare_parameter<double>("max_lookahead_dist", 3.0);
+    this->declare_parameter<double>("use_velocity_scaled_lookahead_dist", true);
     this->declare_parameter<double>("goal_tolerance", 0.5);
     this->get_parameter("odom_topic", odom_topic);
     this->get_parameter("global_plan_topic", global_plan_topic);
     this->get_parameter("subgoal_topic", subgoal_topic);
     this->get_parameter("subgoal_marker_topic", subgoal_marker_topic);
-    this->get_parameter("lookahead_dist", lookahead_dist);
+    this->get_parameter("use_velocity_scaled_lookahead_dist", use_velocity_scaled_lookahead_dist);
+    this->get_parameter("max_speed", max_speed);
+    this->get_parameter("min_lookahead_dist", min_lookahead_dist);
+    this->get_parameter("max_lookahead_dist", max_lookahead_dist);
     this->get_parameter("goal_tolerance", goal_tolerance);
     //Subscribers
     odom_sub_ = this->create_subscription<nav_msgs::msg::Odometry>(
@@ -28,6 +34,19 @@ SubGoalPublisher::SubGoalPublisher()
 
 void SubGoalPublisher::odomCallback(const nav_msgs::msg::Odometry::SharedPtr msg){
     robot_pose = msg->pose.pose;
+    // If using dynamic lookahead distance
+    if (use_velocity_scaled_lookahead_dist) {
+        lookahead_dist = getLookAheadDistance(msg->twist.twist);
+    }
+}
+
+double SubGoalPublisher::getLookAheadDistance(const geometry_msgs::msg::Twist & speed){
+  // If using velocity-scaled look ahead distances, find and clamp the dist
+  // Else, use the static look ahead distance
+  double lookahead_dist = max_lookahead_dist;
+  lookahead_dist = fabs(speed.linear.x) / max_speed * max_lookahead_dist;
+
+  return lookahead_dist;
 }
 
 void SubGoalPublisher::globalPlanCallback(const nav_msgs::msg::Path::SharedPtr msg){
@@ -45,7 +64,7 @@ void SubGoalPublisher::globalPlanCallback(const nav_msgs::msg::Path::SharedPtr m
     auto idx = std::distance(msg->poses.begin(), goal_pose_it);
     subgoal_pose = msg->poses[idx];
     subgoal_pose.header.stamp = this->get_clock()->now();
-    //RCLCPP_INFO(this->get_logger(),"lookahead dist: %f", lookahead_dist);
+    //RCLCPP_INFO(this->get_logger(),"lookahead dist: %f", max_lookahead_dist);
     subgoal_pub_->publish(subgoal_pose);
     visualize_subgoal(subgoal_pose);
 }
