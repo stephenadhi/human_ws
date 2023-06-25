@@ -139,9 +139,9 @@ def launch_setup(context, *args, **kwargs):
         }.items(),
     )
 
-    soloco_planner_launch_cmd = IncludeLaunchDescription(
+    nav2_soloco_controller_launch_cmd = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(os.path.join(
-          get_package_share_directory('soloco_planner'), 'launch', 'social_planner.launch.py')),
+          get_package_share_directory('nav2_soloco_controller'), 'launch', 'social_planner.launch.py')),
         launch_arguments={
           'use_rviz': 'false',
         }.items()
@@ -344,7 +344,7 @@ def launch_setup(context, *args, **kwargs):
 
     return [
         set_logging_env_var,
-        soloco_planner_launch_cmd,
+        nav2_soloco_controller_launch_cmd,
         xslocobot_control_launch_cmd,
         planner_server_node,
         controller_server_node,

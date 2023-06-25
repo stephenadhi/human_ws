@@ -1,4 +1,4 @@
-#include "soloco_planner/subgoal_publisher.hpp"
+#include "nav2_soloco_controller/subgoal_publisher.hpp"
 
 SubGoalPublisher::SubGoalPublisher()
     : Node("subgoal_publisher") {

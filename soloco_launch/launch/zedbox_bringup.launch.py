@@ -21,7 +21,7 @@ def generate_launch_description():
     # Get the launch directory
     bringup_dir = get_package_share_directory('soloco_launch')
     soloco_perception_dir = get_package_share_directory('soloco_perception')
-    soloco_planner_dir = get_package_share_directory('soloco_planner')
+    nav2_soloco_controller_dir = get_package_share_directory('nav2_soloco_controller')
 
     default_map_path = os.path.join(bringup_dir, 'maps', 'tb3_house_demo_crowd.yaml')
     
@@ -61,9 +61,9 @@ def generate_launch_description():
         ]
     )
 
-    soloco_planner_launch_cmd = IncludeLaunchDescription(
+    nav2_soloco_controller_launch_cmd = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(os.path.join(
-          soloco_planner_dir, 'launch', 'social_planner.launch.py')),
+          nav2_soloco_controller_dir, 'launch', 'social_planner.launch.py')),
         launch_arguments={
           'use_rviz': 'false',
         }.items(),
@@ -81,6 +81,6 @@ def generate_launch_description():
     # Add the actions to launch all of the nodes
     ld.add_action(zed_perception_launch_cmd)
     # ld.add_action(zed_pointcloud_to_laserscan_launch_cmd)
-    ld.add_action(soloco_planner_launch_cmd)
+    ld.add_action(nav2_soloco_controller_launch_cmd)
 
     return ld

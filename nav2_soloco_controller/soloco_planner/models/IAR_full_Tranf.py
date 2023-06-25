@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
-from soloco_planner.data.utils import dynamic_window, actionXYtoROT
-from soloco_planner.models.utils import Hist_Encoder, Decoder_TF
+from nav2_soloco_controller.data.utils import dynamic_window, actionXYtoROT
+from nav2_soloco_controller.models.utils import Hist_Encoder, Decoder_TF
 
 
 class TrajectoryGenerator(nn.Module):

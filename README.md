@@ -16,7 +16,7 @@ You need to have the following installed on your machine:
     ├── soloco_interfaces           
     ├── soloco_launch               
     ├── soloco_perception
-    ├── soloco_planner
+    ├── nav2_soloco_controller
     ├── LICENSE
     ├── README.md
     ├── .gitignore
@@ -45,7 +45,7 @@ You need to have the following installed on your machine:
     cd home/zedbox/ros2_ws/src/human_ws
     git pull
     cd home/zedbox/ros2_ws
-    colcon build --packages-select soloco_perception soloco_planner soloco_launch soloco_interfaces
+    colcon build --packages-select soloco_perception nav2_soloco_controller soloco_launch soloco_interfaces
     ```
 
 4. Install ROS dependencies

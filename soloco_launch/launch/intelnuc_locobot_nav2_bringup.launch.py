@@ -29,7 +29,7 @@ def generate_launch_description():
     # Get the launch directory
     bringup_dir = get_package_share_directory('soloco_launch')
     soloco_perception_dir = get_package_share_directory('soloco_perception')
-    soloco_planner_dir = get_package_share_directory('soloco_planner')
+    nav2_soloco_controller_dir = get_package_share_directory('nav2_soloco_controller')
     interbotix_nav_dir = get_package_share_directory('interbotix_xslocobot_nav')
 
     default_map_path = os.path.join(bringup_dir, 'maps', 'tb3_house_demo_crowd.yaml')
@@ -37,7 +37,7 @@ def generate_launch_description():
     neural_config_file_path = os.path.join(
         bringup_dir, 'config', 'neural_motion_planner.yaml')
     with open(neural_config_file_path, 'r') as file:
-        planner_config = yaml.safe_load(file)['soloco_planner']['ros__parameters']
+        planner_config = yaml.safe_load(file)['nav2_soloco_controller']['ros__parameters']
 
     declare_robot_model_cmd = DeclareLaunchArgument(
         'robot_model',
@@ -110,9 +110,9 @@ def generate_launch_description():
         }.items(),
         condition=IfCondition(NotSubstitution(launch_neural_planner)))
 
-    soloco_planner_launch_cmd = IncludeLaunchDescription(
+    nav2_soloco_controller_launch_cmd = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(os.path.join(
-          bringup_dir, 'launch', 'nav2_soloco_planner.launch.py')),
+          bringup_dir, 'launch', 'nav2_nav2_soloco_controller.launch.py')),
         condition=IfCondition(launch_neural_planner))
 
 
@@ -132,6 +132,6 @@ def generate_launch_description():
     ld.add_action(multi_track_visualizer_cmd)
     ld.add_action(human_tf2_publisher_cmd)
     ld.add_action(locobot_nav2_bringup_slam_launch_cmd)
-    ld.add_action(soloco_planner_launch_cmd)
+    ld.add_action(nav2_soloco_controller_launch_cmd)
 
     return ld

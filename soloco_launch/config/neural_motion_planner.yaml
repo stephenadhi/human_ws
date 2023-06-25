@@ -1,4 +1,4 @@
-soloco_planner:
+nav2_soloco_controller:
   ros__parameters:
     # Neural model
     model_name: 'CEM_IAR'

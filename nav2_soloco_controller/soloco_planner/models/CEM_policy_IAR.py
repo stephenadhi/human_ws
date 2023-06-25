@@ -5,11 +5,11 @@ from torch import nn
 import numpy as np
 import os
 
-from soloco_planner.models.AR_fast import TrajectoryGeneratorAR
-from soloco_planner.models.IAR_full_Tranf import TrajectoryGenerator
+from nav2_soloco_controller.models.AR_fast import TrajectoryGeneratorAR
+from nav2_soloco_controller.models.IAR_full_Tranf import TrajectoryGenerator
 
 torch.autograd.set_detect_anomaly(True)
-from soloco_planner.data.utils import prepare_states, batched_Robot_coll_smoothed_loss, cart2pol, pol2cart, GaußNLL, actionXYtoROT
+from nav2_soloco_controller.data.utils import prepare_states, batched_Robot_coll_smoothed_loss, cart2pol, pol2cart, GaußNLL, actionXYtoROT
 
 
 class Prediction_Model(nn.Module):

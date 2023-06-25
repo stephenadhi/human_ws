@@ -7,15 +7,15 @@ import yaml
 def generate_launch_description():
     # get config file path and loading it
     config_file_path = os.path.join(
-        get_package_share_directory('soloco_planner'),
+        get_package_share_directory('nav2_soloco_controller'),
         'config',
         'neural_motion_planner.yaml'
     )
     with open(config_file_path, 'r') as file:
-        planner_config = yaml.safe_load(file)['soloco_planner']['ros__parameters']
+        planner_config = yaml.safe_load(file)['nav2_soloco_controller']['ros__parameters']
     
-    soloco_planner_cmd = Node(
-        package='soloco_planner',
+    nav2_soloco_controller_cmd = Node(
+        package='nav2_soloco_controller',
         executable='neural_motion_planner.py',
         name='neural_motion_planner',
         output='screen',
@@ -23,7 +23,7 @@ def generate_launch_description():
     )
 
     global_nav2_client_cmd = Node(
-        package='soloco_planner',
+        package='nav2_soloco_controller',
         executable='global_nav2_client.py',
         name='global_nav2_client',
         output='screen',
@@ -31,7 +31,7 @@ def generate_launch_description():
     )
 
     subgoal_publisher_cmd = Node(
-        package='soloco_planner',
+        package='nav2_soloco_controller',
         executable='subgoal_publisher',
         name='subgoal_publisher',
         output='screen',
@@ -41,6 +41,6 @@ def generate_launch_description():
     ld = LaunchDescription()
     ld.add_action(global_nav2_client_cmd)
     ld.add_action(subgoal_publisher_cmd)
-    ld.add_action(soloco_planner_cmd)
+    ld.add_action(nav2_soloco_controller_cmd)
 
     return ld
