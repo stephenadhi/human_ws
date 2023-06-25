@@ -21,6 +21,7 @@ set(msg_files
   "msg/TrackedAgent.msg"
   "msg/TrackedAgents.msg"
   "msg/SetHumanAction.msg"
+  "action/NavigateToXYGoal.action"
   DEPENDENCIES builtin_interfaces zed_interfaces geometry_msgs std_msgs nav_msgs
 )
 
