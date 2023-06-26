@@ -1,8 +1,6 @@
 nav2_soloco_controller:
   ros__parameters:
     controller_frequency: 20.0 # [Hz]
-    republish_global_goal: False
-    republish_goal_period: 0.5
     # Neural model
     model_name: 'CEM_IAR'
     use_robot_model: True   # Flag for robot param constrains usage
@@ -10,10 +8,12 @@ nav2_soloco_controller:
     IAR_checkpoint: 'models/weights/SIMNoGoal-univ_IAR_Full_trans/checkpoint_with_model.pt'
     device: 'cpu'           # Options: 'cuda' or 'cpu'
     # Goal tolerance
-    goal_tolerance: 0.2
+    goal_tolerance: 0.1
     use_velocity_scaled_lookahead_dist: True # max_lookahead_dist scaled by speed / max_speed
     min_lookahead_dist: 0.4 # Minimum distance to subgoal pose if robot is at very low speed
-    max_lookahead_dist: 3.0 # At least max_speed * interp_interval * prediction_steps, must be less than costmap size / 2
+    max_lookahead_dist: 2.4 # At least max_speed * interp_interval * prediction_steps, must be less than costmap size / 2
+    republish_global_goal: False
+    republish_goal_period: 0.5
     # Topic parameters
     odom_topic: 'locobot/odom'
     frame_id: 'locobot/odom'
