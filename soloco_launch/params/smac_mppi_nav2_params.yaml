@@ -231,9 +231,9 @@ local_costmap:
       # Whether costmap should roll with robot base frame. (default: False)
       rolling_window: True
       # Height of costmap (m). (default: 5)
-      width: 5
+      width: 6
       # Width of costmap (m). (default: 5)
-      height: 5
+      height: 6
       # Resolution of 1 pixel of the costmap, in meters. (default: 0.1)
       resolution: 0.05
       # Robot radius to use, if footprint coordinates not provided. (default: 0.1)
@@ -335,9 +335,9 @@ global_costmap:
       # Frequency to publish costmap to topic. (default 1.0)
       publish_frequency: 1.0
       # Height of costmap (m). (default: 5)
-      width: 16
+      width: 20
       # Width of costmap (m). (default: 5)
-      height: 16
+      height: 20
       # Resolution of 1 pixel of the costmap, in meters. (default: 0.1)
       resolution: 0.1
       # Robot base frame. (default: base_link)
