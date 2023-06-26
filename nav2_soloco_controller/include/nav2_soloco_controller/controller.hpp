@@ -120,6 +120,9 @@ protected:
   PathHandler path_handler_;
 
   bool visualize_;
+  double max_lookahead_dist_;
+  double min_lookahead_dist_;
+  double max_speed_;
 
   rclcpp_action::Client<soloco_interfaces::action::NavigateToXYGoal>::SharedPtr soloco_client_ptr_;
 };
