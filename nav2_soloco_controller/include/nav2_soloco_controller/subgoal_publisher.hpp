@@ -22,13 +22,14 @@ private:
     void visualize_subgoal(geometry_msgs::msg::PoseStamped subgoal);
 
 private:
-    bool use_velocity_scaled_lookahead_dist;
-    double max_speed;
-    double lookahead_dist;
-    double min_lookahead_dist;
-    double max_lookahead_dist;
-    double goal_tolerance;
-    geometry_msgs::msg::Pose robot_pose;
+    std::string frame_id_;
+    bool use_velocity_scaled_lookahead_dist_;
+    double max_speed_;
+    double lookahead_dist_;
+    double min_lookahead_dist_;
+    double max_lookahead_dist_;
+    double goal_tolerance_;
+    geometry_msgs::msg::Pose robot_pose_;
     rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_sub_;
     rclcpp::Subscription<nav_msgs::msg::Path>::SharedPtr global_plan_sub_;
     rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr subgoal_pub_;

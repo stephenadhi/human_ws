@@ -90,7 +90,7 @@ Go to the directory and source installation
 
 ### LoCoBot launch with custom neural motion planner as controller:
 
-    ros2 launch soloco_launch intelnuc_locobot_nav2_bringup.launch.py nav2_param_filename:=smac_mppi_nav2_params.yaml launch_neural_planner:=True
+    ros2 launch soloco_launch intelnuc_locobot_nav2_bringup.launch.py nav2_param_filename:=smac_mppi_nav2_params.yaml use_soloco_controller:=True
 
 ### For launching ZED human perception and multi-tracking module:
 SSH to the ZED Box

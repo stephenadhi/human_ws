@@ -12,7 +12,7 @@ from launch.substitutions import LaunchConfiguration
 
 def generate_launch_description():
     # Create the launch configuration variables
-    launch_neural_planner = LaunchConfiguration('launch_neural_planner')   
+    use_soloco_controller = LaunchConfiguration('use_soloco_controller')   
     map_file = LaunchConfiguration('map_file')
     namespace = LaunchConfiguration('namespace')
     robot_model = LaunchConfiguration('robot_model')
@@ -35,8 +35,8 @@ def generate_launch_description():
         default_value='locobot',
         description=('name of the robot (could be anything but defaults to `locobot`).'))
 
-    declare_launch_neural_planner_cmd = DeclareLaunchArgument(
-        'launch_neural_planner',
+    declare_use_soloco_controller_cmd = DeclareLaunchArgument(
+        'use_soloco_controller',
         default_value='False')
     
     declare_map_file_cmd = DeclareLaunchArgument(
@@ -67,12 +67,12 @@ def generate_launch_description():
         launch_arguments={
           'use_rviz': 'false',
         }.items(),
-        condition=IfCondition(launch_neural_planner))
+        condition=IfCondition(use_soloco_controller))
      
     # Create the launch description and populate
     ld = LaunchDescription()
     # Declare the launch options
-    ld.add_action(declare_launch_neural_planner_cmd)
+    ld.add_action(declare_use_soloco_controller_cmd)
     ld.add_action(declare_map_file_cmd)
     ld.add_action(declare_namespace_cmd)
     ld.add_action(declare_robot_model_cmd)

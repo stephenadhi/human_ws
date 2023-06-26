@@ -18,7 +18,7 @@ from launch_ros.substitutions import FindPackageShare
 
 def generate_launch_description():
     # Create the launch configuration variables
-    launch_neural_planner = LaunchConfiguration('launch_neural_planner')
+    use_soloco_controller = LaunchConfiguration('use_soloco_controller')
     run_human_tf = LaunchConfiguration('run_human_tf')
     map_file = LaunchConfiguration('map_file')
     namespace = LaunchConfiguration('namespace')
@@ -49,8 +49,8 @@ def generate_launch_description():
         default_value='locobot',
         description=('name of the robot (could be anything but defaults to `locobot`).'))
 
-    declare_launch_neural_planner_cmd = DeclareLaunchArgument(
-        'launch_neural_planner',
+    declare_use_soloco_controller_cmd = DeclareLaunchArgument(
+        'use_soloco_controller',
         default_value='False')
     
     declare_run_human_tf_cmd = DeclareLaunchArgument(
@@ -108,18 +108,18 @@ def generate_launch_description():
           'use_rviz': 'false',
           'use_sim_time': 'false',
         }.items(),
-        condition=IfCondition(NotSubstitution(launch_neural_planner)))
+        condition=IfCondition(NotSubstitution(use_soloco_controller)))
 
     nav2_soloco_controller_launch_cmd = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(os.path.join(
-          bringup_dir, 'launch', 'nav2_nav2_soloco_controller.launch.py')),
-        condition=IfCondition(launch_neural_planner))
+          bringup_dir, 'launch', 'nav2_soloco_controller.launch.py')),
+        condition=IfCondition(use_soloco_controller))
 
 
     # Create the launch description and populate
     ld = LaunchDescription()
     # Declare the launch options
-    ld.add_action(declare_launch_neural_planner_cmd)
+    ld.add_action(declare_use_soloco_controller_cmd)
     ld.add_action(declare_run_human_tf_cmd)
     ld.add_action(declare_map_file_cmd)
     ld.add_action(declare_namespace_cmd)
