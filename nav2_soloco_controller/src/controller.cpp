@@ -40,6 +40,10 @@ void SolocoController::configure(
   // Configure composed objects
   path_handler_.initialize(parent_, name_, costmap_ros_, tf_buffer_, parameters_handler_.get());
 
+  // Configure action client
+  soloco_client_ptr_ = rclcpp_action::create_client<soloco_interfaces::action::NavigateToXYGoal>(
+    node, "navigate_to_xy_goal");
+  
   RCLCPP_INFO(logger_, "Configured Soloco Controller: %s", name_.c_str());
 }
 
@@ -71,9 +75,9 @@ void SolocoController::deactivate()
 //   const geometry_msgs::msg::Twist & robot_speed,
 //   nav2_core::GoalChecker * goal_checker)
 // {
-// #ifdef BENCHMARK_TESTING
-//   auto start = std::chrono::system_clock::now();
-// #endif
+//   #ifdef BENCHMARK_TESTING
+//     auto start = std::chrono::system_clock::now();
+//   #endif
 
 //   std::lock_guard<std::mutex> lock(*parameters_handler_->getLock());
 //   nav_msgs::msg::Path transformed_plan = path_handler_.transformPath(robot_pose);
@@ -87,17 +91,22 @@ void SolocoController::deactivate()
 //     goal_dist_tol_ = pose_tolerance.position.x;
 //   }
 
-// #ifdef BENCHMARK_TESTING
-//   auto end = std::chrono::system_clock::now();
-//   auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-//   RCLCPP_INFO(logger_, "Control loop execution time: %ld [ms]", duration);
-// #endif
+//   #ifdef BENCHMARK_TESTING
+//     auto end = std::chrono::system_clock::now();
+//     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+//     RCLCPP_INFO(logger_, "Control loop execution time: %ld [ms]", duration);
+//   #endif
 
-//   if (visualize_) {
-//     visualize(std::move(transformed_plan));
+//   // if (visualize_) {
+//   //   visualize(std::move(transformed_plan));
+//   // }
+
+// if (!this->client_ptr_->wait_for_action_server()) {
+//     RCLCPP_ERROR(logger_, "Action server not available after waiting");
 //   }
+//   cmd_vel = Twist()
 
-//   return cmd;
+//   return cmd_vel;
 // }
 
 void SolocoController::setPlan(const nav_msgs::msg::Path & path)

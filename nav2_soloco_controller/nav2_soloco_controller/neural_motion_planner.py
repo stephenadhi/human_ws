@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import os
 import rclpy
+from rclpy.action import ActionServer
 import numpy as np
 from math import hypot
 from tf_transformations import euler_from_quaternion
@@ -14,6 +15,7 @@ from nav_msgs.msg import OccupancyGrid, Odometry
 from geometry_msgs.msg import Point, PointStamped, Twist, PoseStamped
 from visualization_msgs.msg import Marker, MarkerArray
 from soloco_interfaces.msg import TrackedPersons, EgoTrajectory
+from soloco_interfaces.action import NavigatetoXYGoal
 
 from nav2_soloco_controller.models.DWA import DWA
 from nav2_soloco_controller.models.CEM_policy_IAR import CEM_IAR
@@ -38,7 +40,13 @@ class NeuralMotionPlanner(Node):
         self.initialize_node()
         # Setup publishers and subscribers
         self.setup_publishers_and_subscribers()
-
+        # Setup action server
+        self._action_server = ActionServer(
+            self,
+            NavigatetoXYGoal,
+            'navigate_to_xy_goal',
+            self.execute_callback)
+        
     def declare_ros_parameters(self):
         # Declare topic parameters
         self.declare_parameter('odom_topic', 'locobot/odom')
@@ -149,10 +157,9 @@ class NeuralMotionPlanner(Node):
         self.costmap_sub = self.create_subscription(OccupancyGrid, costmap_topic, self.costmap_callback, self.pose_qos)
         self.odom_sub = self.create_subscription(Odometry, odom_topic, self.odom_callback, self.pose_qos)
         
-        controller_frequency = self.get_parameter('controller_frequency').get_parameter_value().double_value
-        self.timer_period = 1/controller_frequency
-
-        self.timer = self.create_timer(self.timer_period, self.timer_callback)
+        # controller_frequency = self.get_parameter('controller_frequency').get_parameter_value().double_value
+        # self.timer_period = 1/controller_frequency
+        # self.timer = self.create_timer(self.timer_period, self.timer_callback)
 
     def goal_callback(self, goal_msg):
         self.new_goal = True
@@ -210,13 +217,8 @@ class NeuralMotionPlanner(Node):
         self.r_state[3] = hypot(odom_msg.twist.twist.linear.x, odom_msg.twist.twist.linear.y)
         self.r_state[4] = odom_msg.twist.twist.angular.z
 
-    def timer_callback(self):
+    def execute_callback(self, goal_handle):
         if self.global_goal is not None and self.subgoal_pose is not None and self.ogm is not None:
-            # If global goal is new
-            # if self.new_goal == True and self.robot_model == 'differential_drive':
-            #     yaw_diff = self.global_goal[2] - self.robot_yaw[2]
-            #     self.spin_robot_in_subgoal_direction(yaw_diff)
-
             # Calculate euclidian distance to goal
             distance_to_goal = hypot((self.r_pos_xy[0]-self.global_goal[0]), 
                                  (self.r_pos_xy[1]-self.global_goal[1]))
@@ -229,7 +231,6 @@ class NeuralMotionPlanner(Node):
             
             # Publish resulting twist to cmd_vel topic
             cmd_vel = Twist()
-
             if distance_to_goal > self.goal_tolerance:
                 cmd_vel.linear.x = float(u[0])
                 cmd_vel.angular.z = float(u[1])
@@ -245,14 +246,14 @@ class NeuralMotionPlanner(Node):
                 self.global_goal = None
 
             self.visualize_future(current_future)
+        
+        
+        goal_handle.succeed()
+        
+        result = NavigatetoGoalXY.Result()
+        result.command_velocity = cmd_vel
 
-    def spin_robot_in_subgoal_direction(self, yaw_diff):
-        cmd_vel = Twist()
-        cmd_vel.angular.z = 0.8 if yaw_diff > 0 else -0.8
-        self.cmd_vel_publisher.publish(cmd_vel)
-        if abs(yaw_diff) < 0.2:
-            self.new_goal = False
-            self.get_logger().info("Spin in goal direction completed.")
+        return result
 
     def visualize_future(self, current_future):
         agent_marker = MarkerArray()

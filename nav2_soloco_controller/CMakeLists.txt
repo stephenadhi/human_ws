@@ -14,24 +14,20 @@ set(XTENSOR_USE_OPENMP 0)
 
 find_package(ament_cmake REQUIRED)
 find_package(xtensor REQUIRED)
-find_package(ament_cmake REQUIRED)
-find_package(rclpy REQUIRED)
-find_package(sensor_msgs REQUIRED)
-find_package(std_msgs REQUIRED)
-find_package(action_msgs REQUIRED)
-find_package(visualization_msgs REQUIRED)
-find_package(soloco_interfaces REQUIRED)
-find_package(zed_interfaces REQUIRED)
 
 include_directories(include)
 
 set(dependencies_pkgs
   rclcpp
+  rclpy
   nav2_common
   pluginlib
   tf2
   geometry_msgs
+  sensor_msgs
   visualization_msgs
+  action_msgs
+  std_msgs
   nav_msgs
   nav2_core
   nav2_costmap_2d
@@ -39,6 +35,7 @@ set(dependencies_pkgs
   tf2_geometry_msgs
   tf2_eigen
   tf2_ros
+  soloco_interfaces
 )
 
 foreach(pkg IN LISTS dependencies_pkgs)

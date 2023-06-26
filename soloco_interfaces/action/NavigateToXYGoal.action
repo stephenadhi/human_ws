@@ -6,7 +6,7 @@ uint16 NONE=0
 geometry_msgs/PoseStamped pose
 ---
 #result definition
-geometry_msgs/Twist result
+geometry_msgs/Twist command_velocity
 uint16 error_code
 ---
 #feedback definition
