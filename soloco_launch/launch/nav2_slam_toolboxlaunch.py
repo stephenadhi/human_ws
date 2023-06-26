@@ -117,36 +117,6 @@ def launch_setup(context, *args, **kwargs):
         convert_types=True,
     )
 
-    xslocobot_control_launch_cmd = IncludeLaunchDescription(
-        launch_description_source=PythonLaunchDescriptionSource([
-            PathJoinSubstitution([
-                FindPackageShare('interbotix_xslocobot_control'),
-                'launch',
-                'xslocobot_control.launch.py',
-            ])
-        ]),
-        launch_arguments={
-            'robot_name': 'locobot',
-            'use_lidar': 'true',
-            'lidar_type': 'rplidar_a2m8',
-            'use_rviz': 'false',
-            'rviz_frame': 'map',
-            'use_camera': 'false',
-            'rs_camera_align_depth': 'true',
-            'use_base': 'true',
-            # 'use_dock': 'true',
-            'use_sim_time': 'false',
-        }.items(),
-    )
-
-    nav2_soloco_controller_launch_cmd = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(os.path.join(
-          get_package_share_directory('nav2_soloco_controller'), 'launch', 'social_planner.launch.py')),
-        launch_arguments={
-          'use_rviz': 'false',
-        }.items()
-    )
-
     planner_server_node = Node(
         package='nav2_planner',
         executable='planner_server',
@@ -344,8 +314,6 @@ def launch_setup(context, *args, **kwargs):
 
     return [
         set_logging_env_var,
-        nav2_soloco_controller_launch_cmd,
-        xslocobot_control_launch_cmd,
         planner_server_node,
         controller_server_node,
         behavior_server_node,

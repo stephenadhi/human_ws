@@ -86,11 +86,11 @@ Go to the directory and source installation
     
 ### Default LoCoBot launch with navigation2 stack + SLAM, and visualization:
 
-    ros2 launch soloco_launch intelnuc_locobot_nav2_bringup.launch.py nav2_param_filename:=smac_mppi_nav2_params.yaml
+    ros2 launch soloco_launch intelnuc_locobot_bringup.launch.py nav2_param_filename:=smac_mppi_nav2_params.yaml
 
 ### LoCoBot launch with custom neural motion planner as controller:
 
-    ros2 launch soloco_launch intelnuc_locobot_nav2_bringup.launch.py nav2_param_filename:=smac_mppi_nav2_params.yaml use_soloco_controller:=True
+    ros2 launch soloco_launch intelnuc_locobot_bringup.launch.py nav2_param_filename:=smac_mppi_nav2_params.yaml use_soloco_controller:=True
 
 ### For launching ZED human perception and multi-tracking module:
 SSH to the ZED Box
