@@ -15,7 +15,7 @@ from nav_msgs.msg import OccupancyGrid, Odometry
 from geometry_msgs.msg import Point, PointStamped, Twist, PoseStamped
 from visualization_msgs.msg import Marker, MarkerArray
 from soloco_interfaces.msg import TrackedPersons, EgoTrajectory
-from soloco_interfaces.action import NavigatetoXYGoal
+from soloco_interfaces.action import NavigateToXYGoal
 
 from nav2_soloco_controller.models.DWA import DWA
 from nav2_soloco_controller.models.CEM_policy_IAR import CEM_IAR
@@ -43,7 +43,7 @@ class NeuralMotionPlanner(Node):
         # Setup action server
         self._action_server = ActionServer(
             self,
-            NavigatetoXYGoal,
+            NavigateToXYGoal,
             'navigate_to_xy_goal',
             self.execute_callback)
         
