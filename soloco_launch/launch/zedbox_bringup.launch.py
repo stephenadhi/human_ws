@@ -12,7 +12,7 @@ from launch.substitutions import LaunchConfiguration
 
 def generate_launch_description():
     # Create the launch configuration variables
-    use_soloco_controller = LaunchConfiguration('use_soloco_controller')   
+    use_nav2_slam = LaunchConfiguration('use_nav2_slam')   
     map_file = LaunchConfiguration('map_file')
     namespace = LaunchConfiguration('namespace')
     robot_model = LaunchConfiguration('robot_model')
@@ -35,8 +35,8 @@ def generate_launch_description():
         default_value='locobot',
         description=('name of the robot (could be anything but defaults to `locobot`).'))
 
-    declare_use_soloco_controller_cmd = DeclareLaunchArgument(
-        'use_soloco_controller',
+    declare_use_nav2_slam_cmd = DeclareLaunchArgument(
+        'use_nav2_slam',
         default_value='False')
     
     declare_map_file_cmd = DeclareLaunchArgument(
@@ -61,18 +61,15 @@ def generate_launch_description():
         ]
     )
 
-    nav2_soloco_controller_launch_cmd = IncludeLaunchDescription(
+    nav2_bringup_slam_launch_cmd = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(os.path.join(
-          nav2_soloco_controller_dir, 'launch', 'social_planner.launch.py')),
-        launch_arguments={
-          'use_rviz': 'false',
-        }.items(),
-        condition=IfCondition(use_soloco_controller))
+          bringup_dir, 'launch', 'nav2_slam_toolbox.launch.py')),
+        condition=IfCondition(use_nav2_slam))
      
     # Create the launch description and populate
     ld = LaunchDescription()
     # Declare the launch options
-    ld.add_action(declare_use_soloco_controller_cmd)
+    ld.add_action(declare_use_nav2_slam_cmd)
     ld.add_action(declare_map_file_cmd)
     ld.add_action(declare_namespace_cmd)
     ld.add_action(declare_robot_model_cmd)
@@ -81,6 +78,6 @@ def generate_launch_description():
     # Add the actions to launch all of the nodes
     ld.add_action(zed_perception_launch_cmd)
     # ld.add_action(zed_pointcloud_to_laserscan_launch_cmd)
-    ld.add_action(nav2_soloco_controller_launch_cmd)
+    ld.add_action(nav2_bringup_slam_launch_cmd)
 
     return ld

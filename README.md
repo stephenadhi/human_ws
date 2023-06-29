@@ -12,11 +12,11 @@ You need to have the following installed on your machine:
 
     ├── 3rdparty
     ├── docker
+    ├── nav2_soloco_controller
     ├── nav2_soloco_costmap_plugin
     ├── soloco_interfaces           
     ├── soloco_launch               
     ├── soloco_perception
-    ├── nav2_soloco_controller
     ├── LICENSE
     ├── README.md
     ├── .gitignore
@@ -86,11 +86,11 @@ Go to the directory and source installation
     
 ### Default LoCoBot launch with navigation2 stack + SLAM, and visualization:
 
-    ros2 launch soloco_launch intelnuc_locobot_nav2_bringup.launch.py nav2_param_filename:=smac_mppi_nav2_params.yaml
+    ros2 launch soloco_launch intelnuc_locobot_bringup.launch.py nav2_param_filename:=smac_mppi_nav2_params.yaml
 
 ### LoCoBot launch with custom neural motion planner as controller:
 
-    ros2 launch soloco_launch intelnuc_locobot_nav2_bringup.launch.py nav2_param_filename:=smac_mppi_nav2_params.yaml use_soloco_controller:=True
+    ros2 launch soloco_launch intelnuc_locobot_bringup.launch.py nav2_param_filename:=smac_mppi_nav2_params.yaml use_soloco_controller:=True
 
 ### For launching ZED human perception and multi-tracking module:
 SSH to the ZED Box
@@ -116,3 +116,7 @@ Launch Locobot in Gazebo with GUI and optionally pedestrian simulator
 
     ros2 launch soloco_launch locobot_sim.launch.py use_gazebo_gui:=true use_pedsim:=false
 
+## Rosbag Example
+To record data, launch RViZ and run the following command
+
+    ros2 bag record /locobot/commands/velocity /locobot/odom /map /local_costmap/costmap /global_costmap/costmap /tf /tf_static /plan /visualization/predicted_future /visualization/human_tracks /visualization/robot_track /visualization/subgoal /visualization/human_bounding_boxes /goal_pose /locobot/robot_description -o my_experiment
