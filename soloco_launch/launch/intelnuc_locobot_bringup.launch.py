@@ -24,7 +24,7 @@ def generate_launch_description():
     map_file = LaunchConfiguration('map_file')
     namespace = LaunchConfiguration('namespace')
     nav2_param_file = LaunchConfiguration('nav2_param_file')
-    robot_model = LaunchConfiguration('robot_moel')
+    robot_model = LaunchConfiguration('robot_model')
     robot_name = LaunchConfiguration('robot_name')
 
     # Get the launch directory
@@ -87,6 +87,7 @@ def generate_launch_description():
         executable='multi_track_visualizer.py', # 'robot_track_publisher'
         name='multi_track_visualizer',
         output='screen',
+        condition=IfCondition(use_soloco_controller)
     )
 
     human_tf2_publisher_cmd = Node(
@@ -147,8 +148,8 @@ def generate_launch_description():
           nav2_soloco_controller_dir, 'launch', 'social_planner.launch.py')),
         launch_arguments={
           'use_rviz': 'false',
-        }.items()
-    )
+        }.items(),
+        condition=IfCondition(use_soloco_controller))
 
     # Create the launch description and populate
     ld = LaunchDescription()
