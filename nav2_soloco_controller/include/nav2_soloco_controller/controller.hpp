@@ -77,7 +77,7 @@ public:
   /**
     * @brief Reset the controller state between tasks
     */
-//   void reset() override;
+  // void reset() override;
 
   /**
     * @brief Main method to compute velocities using the optimizer
