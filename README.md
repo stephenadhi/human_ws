@@ -12,11 +12,11 @@ You need to have the following installed on your machine:
 
     ├── 3rdparty
     ├── docker
+    ├── nav2_soloco_controller
     ├── nav2_soloco_costmap_plugin
     ├── soloco_interfaces           
     ├── soloco_launch               
     ├── soloco_perception
-    ├── nav2_soloco_controller
     ├── LICENSE
     ├── README.md
     ├── .gitignore
@@ -116,3 +116,7 @@ Launch Locobot in Gazebo with GUI and optionally pedestrian simulator
 
     ros2 launch soloco_launch locobot_sim.launch.py use_gazebo_gui:=true use_pedsim:=false
 
+## Rosbag Example
+To record data, launch RViZ and run the following command
+
+    ros2 bag record /locobot/commands/velocity /locobot/odom /map /local_costmap/costmap /global_costmap/costmap /tf /tf_static /plan /visualization/predicted_future /visualization/human_tracks /visualization/robot_track /visualization/subgoal /visualization/human_bounding_boxes /goal_pose /locobot/robot_description -o my_experiment
