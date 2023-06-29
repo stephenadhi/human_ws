@@ -17,13 +17,14 @@ from launch.substitutions import (
 from launch_ros.substitutions import FindPackageShare
 
 def generate_launch_description():
-    # Create the launch configuration variables
+    # Create the launch configuration 
+    use_nav2_slam = LaunchConfiguration('use_nav2_slam')
     use_soloco_controller = LaunchConfiguration('use_soloco_controller')
     run_human_tf = LaunchConfiguration('run_human_tf')
     map_file = LaunchConfiguration('map_file')
     namespace = LaunchConfiguration('namespace')
     nav2_param_file = LaunchConfiguration('nav2_param_file')
-    robot_model = LaunchConfiguration('robot_model')
+    robot_model = LaunchConfiguration('robot_moel')
     robot_name = LaunchConfiguration('robot_name')
 
     # Get the launch directory
@@ -39,6 +40,10 @@ def generate_launch_description():
     with open(neural_config_file_path, 'r') as file:
         planner_config = yaml.safe_load(file)['nav2_soloco_controller']['ros__parameters']
 
+    declare_use_nav2_slam_cmd = DeclareLaunchArgument(
+            'use_nav2_slam',
+            default_value='False')
+        
     declare_robot_model_cmd = DeclareLaunchArgument(
         'robot_model',
         default_value='locobot_base',
@@ -135,7 +140,7 @@ def generate_launch_description():
     nav2_bringup_slam_launch_cmd  = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(os.path.join(
           bringup_dir, 'launch', 'nav2_slam_toolbox.launch.py')),
-        condition=IfCondition(use_soloco_controller))
+        condition=IfCondition(use_nav2_slam))
 
     soloco_controller_launch_cmd = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(os.path.join(
@@ -148,6 +153,7 @@ def generate_launch_description():
     # Create the launch description and populate
     ld = LaunchDescription()
     # Declare the launch options
+    ld.add_action(declare_use_nav2_slam_cmd)
     ld.add_action(declare_use_soloco_controller_cmd)
     ld.add_action(declare_run_human_tf_cmd)
     ld.add_action(declare_map_file_cmd)
@@ -163,6 +169,6 @@ def generate_launch_description():
     ld.add_action(xslocobot_control_launch_cmd)
     ld.add_action(locobot_nav2_bringup_slam_launch_cmd)
     ld.add_action(soloco_controller_launch_cmd)
-    # ld.add_action(nav2_bringup_slam_launch_cmd)
+    ld.add_action(nav2_bringup_slam_launch_cmd)
 
     return ld
