@@ -62,6 +62,23 @@ class Pooling_net(nn.Module):
         pool_h = H.max(1)[0]
         pool_h[pool_h == -np.Inf] = 0.
         return pool_h
+
+    def forward_old(self, corr_index, nei_index, nei_num, lstm_state, curr_pos_abs, plot_att=False):
+        self.N = corr_index.shape[0]
+        hj_t = lstm_state.unsqueeze(0).expand(self.N, self.N, self.h_dim)
+        hi_t = lstm_state.unsqueeze(1).expand(self.N, self.N, self.h_dim)
+        nei_index_t = nei_index.view((-1))
+        corr_t = corr_index.reshape((self.N * self.N, -1))
+        r_t = self.spatial_embedding(corr_t[nei_index_t > 0])
+        mlp_h_input = torch.cat((r_t, hj_t[nei_index > 0], hi_t[nei_index > 0]), 1)
+        curr_pool_h = self.mlp_pre_pool(mlp_h_input)
+        # Message Passing
+        H = torch.full((self.N * self.N, self.bottleneck_dim), -np.Inf, device=torch.device("cuda"),
+                       dtype=curr_pool_h.dtype)
+        H[nei_index_t > 0] = curr_pool_h
+        pool_h = H.view(self.N, self.N, -1).max(1)[0]
+        pool_h[pool_h == -np.Inf] = 0.
+        return pool_h, (0, 0, 0), 0
 class Hist_Encoder(nn.Module):
     def __init__(self, hist_len, device):
         super(Hist_Encoder, self).__init__()
@@ -81,8 +98,8 @@ class Hist_Encoder(nn.Module):
         self.dropout = nn.Dropout(p=dropout)
         pe = self.build_pos_enc(max_t_len)
         self.register_buffer('pe', pe)
-        self.fc = nn.Linear(2 * self.d_model, self.d_model)
-        self.input_fc = nn.Linear(2, self.d_model)
+        self.fc = nn.Linear(2 * self.d_model, self.d_model).to(self.device)
+        self.input_fc = nn.Linear(2, self.d_model).to(self.device)
 
         self.scr_mask = self.generate_square_subsequent_mask(self.hist_len)
 
@@ -122,10 +139,10 @@ class Hist_Encoder(nn.Module):
         return x_enc
 
 class Decoder_TF(nn.Module):
-    def __init__(self, device):
+    def __init__(self, device, input_dim=16):
         super(Decoder_TF, self).__init__()
         self.device = device
-        self.d_model = 16
+        self.d_model = input_dim
         nhead = 2
         dropout = 0.0
         d_hid = 32
@@ -180,3 +197,18 @@ class Decoder_TF(nn.Module):
                                                                     4).chunk(2, 2)
         return mu, scale
 
+    def forward_new(self, x, c):
+        self.tgt_mask  = self.generate_square_subsequent_mask(x.shape[0])
+        x = self.input_fc(x.reshape(-1, x.shape[-1])).view(x.shape[0], x.shape[1], self.d_model)
+        x_pos = self.positional_encoding(x, 8)
+        x = self.transformer_decoder(x_pos,c, tgt_mask = self.tgt_mask )
+        x = self.output_fc(x.reshape(-1, x.shape[-1])).view(x.shape[0],
+                                                                    x.shape[1],
+                                                                    5) # .chunk(2, 2)
+        mu = x[:, :, :2]
+        cov_params = x[:, :, 2:]
+        L = torch.zeros((x.shape[0], x.shape[1], 2, 2), device=x.device)
+        L[..., 0, 0] = torch.exp(cov_params[..., 0])  # Diagonal element (0, 0) is positive
+        L[..., 1, 0] = cov_params[..., 1]  # Lower triangular element (1, 0)
+        L[..., 1, 1] = torch.exp(cov_params[..., 2])
+        return mu, L
