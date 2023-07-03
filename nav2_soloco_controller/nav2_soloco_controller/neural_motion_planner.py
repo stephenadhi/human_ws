@@ -19,6 +19,7 @@ from soloco_interfaces.action import NavigateToXYGoal
 
 from nav2_soloco_controller.models.DWA import DWA
 from nav2_soloco_controller.models.CEM_policy_IAR import CEM_IAR
+from nav2_soloco_controller.models.MPPI_policy_AR import Parallel_MPPI
 from nav2_soloco_controller.occupancy_grid_manager import OccupancyGridManager
 # from nav2_soloco_controller.utils import point_transform, pose_transform
 from launch_ros.substitutions import FindPackageShare
@@ -61,7 +62,7 @@ class NeuralMotionPlanner(Node):
         # Device to use: 'gpu' or 'cpu'
         self.declare_parameter('device', 'cpu') 
         # Define neural model
-        self.declare_parameter('model_name', 'CEM_IAR')
+        self.declare_parameter('model_name', 'MPPI')
         self.declare_parameter('AR_checkpoint', 'models/weights/SIMNoGoal-univ_fast_AR2/checkpoint_with_model.pt')
         self.declare_parameter('IAR_checkpoint', 'models/weights/SIMNoGoal-univ_IAR_Full_trans/checkpoint_with_model.pt')     
         # Declare goal tolerance
@@ -131,6 +132,9 @@ class NeuralMotionPlanner(Node):
             return CEM_IAR(robot_params_dict=self.robot_params_dict, dt=self.interp_interval, sample_batch=self.sample_batch, hist=self.max_history_length, 
                            prediction_steps=self.prediction_steps, num_agent=self.max_num_agents, AR_checkpoint=self.AR_checkpoint,
                            IAR_checkpoint=self.IAR_checkpoint, device=self.device)
+        elif model_name == 'MPPI':
+            return Parallel_MPPI(robot_params_dict=self.robot_params_dict, dt=self.interp_interval, hist=self.max_history_length, 
+                    num_agent=self.max_num_agents, device=self.device)
         else:
             raise Exception('An error occurred')
             
