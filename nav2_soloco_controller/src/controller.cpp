@@ -122,12 +122,14 @@ geometry_msgs::msg::TwistStamped SolocoController::computeVelocityCommands(
   auto send_goal_future = soloco_client_ptr_->async_send_goal(goal_msg);
   rclcpp::spin_until_future_complete(node, send_goal_future);
   auto goal_handle = send_goal_future.get();
+  RCLCPP_INFO(logger_, "Computing velocity commands");
   auto result_future = soloco_client_ptr_->async_get_result(goal_handle);
   rclcpp::spin_until_future_complete(node, result_future);
   auto result = result_future.get();
   geometry_msgs::msg::TwistStamped cmd_vel;
   cmd_vel.header.stamp = node->get_clock()->now();
   cmd_vel.twist = result.result->command_velocity;
+  RCLCPP_INFO(logger_, "navigating with cmd_vel");
 
   #ifdef BENCHMARK_TESTING
     auto end = std::chrono::system_clock::now();
