@@ -375,7 +375,7 @@ def generate_launch_description():
             default_value=PathJoinSubstitution([
                 FindPackageShare('soloco_launch'),
                 'params',
-                'smac_dwb_nav2_params.yaml'
+                'smac_soloco_nav2_params.yaml'
             ]),
             description=(
                 'full path to the ROS 2 parameters file to use when configuring the Nav2 stack.'

@@ -147,6 +147,15 @@ void SolocoController::setPlan(const nav_msgs::msg::Path & path)
   path_handler_.setPath(path);
 }
 
+void SolocoController::setSpeedLimit(const double & speed_limit, const bool & percentage)
+{
+
+  if (percentage) {
+    // Speed limit is expressed in % from maximum speed of robot
+    max_speed_ = max_speed_ * speed_limit / 100.0;
+  }
+}
+
 }  // namespace nav2_soloco_controller
 
 #include "pluginlib/class_list_macros.hpp"

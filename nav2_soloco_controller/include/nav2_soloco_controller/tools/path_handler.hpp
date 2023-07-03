@@ -27,7 +27,7 @@
 #include "builtin_interfaces/msg/time.hpp"
 #include "nav2_costmap_2d/costmap_2d_ros.hpp"
 #include "nav2_util/geometry_utils.hpp"
-
+#include "nav2_core/controller.hpp"
 #include "nav2_soloco_controller/tools/parameters_handler.hpp"
 
 namespace soloco

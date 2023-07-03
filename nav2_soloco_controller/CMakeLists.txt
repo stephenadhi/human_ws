@@ -60,12 +60,8 @@ add_compile_options(-O3 -finline-limit=1000000 -ffp-contract=fast -ffast-math)
 
 add_library(soloco_controller SHARED
   src/controller.cpp
-#   src/optimizer.cpp
-#   src/critic_manager.cpp
-#   src/trajectory_visualizer.cpp
-#   src/path_handler.cpp
-#   src/parameters_handler.cpp
-#   src/noise_generator.cpp
+  src/path_handler.cpp
+  src/parameters_handler.cpp
 )
 
 set(libraries soloco_controller)
