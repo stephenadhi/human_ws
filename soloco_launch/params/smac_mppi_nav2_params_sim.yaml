@@ -235,9 +235,9 @@ local_costmap:
       # Whether costmap should roll with robot base frame. (default: False)
       rolling_window: True
       # Height of costmap (m). (default: 5)
-      width: 5
+      width: 8
       # Width of costmap (m). (default: 5)
-      height: 5
+      height: 8
       # Resolution of 1 pixel of the costmap, in meters. (default: 0.1)
       resolution: 0.05
       # Robot radius to use, if footprint coordinates not provided. (default: 0.1)
