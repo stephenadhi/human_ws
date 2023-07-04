@@ -123,6 +123,8 @@ class NeuralMotionPlanner(Node):
 
     def switch_case_model(self, model_name):
         if model_name == 'CEM_IAR':
+            self.AR_checkpoint = os.path.join(self.pkg_dir, self.pkg_name, 'models/weights/SIMNoGoal-univ_fast_AR2/checkpoint_with_model.pt')
+            self.IAR_checkpoint = os.path.join(self.pkg_dir, self.pkg_name, 'models/weights/SIMNoGoal-univ_IAR_Full_trans/checkpoint_with_model.pt')
             return CEM_IAR(robot_params_dict=self.robot_params_dict, dt=self.interp_interval, sample_batch=self.sample_batch, hist=self.max_history_length, 
                            prediction_steps=self.prediction_steps, num_agent=self.max_num_agents, AR_checkpoint=self.AR_checkpoint,
                            IAR_checkpoint=self.IAR_checkpoint, device=self.device)
