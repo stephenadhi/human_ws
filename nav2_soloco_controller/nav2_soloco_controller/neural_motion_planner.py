@@ -100,15 +100,17 @@ class NeuralMotionPlanner(Node):
         self.interp_interval = self.get_parameter('interp_interval').get_parameter_value().double_value
         self.sample_batch = self.get_parameter('sample_batch').get_parameter_value().integer_value
         # Initialize neighboring matrix
-        self.neigh_matrix = np.ones((6, 6), int)
+        self.neigh_matrix = np.ones((self.max_num_agents+1, self.max_num_agents+1), int)
         np.fill_diagonal(self.neigh_matrix, 0)
         # Initialize current robot state
         self.r_pos_xy = np.zeros(2)
         self.robot_yaw = np.zeros(3)
         self.r_state = np.zeros(5)  # v_x, v_y, yaw, v_t, omega_t
         # Initialize current position of all people and goal pose
-        self.ped_pos_xy_cem = np.ones((self.max_history_length + 1, self.max_num_agents + 1, 2)) * 500 # placeholder value
+        self.ped_pos_xy_cem = np.ones((self.max_history_length + 1, self.max_num_agents + 1, 2)) * 50 # placeholder value
+        self.ped_pos_xy_cem[:, 0] = np.ones((self.max_history_length + 1, 2))
         self.new_goal = False
+        self.trajectory_received = False
         self.global_goal = None
         self.subgoal_pose = None
         self.goal_tolerance = self.get_parameter('goal_tolerance').get_parameter_value().double_value
@@ -125,8 +127,9 @@ class NeuralMotionPlanner(Node):
                            prediction_steps=self.prediction_steps, num_agent=self.max_num_agents, AR_checkpoint=self.AR_checkpoint,
                            IAR_checkpoint=self.IAR_checkpoint, device=self.device)
         elif model_name == 'MPPI':
-            return Parallel_MPPI(robot_params_dict=self.robot_params_dict, dt=self.interp_interval, hist=self.max_history_length, 
-                    num_agent=self.max_num_agents, device=self.device)
+            return Parallel_MPPI(robot_params_dict=self.robot_params_dict, dt=self.interp_interval, hist=self.max_history_length,
+                           sample_batch_per_thread=self.sample_batch, num_threads=1, predictions_steps=self.prediction_steps, num_agent=self.max_num_agents,
+                           device=self.device, human_reaction=False)
         else:
             raise Exception('An error occurred')
             
@@ -183,7 +186,11 @@ class NeuralMotionPlanner(Node):
         # self.get_logger().info('Robot trajectory received.')
         # Update robot state (Robot ID: 0)
         coords_array = np.array([[e.pose.position.x, e.pose.position.y] for e in robot_msg.track.poses])
+        # Add small noise if odometry is giving zeros
+        if coords_array.sum() == 0:
+            coords_array = np.random.randn(self.max_history_length+1, 2)*0.01
         self.ped_pos_xy_cem[:, 0] = coords_array[::-1]
+        self.trajectory_received = True
 
     '''update people state (ID 0 is reserved for robot)'''
     def human_callback(self, human_msg):
@@ -194,7 +201,7 @@ class NeuralMotionPlanner(Node):
                 self.ped_pos_xy_cem[:, person_idx+1] = coords_array[::-1]
         else:
             # Reset human data
-            self.ped_pos_xy_cem[:, 1:] = np.ones((self.max_history_length + 1, self.max_num_agents, 2)) * 500 # placeholder value
+            self.ped_pos_xy_cem[:, 1:] = np.ones((self.max_history_length + 1, self.max_num_agents, 2)) * 50 # placeholder value
 
     def costmap_callback(self, costmap_msg):
         # Send costmap to occupancy grid manager
@@ -215,19 +222,13 @@ class NeuralMotionPlanner(Node):
         self.r_state[4] = odom_msg.twist.twist.angular.z
 
     def timer_callback(self):
-        if self.global_goal is not None and self.subgoal_pose is not None and self.ogm is not None:
-            # If global goal is new
-            # if self.new_goal == True and self.robot_model == 'differential_drive':
-            #     yaw_diff = self.global_goal[2] - self.robot_yaw[2]
-            #     self.spin_robot_in_subgoal_direction(yaw_diff)
-
+        if self.global_goal is not None and self.subgoal_pose is not None and self.ogm is not None and self.trajectory_received:
             # Calculate euclidian distance to goal
             distance_to_goal = hypot((self.r_pos_xy[0]-self.global_goal[0]), 
                                  (self.r_pos_xy[1]-self.global_goal[1]))
 
             # Concatenate information about people track, robot state, and goal
             x = np.concatenate([self.ped_pos_xy_cem.flatten(), self.neigh_matrix.flatten(), self.r_state, self.subgoal_pose[:2]])
-            
             # Get command from neural model forward pass, given costmap object
             u, current_future = self.model.predict(x, costmap_obj=self.ogm)
             
@@ -239,7 +240,7 @@ class NeuralMotionPlanner(Node):
                 cmd_vel.angular.z = float(u[1])
                 self.cmd_vel_publisher.publish(cmd_vel)
                 if self.debug_log:
-                    self.get_logger().info(f'Heading towards x:{self.subgoal_pose[0]}, y: {self.subgoal_pose[1]}')
+                    self.get_logger().info(f'Heading towards x:{self.global_goal[0]}, y: {self.global_goal[1]}')
                     self.get_logger().info(f'Navigating with velocity linear: {u[0]} and angular {u[1]}.')          
             else:
                 cmd_vel.linear.x = 0.0
