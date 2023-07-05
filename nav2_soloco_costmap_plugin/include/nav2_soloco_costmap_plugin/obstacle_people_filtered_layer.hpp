@@ -251,10 +251,21 @@ protected:
     double * max_x,
     double * max_y);
 
+  void setProxemics(
+    tf2::Transform agent, double r, double amplitude);
+
+  tf2::Vector3 transformPoint(
+    const tf2::Vector3 & input_point, const tf2::Transform & transform);
+  void transformProxemicFootprint(
+    std::vector<geometry_msgs::msg::Point> input_points,
+    tf2::Transform tf,
+    std::vector<geometry_msgs::msg::Point> & transformed_proxemic,
+    float alpha_mod = 0.0);
+
   std::string global_frame_;  ///< @brief The global frame for the costmap
   double min_obstacle_height_;  ///< @brief Max Obstacle Height
   double max_obstacle_height_;  ///< @brief Max Obstacle Height
-
+  float intimate_z_radius_, personal_z_radius_, gaussian_amplitude_;
   /// @brief Used to project laser scans into point clouds
   laser_geometry::LaserProjection projector_;
   /// @brief Used for the observation message filters
@@ -291,6 +302,8 @@ protected:
 
   std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
   std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
+
+  std::shared_ptr<nav2_costmap_2d::Costmap2D> social_costmap_;
 
   geometry_msgs::msg::Pose robot_pose_2d_;
   std::vector<std::string> agent_ids_;

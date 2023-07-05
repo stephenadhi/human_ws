@@ -592,17 +592,13 @@ ObstaclePeopleFilteredLayer::updateBounds(
     current = current && getAgentTFs(agents);
     if (agents.size() != 0) {
         for (auto agent : agents) {
-        agentFilter(agent, filter_radius_);
-        doTouch(agent, min_x, min_y, max_x, max_y);
+          agentFilter(agent, filter_radius_);
+          doTouch(agent, min_x, min_y, max_x, max_y);
         }
-        // RCLCPP_INFO(node->get_logger(), "Agents vector size is %li", agents.size());
+        RCLCPP_DEBUG(logger_, "Agents vector size is %li", agents.size());
     }
     // update the global current status
     current_ = current;
-    // if (!use_people_tf_) {
-    //   // Clear vector to prevent old people data being used if subsription fails
-    //   agent_states_.clear();
-    // }
   }
 }
 
@@ -625,6 +621,7 @@ bool
 ObstaclePeopleFilteredLayer::getAgentTFs(std::vector<tf2::Transform> & agents) const
 {
   auto node = node_.lock();
+  // If tf2 transform is published
   if (use_people_tf_) {
     geometry_msgs::msg::TransformStamped global2agent;
     for (auto id : agent_ids_) {
@@ -641,11 +638,18 @@ ObstaclePeopleFilteredLayer::getAgentTFs(std::vector<tf2::Transform> & agents) c
     }
     return true;
   } 
+  // If subscribing directly to people topic
   else {
       tf2::Transform transform;
       int count = 0;
       for (auto person : agent_states_) {
-        if (agent_distances_[count] > filter_min_distance_){
+        // If agent is closer than minimum filter distance
+        if (agent_distances_[count] < filter_min_distance_){
+          // Convert agent costmap to social layer instead of filtering
+          RCLCPP_WARN(node->get_logger(), "Failed to get person pose");
+        }
+        // else filter agent costmap
+        else {
           try {
             transform.setOrigin(
               tf2::Vector3(person.pose.position.x, person.pose.position.y, person.pose.position.z)
@@ -689,6 +693,106 @@ ObstaclePeopleFilteredLayer::agentFilter(tf2::Transform agent, double r)
     unsigned int index = getIndex(polygon_cells[i].x, polygon_cells[i].y);
     costmap_[index] = nav2_costmap_2d::FREE_SPACE;
   }
+}
+
+void 
+ObstaclePeopleFilteredLayer::setProxemics(
+  tf2::Transform agent, double r, double amplitude)
+{
+  std::vector<geometry_msgs::msg::Point> agent_footprint, intimate_footprint;
+  std::vector<MapLocation> polygon_cells, intimate_cells;
+  double var_h = 1.2; 
+  double var_s = 1.2;
+  double var_r = 1.2;
+
+  tf2::Matrix3x3 m(agent.getRotation());
+  double yaw = 0.0;
+
+  transformProxemicFootprint(
+      social_geometry::makeProxemicShapeFromAngle(
+        r, 2 * M_PI),
+      agent,
+      agent_footprint);
+
+  social_geometry::getPolygon(
+    layered_costmap_->getCostmap(),
+    agent_footprint,
+    polygon_cells);
+
+  double a, ax, ay;
+  unsigned int index;
+  unsigned char cvalue, old_value, max_value;
+
+  for (unsigned int i = 0; i < polygon_cells.size(); i++) {
+    mapToWorld(polygon_cells[i].x, polygon_cells[i].y, ax, ay);
+    a = social_geometry::asymmetricGaussian(
+      ax,
+      ay,
+      agent.getOrigin().x(),
+      agent.getOrigin().y(),
+      amplitude,
+      yaw,
+      var_h,
+      var_s,
+      var_r);
+    if (a > 254.0) {a = 254.0;} else if (a <= 20.0) {continue;}
+    index = getIndex(polygon_cells[i].x, polygon_cells[i].y);
+    cvalue = (unsigned char) a;
+    old_value = costmap_[index];
+    if (old_value <= nav2_costmap_2d::LETHAL_OBSTACLE) {
+      max_value = std::max(old_value, cvalue);
+      cvalue = max_value;
+    }
+    costmap_[index] = cvalue;
+    social_costmap_->setCost(polygon_cells[i].x, polygon_cells[i].y, cvalue);
+  }
+
+  // We add the intimate zone footprint to the proxemic shape polygon.
+  transformProxemicFootprint(
+    social_geometry::makeProxemicShapeFromAngle(intimate_z_radius_, 2 * M_PI),
+    agent,
+    intimate_footprint);
+  social_geometry::getPolygon(
+    layered_costmap_->getCostmap(),
+    intimate_footprint,
+    intimate_cells);
+
+  cvalue = 252;
+  for (unsigned int i = 0; i < intimate_cells.size(); i++) {
+    index = getIndex(intimate_cells[i].x, intimate_cells[i].y);
+    social_costmap_->setCost(intimate_cells[i].x, intimate_cells[i].y, cvalue);
+    costmap_[index] = cvalue;
+  }
+}
+
+void 
+ObstaclePeopleFilteredLayer::transformProxemicFootprint(
+  std::vector<geometry_msgs::msg::Point> input_points,
+  tf2::Transform tf,
+  std::vector<geometry_msgs::msg::Point> & transformed_proxemic,
+  float alpha_mod)
+{
+  tf2::Transform tf_ = tf;
+  tf2::Quaternion q_orig, q_rot, q_new;
+  q_rot.setRPY(alpha_mod, 0, 0);
+  q_new = q_rot * tf_.getRotation();  // Calculate the new orientation
+  q_new.normalize();
+  tf_.setRotation(q_new);
+
+  for (auto p : input_points) {
+    tf2::Vector3 p_obj(p.x, p.y, 0.0);
+    auto transform_p = transformPoint(p_obj, tf_);
+    geometry_msgs::msg::Point out_p;
+    out_p.x = transform_p.x();
+    out_p.y = transform_p.y();
+    transformed_proxemic.push_back(out_p);
+  }
+}
+
+tf2::Vector3 ObstaclePeopleFilteredLayer::transformPoint(
+  const tf2::Vector3 & input_point, const tf2::Transform & transform)
+{
+  return transform * input_point;
 }
 
 void
