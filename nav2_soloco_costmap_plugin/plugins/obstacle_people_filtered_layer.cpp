@@ -160,7 +160,8 @@ void ObstaclePeopleFilteredLayer::onInitialize()
       std::bind(&ObstaclePeopleFilteredLayer::odomCallback, this, std::placeholders::_1));
 
   global_frame_ = layered_costmap_->getGlobalFrameID();
-
+  gaussian_amplitude_ = 254.0; /* Amplitude value to get a LETHAL_OBSTACLE intimate zone */
+  
   auto sub_opt = rclcpp::SubscriptionOptions();
   sub_opt.callback_group = callback_group_;
 
@@ -591,14 +592,22 @@ ObstaclePeopleFilteredLayer::updateBounds(
     }
     current = current && getAgentTFs(agents);
     if (agents.size() != 0) {
-        for (auto agent : agents) {
-          agentFilter(agent, filter_radius_);
-          doTouch(agent, min_x, min_y, max_x, max_y);
+      int idx = 0;
+      for (auto agent : agents) {
+        // If agent is closer than minimum filter distance
+        if (agent_distances_[idx] < filter_min_distance_){
+          setProxemics(agent, filter_radius_, gaussian_amplitude_);
         }
-        RCLCPP_DEBUG(logger_, "Agents vector size is %li", agents.size());
+        else {
+          agentFilter(agent, filter_radius_);
+        }
+        idx+=1;
+        doTouch(agent, min_x, min_y, max_x, max_y);
+      }  
+    RCLCPP_DEBUG(logger_, "Agents vector size is %li", agents.size());
     }
-    // update the global current status
-    current_ = current;
+  // update the global current status
+  current_ = current;
   }
 }
 
@@ -643,31 +652,23 @@ ObstaclePeopleFilteredLayer::getAgentTFs(std::vector<tf2::Transform> & agents) c
       tf2::Transform transform;
       int count = 0;
       for (auto person : agent_states_) {
-        // If agent is closer than minimum filter distance
-        if (agent_distances_[count] < filter_min_distance_){
-          // Convert agent costmap to social layer instead of filtering
+        try {
+          transform.setOrigin(
+            tf2::Vector3(person.pose.position.x, person.pose.position.y, person.pose.position.z)
+          );
+          transform.setRotation(
+            tf2::Quaternion(
+              person.pose.orientation.x,
+              person.pose.orientation.y,
+              person.pose.orientation.z,
+              person.pose.orientation.w
+            )
+          );
+        } catch(...) { 
           RCLCPP_WARN(node->get_logger(), "Failed to get person pose");
+          return false;
         }
-        // else filter agent costmap
-        else {
-          try {
-            transform.setOrigin(
-              tf2::Vector3(person.pose.position.x, person.pose.position.y, person.pose.position.z)
-            );
-            transform.setRotation(
-              tf2::Quaternion(
-                person.pose.orientation.x,
-                person.pose.orientation.y,
-                person.pose.orientation.z,
-                person.pose.orientation.w
-              )
-            );
-          } catch(...) { 
-            RCLCPP_WARN(node->get_logger(), "Failed to get person pose");
-            return false;
-          }
-          agents.push_back(transform);
-        }
+        agents.push_back(transform);
       count++;
     }
     return true;
