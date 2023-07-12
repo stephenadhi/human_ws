@@ -201,7 +201,7 @@ local_costmap:
       # List of mapped plugin names for parameter namespaces and names. Note: Each plugin namespace
       # defined in this list needs to have a plugin parameter defining the type of plugin to be
       # loaded in the namespace.
-      plugins: ["obstacle_people_filtered_layer", "inflation_layer"] #, "social_layer"]
+      plugins: ["obstacle_people_filtered_layer", "inflation_layer", "social_layer"]
       obstacle_people_filtered_layer:
         plugin: "nav2_soloco_costmap_plugin/ObstaclePeopleFilteredLayer"
         # Whether the plugin is enabled. (default: True)
@@ -271,6 +271,43 @@ local_costmap:
 
         # QoS settings for map topic. (default: True)
         map_subscribe_transient_local: True
+      
+      social_layer:
+        plugin: "nav2_soloco_costmap_plugin/SocialLayer"
+        enabled: True
+        debug_only: False
+        # Whether the people transformation is used. (default: False)
+        use_people_tf: False        
+        # Tf prefix of detected people. (if using people_tf)
+        tf_prefix: "agent_"
+        # Topic name of detected people. (if not using people_tf)
+        people_topic: "/human/interpolated_history"
+        # Robot odometry topic 
+        odom_topic: "/locobot/odom"
+        intimate_z_radius: 0.4
+        personal_z_radius: 1.2  # Must be lower than half width and half height
+        orientation_info: True
+        action_names: ["following", "escorting", "approaching", "default"]
+        escorting:
+          var_h: 1.0
+          var_s: 1.0
+          var_r: 1.0
+          n_activity_zones: 0
+          activity_zone_phi: 1.5707
+        following:
+          var_h: 1.0
+          var_s: 1.0
+          var_r: 0.7
+          n_activity_zones: 1
+          activity_zone_alpha: 0.7853
+          activity_zone_phi: 3.1415
+        approaching:
+          var_h: 1.0
+          var_s: 1.0
+          var_r: 1.0
+          n_activity_zones: 1
+          activity_zone_alpha: 0.7853
+          activity_zone_phi: 0.0
 
 # The Costmap 2D package implements a 2D grid-based costmap for environmental representations and a
 # number of sensor processing plugins. It is used in the planner and controller servers for

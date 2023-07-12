@@ -60,6 +60,7 @@
 #include "tf2_ros/message_filter.h"
 #include "message_filters/subscriber.h"
 #include "nav_msgs/msg/occupancy_grid.hpp"
+#include "nav_msgs/msg/odometry.hpp"
 #include "nav2_costmap_2d/costmap_layer.hpp"
 #include "nav2_costmap_2d/layered_costmap.hpp"
 #include "nav2_costmap_2d/observation_buffer.hpp"
@@ -76,7 +77,7 @@
 #include "tf2_ros/transform_listener.h"
 #include "diagnostic_msgs/msg/key_value.hpp"
 #include "soloco_interfaces/msg/set_human_action.hpp"
-
+#include <soloco_interfaces/msg/tracked_persons.hpp>
 #include "nav2_soloco_costmap_plugin/geometry/geometry.hpp"
 
 using SetHumanAction = soloco_interfaces::msg::SetHumanAction;
@@ -131,8 +132,11 @@ public:
    */
   void tfCallback(const tf2_msgs::msg::TFMessage::SharedPtr msg);
   void setActionCallback(const SetHumanAction::SharedPtr msg);
-
+  void odomCallback(const nav_msgs::msg::Odometry::SharedPtr msg);
+  void agentsCallback(const soloco_interfaces::msg::TrackedPersons::SharedPtr msg);
+  
 protected:
+  double calculateRobotAgentDistance(geometry_msgs::msg::Pose agent_pose_2d);
   void doTouch(
     tf2::Transform agent, double * min_x, double * min_y,
     double * max_x, double * max_y);
@@ -159,12 +163,18 @@ protected:
 
   std::vector<geometry_msgs::msg::Point> transformed_footprint_;
   std::map<std::string, Agent> agents_;
+  std::vector<geometry_msgs::msg::PoseStamped> agent_states_;
+  std::vector<double> agent_distances_;
+  geometry_msgs::msg::Pose robot_pose_2d_;
   std::map<std::string, ActionZoneParams> action_z_params_map_;
   std::vector<std::string> action_names_;
   rclcpp::Subscription<SetHumanAction>::SharedPtr set_action_sub_;
   std::string global_frame_;  ///< @brief The global frame for the costmap
   bool footprint_clearing_enabled_, rolling_window_, orientation_info_, debug_only_;
+  bool use_people_tf_;
   std::string tf_prefix_;
+  std::string people_topic_;
+  std::string odom_topic_;
   float intimate_z_radius_, personal_z_radius_, gaussian_amplitude_;
   std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
   std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
@@ -173,7 +183,8 @@ protected:
   std::shared_ptr<nav2_costmap_2d::Costmap2DPublisher> costmap_pub_{nullptr};};
   rclcpp::AsyncParametersClient::SharedPtr parameters_client_;
   rclcpp::Subscription<rcl_interfaces::msg::ParameterEvent>::SharedPtr parameter_event_sub_;
-
+  rclcpp::Subscription<soloco_interfaces::msg::TrackedPersons>::SharedPtr people_sub_;
+  rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_sub_;
 }  // namespace nav2_costmap_2d
 
 #endif  // nav2_soloco_costmap_plugin__SOCIAL_LAYER_HPP_

@@ -56,6 +56,7 @@
 
 #include "nav2_costmap_2d/costmap_math.hpp"
 #include "nav2_costmap_2d/footprint.hpp"
+#include "nav2_util/geometry_utils.hpp"
 #include "rclcpp/parameter_events_filter.hpp"
 
 using std::placeholders::_1;
@@ -83,7 +84,10 @@ SocialLayer::onInitialize()
   declareParameter(
     "footprint_clearing_enabled",
     rclcpp::ParameterValue(false));
+  declareParameter("use_people_tf", rclcpp::ParameterValue(false));
   declareParameter("tf_prefix", rclcpp::ParameterValue("agent_"));
+  declareParameter("people_topic", rclcpp::ParameterValue(std::string("")));
+  declareParameter("odom_topic", rclcpp::ParameterValue(std::string("")));
   declareParameter("intimate_z_radius", rclcpp::ParameterValue(0.32));
   declareParameter("personal_z_radius", rclcpp::ParameterValue(0.7));
   declareParameter("orientation_info", rclcpp::ParameterValue(false));
@@ -95,7 +99,10 @@ SocialLayer::onInitialize()
   node->get_parameter(
     name_ + "." + "footprint_clearing_enabled",
     footprint_clearing_enabled_);
+  node->get_parameter(name_ + "." + "use_people_tf", use_people_tf_);
   node->get_parameter(name_ + "." + "tf_prefix", tf_prefix_);
+  node->get_parameter(name_ + "." + "people_topic", people_topic_);
+  node->get_parameter(name_ + "." + "odom_topic", odom_topic_);
   node->get_parameter(name_ + "." + "intimate_z_radius", intimate_z_radius_);
   node->get_parameter(name_ + "." + "personal_z_radius", personal_z_radius_);
   node->get_parameter(name_ + "." + "orientation_info", orientation_info_);
@@ -175,12 +182,24 @@ SocialLayer::onInitialize()
     name_ + "/costmap", true);
   costmap_pub_->on_activate();
 
-  tf_buffer_ = std::make_shared<tf2_ros::Buffer>(node->get_clock());
-  auto timer_interface = std::make_shared<tf2_ros::CreateTimerROS>(
-    node->get_node_base_interface(),
-    node->get_node_timers_interface());
-  tf_buffer_->setCreateTimerInterface(timer_interface);
-  tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
+  if (use_people_tf_) {
+    tf_buffer_ = std::make_shared<tf2_ros::Buffer>(node->get_clock());
+    auto timer_interface = std::make_shared<tf2_ros::CreateTimerROS>(
+      node->get_node_base_interface(),
+      node->get_node_timers_interface());
+    tf_buffer_->setCreateTimerInterface(timer_interface);
+    tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
+  }
+  else {
+    // Subscribe to tracked people
+    people_sub_ = node->create_subscription<soloco_interfaces::msg::TrackedPersons>(
+      people_topic_, rclcpp::SensorDataQoS(),
+      std::bind(&SocialLayer::agentsCallback, this, std::placeholders::_1));
+    // Subscribe to robot pose
+    odom_sub_ = node->create_subscription<nav_msgs::msg::Odometry>(
+      odom_topic_, rclcpp::SensorDataQoS(),
+      std::bind(&SocialLayer::odomCallback, this, std::placeholders::_1));
+  }
 
   set_action_sub_ = node->create_subscription<SetHumanAction>(
     "/social_nav2/set_agent_action",
@@ -231,6 +250,23 @@ SocialLayer::onParameterEventCallback(
   }
 }
 
+void 
+SocialLayer::agentsCallback(
+    const soloco_interfaces::msg::TrackedPersons::SharedPtr msg) {
+  agent_states_.clear();
+  agent_distances_.clear();
+  for (auto person : msg->tracks){
+    agent_states_.push_back(person.current_pose);
+    double dist = calculateRobotAgentDistance(person.current_pose.pose);
+    agent_distances_.push_back(dist);
+  }
+}
+
+double
+SocialLayer::calculateRobotAgentDistance(geometry_msgs::msg::Pose agent_pose){
+  // Default is only in 2D, Z-axis not considered
+  return nav2_util::geometry_utils::euclidean_distance(robot_pose_2d_, agent_pose);
+}
 
 void 
 SocialLayer::updateBounds(
@@ -316,35 +352,68 @@ bool
 SocialLayer::updateAgentMap(std::map<std::string, Agent> & agents)
 {
   auto node = node_.lock();
-  geometry_msgs::msg::TransformStamped global2agent;
+  if (use_people_tf_) {
+    geometry_msgs::msg::TransformStamped global2agent;
 
-  std::vector<std::string> frames;
-  frames = tf_buffer_->getAllFrameNames();
-  for (auto frame : frames) {
-    if (frame.find(tf_prefix_) != std::string::npos &&
-      agents.find(frame) == agents.end())
-    {
-      Agent a;
-      a.action = "default";
-      agents.insert(std::pair<std::string, Agent>(frame, a));
-    }
-  }
-
-  for (auto agent : agents) {
-    try {
-      // Check if the transform is available
-      global2agent = tf_buffer_->lookupTransform(global_frame_, agent.first, tf2::TimePointZero);
-    } catch (tf2::TransformException & e) {
-      RCLCPP_WARN(node->get_logger(), "%s", e.what());
-      return false;
+    std::vector<std::string> frames;
+    frames = tf_buffer_->getAllFrameNames();
+    for (auto frame : frames) {
+      if (frame.find(tf_prefix_) != std::string::npos &&
+        agents.find(frame) == agents.end())
+      {
+        Agent a;
+        a.action = "default";
+        agents.insert(std::pair<std::string, Agent>(frame, a));
+      }
     }
 
-    tf2::Transform global2agent_tf2;
-    tf2::impl::Converter<true, false>::convert(global2agent.transform, global2agent_tf2);
-    agent.second.tf = global2agent_tf2;
-    agents[agent.first] = agent.second;
+    for (auto agent : agents) {
+      try {
+        // Check if the transform is available
+        global2agent = tf_buffer_->lookupTransform(global_frame_, agent.first, tf2::TimePointZero);
+      } catch (tf2::TransformException & e) {
+        RCLCPP_WARN(node->get_logger(), "%s", e.what());
+        return false;
+      }
+
+      tf2::Transform global2agent_tf2;
+      tf2::impl::Converter<true, false>::convert(global2agent.transform, global2agent_tf2);
+      agent.second.tf = global2agent_tf2;
+      agents[agent.first] = agent.second;
+    }
+    return true;
   }
+  // If subscribing to people topic directly
+  else {
+    tf2::Transform transform;
+    int count = 0;
+    for (auto person : agent_states_) {
+      if (agent_distances_[count] < personal_z_radius_){
+        try {
+          transform.setOrigin(
+            tf2::Vector3(person.pose.position.x, person.pose.position.y, person.pose.position.z)
+          );
+          transform.setRotation(
+            tf2::Quaternion(
+              person.pose.orientation.x,
+              person.pose.orientation.y,
+              person.pose.orientation.z,
+              person.pose.orientation.w
+            )
+          );
+        } catch(...) { 
+          RCLCPP_WARN(node->get_logger(), "Failed to get person pose");
+          return false;
+        }
+        Agent a;
+        a.action = "default";
+        a.tf = transform;
+        agents.insert(std::pair<std::string, Agent>("agent_" + std::to_string(count), a));
+      }
+    count++;
+    }
   return true;
+  }
 }
 
 void 
