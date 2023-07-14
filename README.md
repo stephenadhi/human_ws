@@ -119,4 +119,4 @@ Launch Locobot in Gazebo with GUI and optionally pedestrian simulator
 ## Rosbag Example
 To record data, launch RViZ and run the following command
 
-    ros2 bag record /locobot/commands/velocity /locobot/odom /map /local_costmap/costmap /global_costmap/costmap /tf /tf_static /plan /visualization/predicted_future /visualization/human_tracks /visualization/robot_track /visualization/subgoal /visualization/human_bounding_boxes /goal_pose /locobot/robot_description -o my_experiment
+    ros2 bag record /locobot/commands/velocity /locobot/odom /map /local_costmap/costmap /global_costmap/costmap /tf /tf_static /plan /visualization/predicted_future /visualization/human_tracks /visualization/robot_track /visualization/subgoal /visualization/human_bounding_boxes /goal_pose /locobot/robot_description /zed2_camera/left_image_raw -o my_experiment
