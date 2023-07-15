@@ -17,20 +17,25 @@ def generate_launch_description():
     robot_name = LaunchConfiguration('robot_name')
     use_pedsim = LaunchConfiguration('use_pedsim')
     use_gazebo_gui = LaunchConfiguration('use_gazebo_gui')
+    use_soloco_controller = LaunchConfiguration('use_soloco_controller')
+    run_human_tf = LaunchConfiguration('run_human_tf')
     world_file = LaunchConfiguration('world_file')
     map_file = LaunchConfiguration('map_file')
     nav2_params_file = LaunchConfiguration('nav2_params_file')
+    cmd_vel_topic = LaunchConfiguration('cmd_vel_topic')
     pedsim_scene_file = LaunchConfiguration('pedsim_scene_file')
     pedsim_config_file = LaunchConfiguration('pedsim_config_file')
 
     # Get the launch directory
     bringup_dir = get_package_share_directory('soloco_launch')
     interbotix_sim_dir = get_package_share_directory('interbotix_xslocobot_sim')
-    interbotix_nav_dir = get_package_share_directory('interbotix_xslocobot_nav')
+    nav2_soloco_controller_dir = get_package_share_directory('nav2_soloco_controller')
     pedsim_dir = get_package_share_directory('pedsim_simulator')
 
     default_world_path = os.path.join(bringup_dir, 'worlds', 'empty_world')
     default_map_path = os.path.join(pedsim_dir, 'maps', 'tb3_house_demo_crowd.yaml')
+    default_nav_to_pose_bt_xml = LaunchConfiguration('default_nav_to_pose_bt_xml')
+    default_nav_through_poses_bt_xml = LaunchConfiguration('default_nav_through_poses_bt_xml')
     default_pedsim_scene_path = os.path.join(pedsim_dir, 'scenarios', 'warehouse.xml')
     default_pedsim_config_path = os.path.join(pedsim_dir, 'config', 'params.yaml')
 
@@ -51,7 +56,7 @@ def generate_launch_description():
 
     declare_use_gazebo_gui_cmd = DeclareLaunchArgument(
         'use_gazebo_gui',
-        default_value='true',
+        default_value='false',
         description='Whether to use lidar in simulator')
 
     declare_world_file_cmd = DeclareLaunchArgument(
@@ -67,12 +72,31 @@ def generate_launch_description():
         default_value=PathJoinSubstitution([
             FindPackageShare('soloco_launch'),
             'params',
-            'smac_mppi_nav2_params_sim.yaml'
+            'smac_dwb_nav2_params.yaml'
         ]),
         description=(
             'full path to the ROS 2 parameters file to use when configuring the Nav2 stack.'
         ),
     )
+
+    declare_nav_to_pose_bt_xml = DeclareLaunchArgument(
+        'default_nav_to_pose_bt_xml',
+        default_value=os.path.join(
+            get_package_share_directory('soloco_launch'),
+            'config', 'behavior_trees', 'soloco_nav_to_pose_global.xml'),
+        description='Full path to the behavior tree xml file to use')
+    
+    declare_nav_through_poses_bt_xml = DeclareLaunchArgument(
+        'default_nav_through_poses_bt_xml',
+        default_value=os.path.join(
+            get_package_share_directory('soloco_launch'),
+            'config', 'behavior_trees', 'soloco_nav_through_poses_global.xml'),
+        description='Full path to the behavior tree xml file to use')
+
+    declare_cmd_vel_topic_cmd = DeclareLaunchArgument(
+        'cmd_vel_topic',
+        default_value=('locobot/diffdrive_controller/cmd_vel_unstamped'),
+        description="topic to remap /cmd_vel to.")
 
     declare_pedsim_scene_file_cmd = DeclareLaunchArgument(
         'pedsim_scene_file', 
@@ -89,6 +113,14 @@ def generate_launch_description():
         default_value='',
         description='Top-level namespace')
 
+    declare_use_soloco_controller_cmd = DeclareLaunchArgument(
+        'use_soloco_controller',
+        default_value='False')
+    
+    declare_run_human_tf_cmd = DeclareLaunchArgument(
+        'run_human_tf',
+        default_value='False')
+
     simulator_launch_cmd = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(os.path.join(
           interbotix_sim_dir, 'launch', 'xslocobot_gz_classic.launch.py')),
@@ -96,26 +128,33 @@ def generate_launch_description():
           'robot_model': robot_model,
           'robot_name':robot_name,
           'use_lidar': 'true',
+          'use_rviz': 'false',
           'use_gazebo': use_gazebo_gui,
           'world_file_path': world_file,
         }.items())
 
     slam_toolbox_launch_cmd = TimerAction(
-        period=10.0, # wait 10 seconds for simulator until launching nav2
+        period=10.0, # wait for simulator until launching nav2
         actions=[
             IncludeLaunchDescription(
-            PythonLaunchDescriptionSource(os.path.join(
-            interbotix_nav_dir, 'launch', 'xslocobot_slam_toolbox.launch.py')),
+                PythonLaunchDescriptionSource(os.path.join(
+                bringup_dir, 'launch', 'nav2_slam_toolbox.launch.py')),
             launch_arguments={
-            'launch_driver': 'false',
-            'cmd_vel_topic': 'locobot/diffdrive_controller/cmd_vel_unstamped',
-            'robot_name':robot_name,
-            'use_lidar': 'true',
+            'cmd_vel_topic': cmd_vel_topic,
             'use_sim_time': 'true',
             'map': map_file,
             'nav2_params_file': nav2_params_file,
+            'default_nav_to_pose_bt_xml': default_nav_to_pose_bt_xml,
+            'default_nav_through_poses_bt_xml':default_nav_through_poses_bt_xml
             }.items())
         ])
+
+    human_tf2_publisher_cmd = Node(
+        package='soloco_perception',
+        executable='human_tf2_publisher', # 'human_track_publisher',
+        name='human_tf2_publisher',
+        output='screen',
+        condition=IfCondition(run_human_tf))
 
     pedsim_launch_cmd = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(os.path.join(
@@ -134,6 +173,35 @@ def generate_launch_description():
         output='screen',
         condition=IfCondition(use_pedsim))
 
+    pedsim_tracker_cmd = Node(
+        package='soloco_perception',
+        executable='pedsim_tracks.py', # 'robot_track_publisher'
+        name='pedsim_tracker',
+        output='screen',
+        condition=IfCondition(use_pedsim))
+
+    robot_tracker_cmd = Node(
+        package='soloco_perception',
+        executable='robot_track.py', # 'robot_track_publisher'
+        name='robot_tracker',
+        output='screen',
+        condition=IfCondition(use_soloco_controller))
+
+    soloco_controller_launch_cmd = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(os.path.join(
+          nav2_soloco_controller_dir, 'launch', 'social_planner.launch.py')),
+        launch_arguments={
+          'use_rviz': 'false',
+        }.items(),
+        condition=IfCondition(use_soloco_controller))
+
+    multi_track_visualizer_cmd = Node(
+        package='soloco_perception',
+        executable='multi_track_visualizer.py', # 'robot_track_publisher'
+        name='multi_track_visualizer',
+        output='screen',
+        condition=IfCondition(use_soloco_controller))
+
     # Create the launch description and populate
     ld = LaunchDescription()
     # Declare the launch options
@@ -145,12 +213,21 @@ def generate_launch_description():
     ld.add_action(declare_world_file_cmd)
     ld.add_action(declare_map_file_cmd)
     ld.add_action(declare_nav2_params_file_cmd)
+    ld.add_action(declare_nav_to_pose_bt_xml)
+    ld.add_action(declare_nav_through_poses_bt_xml)
+    ld.add_action(declare_cmd_vel_topic_cmd)
     ld.add_action(declare_pedsim_scene_file_cmd)
     ld.add_action(declare_pedsim_config_file_cmd)
+    ld.add_action(declare_run_human_tf_cmd)
+    ld.add_action(declare_use_soloco_controller_cmd)
     # Add the actions to launch all of the nodes
     ld.add_action(simulator_launch_cmd)
     ld.add_action(slam_toolbox_launch_cmd)
     ld.add_action(pedsim_launch_cmd)
     ld.add_action(pedsim_gazebo_spawner_cmd)
+    ld.add_action(human_tf2_publisher_cmd)
+    ld.add_action(soloco_controller_launch_cmd)
+    ld.add_action(multi_track_visualizer_cmd)
+    ld.add_action(robot_tracker_cmd)
 
     return ld

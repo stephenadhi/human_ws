@@ -83,6 +83,8 @@ bt_navigator:
 # progress checker and goal checker to use and call the appropriate plugins.
 controller_server:
   ros__parameters:
+    # Whether to use simulation time. This paremeter will always be rewritten from the launch file.
+    use_sim_time: False
     # Frequency to run controller (Hz). (default 20.0)
     controller_frequency: 20.0
     # The controller server filters the velocity portion of the odometry messages received before
@@ -218,6 +220,8 @@ controller_server:
 local_costmap:
   local_costmap:
     ros__parameters:
+      # Whether to use simulation time. This paremeter will always be rewritten from the launch file.
+      use_sim_time: False
       # Whether to send full costmap every update, rather than updates. (default: false)
       always_send_full_costmap: True
       # Costmap update frequency. (default 5.0)
@@ -318,6 +322,8 @@ local_costmap:
 global_costmap:
   global_costmap:
     ros__parameters:
+      # Whether to use simulation time. This paremeter will always be rewritten from the launch file.
+      use_sim_time: False
       # Whether to send full costmap every update, rather than updates. (default: false)
       always_send_full_costmap: True
       # Amount to pad footprint (m). (default: 0.01)
@@ -349,7 +355,7 @@ global_costmap:
       # If false, treats unknown space as free space, else as unknown space. (default: False)
       track_unknown_space: True
       # TF transform tolerance. (default: 0.3)
-      transform_tolerance: 0.5
+      transform_tolerance: 0.3
       # If occupancy grid map should be interpreted as only 3 values (free, occupied, unknown) or
       # with its stored values. (default: True)
       trinary_costmap: True
@@ -468,6 +474,8 @@ map_server:
 
 map_saver:
   ros__parameters:
+    # Whether to use simulation time. This paremeter will always be rewritten from the launch file.
+    use_sim_time: False
     # https://navigation.ros.org/configuration/packages/configuring-map-server.html
     # Timeout to attempt saving the map (seconds). (default: 2)
     save_map_timeout: 5.0

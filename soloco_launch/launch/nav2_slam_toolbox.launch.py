@@ -69,6 +69,7 @@ def launch_setup(context, *args, **kwargs):
     nav2_params_file_launch_arg = LaunchConfiguration('nav2_params_file')
     slam_toolbox_params_file_launch_arg = LaunchConfiguration('slam_toolbox_params_file')
     use_slam_toolbox_launch_arg = LaunchConfiguration('use_slam_toolbox')
+    cmd_vel_topic_launch_arg = LaunchConfiguration('cmd_vel_topic')
     map_yaml_file_launch_arg = LaunchConfiguration('map')
     default_nav_to_pose_bt_xml_launch_arg = LaunchConfiguration('default_nav_to_pose_bt_xml')
     default_nav_through_poses_bt_xml_launch_arg = LaunchConfiguration('default_nav_through_poses_bt_xml')
@@ -92,14 +93,17 @@ def launch_setup(context, *args, **kwargs):
         'amcl'
     ]
 
+    remappings = [
+        ('/cmd_vel', cmd_vel_topic_launch_arg),
+    ]
+
     # Map fully qualified names to relative ones so the node's namespace can be prepended.
     # In case of the transforms (tf), currently, there doesn't seem to be a better alternative
     # https://github.com/ros/geometry2/issues/32
     # https://github.com/ros/robot_state_publisher/pull/30
     tf_remappings = [
         ('/tf', 'tf'),
-        ('/tf_static', 'tf_static'
-        )
+        ('/tf_static', 'tf_static'),
     ]
 
     # Create our own temporary YAML files that include substitutions
@@ -135,7 +139,7 @@ def launch_setup(context, *args, **kwargs):
         parameters=[
             configured_params
         ],
-        remappings=tf_remappings,
+        remappings=tf_remappings + remappings,
     )
 
     behavior_server_node = Node(
@@ -380,6 +384,13 @@ def generate_launch_description():
             description=(
                 'full path to the ROS 2 parameters file to use when configuring the Nav2 stack.'
             ),
+        )
+    )
+    declared_arguments.append(
+        DeclareLaunchArgument(
+            'cmd_vel_topic',
+            default_value=('locobot/diffdrive_controller/cmd_vel_unstamped'),
+            description="topic to remap /cmd_vel to."
         )
     )
     declared_arguments.append(
