@@ -130,7 +130,7 @@ def generate_launch_description():
           'use_lidar': 'true',
           'use_rviz': 'false',
           'use_gazebo': use_gazebo_gui,
-          'world_file_path': world_file,
+          'world_filepath': world_file,
         }.items())
 
     slam_toolbox_launch_cmd = TimerAction(
