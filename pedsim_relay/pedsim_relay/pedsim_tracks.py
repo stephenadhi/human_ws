@@ -22,14 +22,14 @@ class PedsimTrackPublisher(Node):
             reliability=ReliabilityPolicy.RELIABLE,
             durability=DurabilityPolicy.VOLATILE)
         # Declare parameters
-        self.declare_parameter('detected_agents_topic', 'zed2/zed_node/obj_det/objects')
+        self.declare_parameter('detected_agents_topic', 'human/simulated_agents')
         self.declare_parameter('human_track_topic', 'human/interpolated_history')
         self.declare_parameter('pub_frame_id', 'locobot/odom')
         self.declare_parameter('interp_interval', 0.4)
         self.declare_parameter('delay_tolerance', 0.05)
         self.declare_parameter('max_history_length', 7)
-        self.declare_parameter('max_num_agents', 5)
-        self.declare_parameter('track_timeout', 0.1)
+        self.declare_parameter('max_num_agents', 10)
+        self.declare_parameter('track_timeout', 0.15)
         self.declare_parameter('pruning_rate', 20.0)
 
         # Get parameter values
