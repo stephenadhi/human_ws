@@ -14,7 +14,6 @@ find_package(visualization_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(pedsim_msgs REQUIRED)
-find_package(zed_interfaces REQUIRED)
 find_package(soloco_interfaces REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(tf2_sensor_msgs REQUIRED)
@@ -32,10 +31,7 @@ set(dependencies
     tf2
 )
 
-include_directories(
-include
-${GSL_INCLUDE_DIRS}
-)
+include_directories(include)
 
 add_executable(pedsim_relay_node src/pedsim_relay_node.cpp)
 ament_target_dependencies(pedsim_relay_node ${dependencies})
