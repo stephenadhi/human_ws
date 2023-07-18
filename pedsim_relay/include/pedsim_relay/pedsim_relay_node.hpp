@@ -42,11 +42,14 @@ private:
   double map_origin_y = 0.0;
   double map_resolution = 0.1;
 
+  std::string pub_frame_id_;
+
   void agentsCallback(const pedsim_msgs::msg::AgentStates::SharedPtr msg);
   void costmapCallback(const nav_msgs::msg::OccupancyGrid::SharedPtr msg);
   bool check_agent_in_local_costmap(double agent_x, double agent_y);
   
-  rclcpp::Subscription<pedsim_msgs::msg::AgentStates>::SharedPtr sub_;
+  rclcpp::Subscription<pedsim_msgs::msg::AgentStates>::SharedPtr pedsim_sub_;
+  rclcpp::Subscription<nav_msgs::msg::OccupancyGrid>::SharedPtr costmap_sub_;
   rclcpp::Publisher<soloco_interfaces::msg::TrackedAgents>::SharedPtr pub_;
 };
 }; // namespace pedsim

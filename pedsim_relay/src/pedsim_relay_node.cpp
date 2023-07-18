@@ -23,11 +23,19 @@ using namespace geometry_msgs::msg;
 
 namespace pedsim {
 PedsimRelayNode::PedsimRelayNode() : Node("pedsim_relay_node") {
+  std::string pub_frame_id;
+  this->declare_parameter<std::string>("pub_frame_id", "locobot/odom"); 
+  this->get_parameter("pub_frame_id", pub_frame_id_);   
   // Subscribe to simulated agents
-  sub_ = create_subscription<pedsim_msgs::msg::AgentStates>(
+  pedsim_sub_ = create_subscription<pedsim_msgs::msg::AgentStates>(
       "pedsim_simulator/simulated_agents", rclcpp::SensorDataQoS(),
       std::bind(&PedsimRelayNode::agentsCallback, this, std::placeholders::_1));
-  pub_ = this->create_publisher<soloco_interfaces::msg::TrackedAgents>("human/simulated_agents", rclcpp::SensorDataQoS());
+  // Subscribe to local costmap topic
+  costmap_sub_ = create_subscription<nav_msgs::msg::OccupancyGrid>(
+      "local_costmap/costmap", 10,
+      std::bind(&PedsimRelayNode::costmapCallback, this, std::placeholders::_1));
+  // Publish filtered agents
+  pub_ = this->create_publisher<soloco_interfaces::msg::TrackedAgents>("human/simulated_agents", 10);
 }
 
 void PedsimRelayNode::agentsCallback(
@@ -36,11 +44,12 @@ void PedsimRelayNode::agentsCallback(
   for (const auto &actor : msg->agent_states) {
     double pos_x = actor.pose.position.x;
     double pos_y = actor.pose.position.y;
+    // Check if agent is insde local costmap
     bool occ_flag = check_agent_in_local_costmap(pos_x, pos_y);
     if (occ_flag) {
       geometry_msgs::msg::PoseStamped ps_;
       soloco_interfaces::msg::TrackedAgent agent_;
-      ps_.header.frame_id = "map";
+      ps_.header.frame_id = pub_frame_id_;
       ps_.header.stamp = now();
       ps_.pose.position.x = pos_x;
       ps_.pose.position.y = pos_y;
@@ -52,8 +61,10 @@ void PedsimRelayNode::agentsCallback(
       agent_.current_pose = ps_;
       agents_.agents.push_back(agent_);
     }
-    pub_->publish(agents_);
   }
+  agents_.header.frame_id = pub_frame_id_;
+  agents_.header.stamp = now();
+  pub_->publish(agents_);
 }
 
 void PedsimRelayNode::costmapCallback(
