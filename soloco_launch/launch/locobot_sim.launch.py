@@ -31,6 +31,7 @@ def generate_launch_description():
     interbotix_sim_dir = get_package_share_directory('interbotix_xslocobot_sim')
     nav2_soloco_controller_dir = get_package_share_directory('nav2_soloco_controller')
     pedsim_dir = get_package_share_directory('pedsim_simulator')
+    relay_dir = get_package_share_directory('pedsim_relay')
 
     default_world_path = os.path.join(bringup_dir, 'worlds', 'tb3_house_demo_crowd.world')
     default_map_path = os.path.join(pedsim_dir, 'maps', 'tb3_house_demo_crowd.yaml')
@@ -156,15 +157,19 @@ def generate_launch_description():
         output='screen',
         condition=IfCondition(run_human_tf))
 
-    pedsim_launch_cmd = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(os.path.join(
-          pedsim_dir, 'launch', 'simulator_launch.py')),
+    pedsim_launch_cmd = TimerAction(
+        period=20.0, # wait for simulator until launching pedsim
+        actions=[
+            IncludeLaunchDescription(
+                PythonLaunchDescriptionSource(os.path.join(
+                pedsim_dir, 'launch', 'simulator_launch.py')),
         launch_arguments={
           'scene_file': pedsim_scene_file,
           'config_file': pedsim_config_file,
           'namespace': namespace,
         }.items(),
         condition=IfCondition(use_pedsim))
+        ])
 
     pedsim_gazebo_spawner_cmd = Node(
         package='pedsim_gazebo_plugin',
@@ -173,16 +178,14 @@ def generate_launch_description():
         output='screen',
         condition=IfCondition(use_pedsim))
 
-    pedsim_tracker_cmd = Node(
-        package='soloco_perception',
-        executable='pedsim_tracks.py', # 'robot_track_publisher'
-        name='pedsim_tracker',
-        output='screen',
+    pedsim_tracker_cmd = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(os.path.join(
+          relay_dir, 'launch', 'pedsim_tracker.launch.py')),
         condition=IfCondition(use_pedsim))
 
     robot_tracker_cmd = Node(
         package='soloco_perception',
-        executable='robot_track.py', # 'robot_track_publisher'
+        executable='robot_track.py',
         name='robot_tracker',
         output='screen',
         condition=IfCondition(use_soloco_controller))
@@ -197,7 +200,7 @@ def generate_launch_description():
 
     multi_track_visualizer_cmd = Node(
         package='soloco_perception',
-        executable='multi_track_visualizer.py', # 'robot_track_publisher'
+        executable='multi_track_visualizer.py',
         name='multi_track_visualizer',
         output='screen',
         condition=IfCondition(use_soloco_controller))
@@ -225,6 +228,7 @@ def generate_launch_description():
     ld.add_action(slam_toolbox_launch_cmd)
     ld.add_action(pedsim_launch_cmd)
     ld.add_action(pedsim_gazebo_spawner_cmd)
+    ld.add_action(pedsim_tracker_cmd)
     ld.add_action(human_tf2_publisher_cmd)
     ld.add_action(soloco_controller_launch_cmd)
     ld.add_action(multi_track_visualizer_cmd)
