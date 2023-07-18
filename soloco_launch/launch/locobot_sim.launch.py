@@ -32,11 +32,11 @@ def generate_launch_description():
     nav2_soloco_controller_dir = get_package_share_directory('nav2_soloco_controller')
     pedsim_dir = get_package_share_directory('pedsim_simulator')
 
-    default_world_path = os.path.join(bringup_dir, 'worlds', 'empty_world')
+    default_world_path = os.path.join(bringup_dir, 'worlds', 'tb3_house_demo_crowd.world')
     default_map_path = os.path.join(pedsim_dir, 'maps', 'tb3_house_demo_crowd.yaml')
     default_nav_to_pose_bt_xml = LaunchConfiguration('default_nav_to_pose_bt_xml')
     default_nav_through_poses_bt_xml = LaunchConfiguration('default_nav_through_poses_bt_xml')
-    default_pedsim_scene_path = os.path.join(pedsim_dir, 'scenarios', 'warehouse.xml')
+    default_pedsim_scene_path = os.path.join(pedsim_dir, 'scenarios', 'tb3_house_demo_crowd.xml')
     default_pedsim_config_path = os.path.join(pedsim_dir, 'config', 'params.yaml')
 
     declare_robot_model_cmd = DeclareLaunchArgument(
