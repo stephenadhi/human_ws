@@ -13,7 +13,6 @@ find_package(std_msgs REQUIRED)
 find_package(action_msgs REQUIRED)
 find_package(visualization_msgs REQUIRED)
 find_package(soloco_interfaces REQUIRED)
-find_package(zed_interfaces REQUIRED)
 
 include_directories(include)
 
