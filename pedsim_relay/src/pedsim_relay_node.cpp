@@ -41,6 +41,7 @@ PedsimRelayNode::PedsimRelayNode() : Node("pedsim_relay_node") {
 void PedsimRelayNode::agentsCallback(
     const pedsim_msgs::msg::AgentStates::SharedPtr msg) {
   soloco_interfaces::msg::TrackedAgents agents_;
+  int count = 0;
   for (const auto &actor : msg->agent_states) {
     double pos_x = actor.pose.position.x;
     double pos_y = actor.pose.position.y;
@@ -59,8 +60,10 @@ void PedsimRelayNode::agentsCallback(
       qt.normalize();
       ps_.pose.orientation = tf2::toMsg(qt);
       agent_.current_pose = ps_;
+      agent_.track_id = count;
       agents_.agents.push_back(agent_);
     }
+    count++;
   }
   agents_.header.frame_id = pub_frame_id_;
   agents_.header.stamp = now();

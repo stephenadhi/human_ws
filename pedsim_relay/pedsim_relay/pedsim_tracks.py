@@ -78,7 +78,7 @@ class PedsimTrackPublisher(Node):
             curr_pose_pub_frame = PoseStamped()
             curr_pose_pub_frame.header.stamp = msg.header.stamp
             curr_pose_pub_frame.header.frame_id = self.pub_frame_id
-            curr_pose_pub_frame.pose = pose_transform(curr_pose_cam, self.pub_frame_id, msg.header.frame_id, self.tf_buffer)
+            curr_pose_pub_frame.pose = curr_pose_cam # pedsim relay node already publishes in the right frame
             # if transformed pose exists
             if curr_pose_pub_frame.pose:             
                 self.new_object = True
