@@ -130,7 +130,7 @@ class Parallel_MPPI(nn.Module):
 
                 # calc next goal based on nll and costmap cost
                 if self.costmap_obj:
-                    costmap_cost_human = torch.Tensor(self.calc_cost_map_cost(pred_traj_abs, costmap_obj))
+                    costmap_cost_human = torch.Tensor(self.calc_cost_map_cost(pred_traj_abs, costmap_obj)).to(self.device)
                 else:
                     costmap_cost_human = 0.
                 nll_h = ((pred_traj_rel - mu) ** 2).sum(0).sum(-1)  # we do not use predicted scale, so each state has the same weigthening
@@ -159,9 +159,9 @@ class Parallel_MPPI(nn.Module):
                                                          collision_dist=self.robot_params_dict["collision_dist"]).view(
                                                          self.predictions_steps, -1).sum(0)
             if costmap_obj:
-                costmap_cost = self.calc_cost_map_cost(self.pred_traj_abs[:, robot_idx], costmap_obj)
+                costmap_cost = torch.Tensor(self.calc_cost_map_cost(self.pred_traj_abs[:, robot_idx], costmap_obj)).to(self.device)
             else:
-                costmap_cost = torch.zeros_like(goal_cost)
+                costmap_cost = torch.zeros_like(goal_cost).to(self.device)
 
 
         return goal_cost, coll_cost, self.pertu_actions_clamped, costmap_cost, self.pred_traj_rel[:,
@@ -170,11 +170,10 @@ class Parallel_MPPI(nn.Module):
     def get_pred_traj_abs(self):
         # Get the absolute predicted trajectories for agents
         # We need this for plotting in RVIZ on a real robot
+        ids_for_plot_cpu = self._ids_for_plot.cpu()
         agent_future = self.pred_traj_abs.cpu().numpy().transpose(1, 0, 2)
-        agent_future = agent_future.reshape(self.num_threads, self.sample_batch_per_thread, -1, self.predictions_steps,
-                                            2)
-        agent_future = agent_future[
-            self.min_thread_id, self._ids_for_plot[self.min_thread_id, :self.num_ids_for_plot]].mean(axis=0)
+        agent_future = agent_future.reshape(self.num_threads, self.sample_batch_per_thread, -1, self.predictions_steps, 2)
+        agent_future = agent_future[self.min_thread_id, ids_for_plot_cpu[self.min_thread_id, :self.num_ids_for_plot]].mean(axis=0)
         return agent_future
 
     def predict(self, x, costmap_obj=None):
