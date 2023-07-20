@@ -53,52 +53,52 @@ class PedsimTrackPublisher(Node):
         # Bool to check object ID
         self.new_object = True
         # Create cache for updating people and robot history
+        self.pedsim_tracker = TrackedAgents()
         self.people = TrackedPersons()
         self.idx = len(self.people.tracks) - 1
         self.interpolated_tracklets = []
 
-    def timer_callback(self):
-        if not self.interpolated_tracklets:
-            # Publish empty human tracks
-            self.people.header.stamp = self.get_clock().now().to_msg()
-            self.human_track_interpolated_pub.publish(self.people)
-
     def det_agents_callback(self, msg):
+        # Store tracked agents
+        self.pedsim_tracker.header = msg.header
+        self.pedsim_tracker.agents = msg.agents
+
+    def timer_callback(self):
         time_now = self.get_clock().now()
+        curr_agents = self.pedsim_tracker.agents
         # Loop through all detected objects, only consider valid tracking
-        for obj in range(len(msg.agents)):
+        for obj in range(len(curr_agents)):
+            self.new_object = True
             # Get object ID
-            obj_id = msg.agents[obj].track_id
+            obj_id = curr_agents[obj].track_id
             # Position in camera frame, saved in poseStamped message format
             curr_pose_cam = Pose()
-            curr_pose_cam.position.x = float(msg.agents[obj].current_pose.pose.position.x)
-            curr_pose_cam.position.y = float(msg.agents[obj].current_pose.pose.position.y)
+            curr_pose_cam.position.x = float(curr_agents[obj].current_pose.pose.position.x)
+            curr_pose_cam.position.y = float(curr_agents[obj].current_pose.pose.position.y)
             curr_pose_cam.position.z = 0.0
             curr_pose_cam.orientation = Quaternion(x=0.0, y=0.0, z=0.0, w=1.0)
             # Convert pose to poseStamped in publishing frame (default: 'odom')
             curr_pose_pub_frame = PoseStamped()
-            curr_pose_pub_frame.header.stamp = msg.header.stamp
+            curr_pose_pub_frame.header.stamp = time_now.to_msg()
             curr_pose_pub_frame.header.frame_id = self.pub_frame_id
             curr_pose_pub_frame.pose = curr_pose_cam # pedsim relay node already publishes in the right frame
             # if transformed pose exists
             if curr_pose_pub_frame.pose:             
-                self.new_object = True
                 self.idx = len(self.people.tracks) - 1
                 # Check for matching id in cache
-                if len(self.people.tracks) != 0:
-                    idx = 0
-                    for person in self.people.tracks:
-                        if person.track_id == obj_id:
-                            # self.get_logger().info(f'Track ID Matched: {person.track_id}, idx: {idx}')
-                            self.new_object = False
-                            self.interpolated_tracklets[idx].add_interpolated_point(curr_pose_pub_frame, time_now)
-                            # Update curent pose to the last interpolated pose
-                            person.current_pose = curr_pose_pub_frame
-                            # Stamp update time
-                            person.track.header.stamp = time_now.to_msg()
-                            self.idx = idx
-                            break
-                        idx += 1
+                idx = 0
+                for person in self.people.tracks:
+                    if person.track_id == obj_id:
+                        # self.get_logger().info(f'Track ID Matched: {person.track_id}, idx: {idx}')
+                        self.new_object = False
+                        self.interpolated_tracklets[idx].add_interpolated_point(curr_pose_pub_frame, time_now)
+                        # Update curent pose to the last interpolated pose
+                        person.current_pose = curr_pose_pub_frame
+                        # Stamp update time
+                        person.track.header.stamp = time_now.to_msg()
+                        self.idx = idx
+                        break
+                    idx += 1
                 # In case this object does not belong to existing tracks
                 if self.new_object:
                     self.idx += 1
@@ -113,14 +113,14 @@ class PedsimTrackPublisher(Node):
                     self.interpolated_tracklets.append(
                         interpolatedTracklet(curr_pose_pub_frame, time_now, self.max_history_length, self.interp_interval))
                 # Update person track
-                self.update_person_track(person_idx=self.idx)
-        if self.people:
-            # Delete entries of interpolated points
-            self.prune_old_interpolated_points(time_now)
-            # Publish human tracks
-            self.human_track_interpolated_pub.publish(self.people)
+                self.update_person_track(person_idx=self.idx, time_now=time_now)
+        # Delete entries of interpolated points
+        self.prune_old_interpolated_points(time_now)
+        # Publish human tracks
+        self.people.header.stamp = time_now.to_msg()
+        self.human_track_interpolated_pub.publish(self.people)
 
-    def update_person_track(self, person_idx):
+    def update_person_track(self, person_idx, time_now):
         # Get interpolated tracklet
         interpolated_tracklet = self.interpolated_tracklets[person_idx]
 
@@ -135,23 +135,19 @@ class PedsimTrackPublisher(Node):
             else:
                 self.people.tracks[person_idx].track.poses[i] = pose_xy
         # Stamp update time
-        self.people.tracks[person_idx].track.header.stamp = self.get_clock().now().to_msg()
+        self.people.tracks[person_idx].track.header.stamp = time_now.to_msg()
 
     def prune_old_interpolated_points(self, timestamp_):
-        idx_to_delete = []
-        idx = 0
-        for person in self.people.tracks:
+        new_people_tracks = []
+        new_interpolated_tracklets = []
+        for person, tracklet in zip(self.people.tracks, self.interpolated_tracklets):
             det_time = Time.from_msg(person.track.header.stamp)
             time_diff = (timestamp_.nanoseconds - det_time.nanoseconds)/10**9
-            # self.get_logger().info(f'Track time difference: {time_diff}s')
-            if ((time_diff) > self.track_timeout + self.delay_tolerance):
-                idx_to_delete.append(idx)
-            idx += 1
-        # Delete old tracks
-        for id in sorted(idx_to_delete, reverse=True):
-            # self.get_logger().info(f'Deleting old track with ID: {self.people.tracks[id].track_id}')
-            del self.people.tracks[id]
-            del self.interpolated_tracklets[id]
+            if time_diff <= (self.track_timeout + self.delay_tolerance):
+                new_people_tracks.append(person)
+                new_interpolated_tracklets.append(tracklet)
+        self.people.tracks = new_people_tracks
+        self.interpolated_tracklets = new_interpolated_tracklets
 
 def main(args=None):
     rclpy.init(args=args)
