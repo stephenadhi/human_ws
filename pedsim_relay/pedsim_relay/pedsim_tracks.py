@@ -64,6 +64,7 @@ class PedsimTrackPublisher(Node):
             self.human_track_interpolated_pub.publish(self.people)
 
     def det_agents_callback(self, msg):
+        time_now = self.get_clock().now()
         # Loop through all detected objects, only consider valid tracking
         for obj in range(len(msg.agents)):
             # Get object ID
@@ -90,12 +91,11 @@ class PedsimTrackPublisher(Node):
                         if person.track_id == obj_id:
                             # self.get_logger().info(f'Track ID Matched: {person.track_id}, idx: {idx}')
                             self.new_object = False
-                            curr_time_ = self.get_clock().now()
-                            self.interpolated_tracklets[idx].add_interpolated_point(curr_pose_pub_frame, curr_time_)
+                            self.interpolated_tracklets[idx].add_interpolated_point(curr_pose_pub_frame, time_now)
                             # Update curent pose to the last interpolated pose
                             person.current_pose = curr_pose_pub_frame
                             # Stamp update time
-                            person.track.header.stamp = curr_time_.to_msg()
+                            person.track.header.stamp = time_now.to_msg()
                             self.idx = idx
                             break
                         idx += 1
@@ -110,17 +110,16 @@ class PedsimTrackPublisher(Node):
                     tracked_person.current_pose = curr_pose_pub_frame
                     self.people.tracks.append(tracked_person)
                     self.get_logger().info(f'New person detected! ID: {obj_id}, idx: {self.idx}')
-                    curr_time_ = self.get_clock().now()
                     self.interpolated_tracklets.append(
-                        interpolatedTracklet(curr_pose_pub_frame, curr_time_, self.max_history_length, self.interp_interval))
+                        interpolatedTracklet(curr_pose_pub_frame, time_now, self.max_history_length, self.interp_interval))
                 # Update person track
                 self.update_person_track(person_idx=self.idx)
-        if self.interpolated_tracklets:
+        if self.people:
+            # Delete entries of interpolated points
+            self.prune_old_interpolated_points(time_now)
             # Publish human tracks
             self.human_track_interpolated_pub.publish(self.people)
-            # Delete entries of interpolated points
-            self.prune_old_interpolated_points(self.get_clock().now())
-  
+
     def update_person_track(self, person_idx):
         # Get interpolated tracklet
         interpolated_tracklet = self.interpolated_tracklets[person_idx]
