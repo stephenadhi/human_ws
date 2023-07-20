@@ -22,12 +22,12 @@ def generate_launch_description():
 
     # get config file path and loading it
     human_config_file = os.path.join(
-        get_package_share_directory('soloco_perception'),
+        get_package_share_directory('pedsim_relay'),
         'config',
-        'human_tracker.yaml'
+        'pedsim_tracker.yaml'
     )
     with open(human_config_file, 'r') as file:
-        human_tracker_config = yaml.safe_load(file)['soloco_perception']['human_tracker']['ros_parameters']
+        human_tracker_config = yaml.safe_load(file)['pedsim_relay']['pedsim_tracker']['ros_parameters']
 
     # Interpolate human trajectory
     pedsim_tracker_cmd = Node(
@@ -44,6 +44,7 @@ def generate_launch_description():
         executable='pedsim_relay_node', 
         name='pedsim_relay_node',
         output='screen',
+        parameters=[human_tracker_config],
     )
 
     # Create the launch description and populate

@@ -11,8 +11,6 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-/* Author: jginesclavero jonatan.gines@urjc.es */
-
 /* Author: stephenadhi stephenadhi@gmail.com */
 
 #include "pedsim_relay/pedsim_relay_node.hpp"
@@ -23,19 +21,23 @@ using namespace geometry_msgs::msg;
 
 namespace pedsim {
 PedsimRelayNode::PedsimRelayNode() : Node("pedsim_relay_node") {
-  std::string pub_frame_id;
-  this->declare_parameter<std::string>("pub_frame_id", "locobot/odom"); 
-  this->get_parameter("pub_frame_id", pub_frame_id_);   
+  std::string local_costmap_topic, detected_agents_topic;
+  this->declare_parameter<std::string>("pub_frame_id", "locobot/odom");
+  this->declare_parameter<std::string>("local_costmap_topic", "local_costmap/costmap"); 
+  this->declare_parameter<std::string>("detected_agents_topic", "human/simulated_agents");
+  this->get_parameter("pub_frame_id", pub_frame_id_);
+  this->get_parameter("local_costmap_topic", local_costmap_topic);
+  this->get_parameter("detected_agents_topic", detected_agents_topic);
   // Subscribe to simulated agents
   pedsim_sub_ = create_subscription<pedsim_msgs::msg::AgentStates>(
       "pedsim_simulator/simulated_agents", rclcpp::SensorDataQoS(),
       std::bind(&PedsimRelayNode::agentsCallback, this, std::placeholders::_1));
   // Subscribe to local costmap topic
   costmap_sub_ = create_subscription<nav_msgs::msg::OccupancyGrid>(
-      "local_costmap/costmap", 10,
+      local_costmap_topic, 10,
       std::bind(&PedsimRelayNode::costmapCallback, this, std::placeholders::_1));
   // Publish filtered agents
-  pub_ = this->create_publisher<soloco_interfaces::msg::TrackedAgents>("human/simulated_agents", 10);
+  det_agents_pub_ = this->create_publisher<soloco_interfaces::msg::TrackedAgents>(detected_agents_topic, 10);
 }
 
 void PedsimRelayNode::agentsCallback(
@@ -67,7 +69,7 @@ void PedsimRelayNode::agentsCallback(
   }
   agents_.header.frame_id = pub_frame_id_;
   agents_.header.stamp = now();
-  pub_->publish(agents_);
+  det_agents_pub_->publish(agents_);
 }
 
 void PedsimRelayNode::costmapCallback(

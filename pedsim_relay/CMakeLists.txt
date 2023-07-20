@@ -54,7 +54,7 @@ install(PROGRAMS
 
 # Install launch files and directories.
 install(DIRECTORY
-        src include launch ${PROJECT_NAME}
+        config src include launch ${PROJECT_NAME}
         DESTINATION share/${PROJECT_NAME}
         )
 

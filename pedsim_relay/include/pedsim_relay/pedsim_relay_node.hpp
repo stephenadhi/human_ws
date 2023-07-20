@@ -50,7 +50,7 @@ private:
   
   rclcpp::Subscription<pedsim_msgs::msg::AgentStates>::SharedPtr pedsim_sub_;
   rclcpp::Subscription<nav_msgs::msg::OccupancyGrid>::SharedPtr costmap_sub_;
-  rclcpp::Publisher<soloco_interfaces::msg::TrackedAgents>::SharedPtr pub_;
+  rclcpp::Publisher<soloco_interfaces::msg::TrackedAgents>::SharedPtr det_agents_pub_;
 };
 }; // namespace pedsim
 

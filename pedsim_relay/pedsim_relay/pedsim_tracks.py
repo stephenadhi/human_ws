@@ -30,7 +30,7 @@ class PedsimTrackPublisher(Node):
         self.declare_parameter('max_history_length', 7)
         self.declare_parameter('max_num_agents', 10)
         self.declare_parameter('track_timeout', 0.15)
-        self.declare_parameter('pruning_rate', 20.0)
+        self.declare_parameter('publish_rate', 15.0)
 
         # Get parameter values
         detected_agents_topic = self.get_parameter('detected_agents_topic').get_parameter_value().string_value
@@ -41,12 +41,12 @@ class PedsimTrackPublisher(Node):
         self.max_history_length = self.get_parameter("max_history_length").get_parameter_value().integer_value
         self.max_num_agents = self.get_parameter('max_num_agents').get_parameter_value().integer_value
         self.track_timeout = self.get_parameter('track_timeout').get_parameter_value().double_value
-        self.pruning_rate = self.get_parameter('pruning_rate').get_parameter_value().double_value
+        self.publish_rate = self.get_parameter('publish_rate').get_parameter_value().double_value
         # Create subscriber
         self.pedsim_sub = self.create_subscription(TrackedAgents, detected_agents_topic, self.det_agents_callback, qos)
         # Create publisher
         self.human_track_interpolated_pub = self.create_publisher(TrackedPersons, human_track_topic, qos)
-        self.timer = self.create_timer(1/self.pruning_rate, self.timer_callback)
+        self.timer = self.create_timer(1/self.publish_rate, self.timer_callback)
         # Create tf buffer and transform listener   
         self.tf_buffer = Buffer()
         self.transform_listener = TransformListener(self.tf_buffer, self)

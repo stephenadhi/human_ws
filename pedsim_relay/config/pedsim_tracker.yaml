@@ -1,0 +1,16 @@
+pedsim_relay:
+  pedsim_tracker:
+    ros_parameters:
+      # Subscriber topics
+      detected_agents_topic: "human/simulated_agents"
+      # Publisher topics
+      human_track_topic: "human/interpolated_history"
+      local_costmap_topic: "local_costmap/costmap"
+      pub_frame_id: "locobot/odom"
+      # Parameters
+      interp_interval: 0.4      # time interval between interpolation points [s]
+      max_history_length: 7     # maximum number of history points (without current)
+      max_num_agents: 5         # currently not used
+      track_timeout: 0.15       # maximum time to keep old tracks before deleting it [s]
+      delay_tolerance: 0.05     # delay tolerance for track timeout [s]
+      publish_rate: 15.0        # Rate at which to publish and check whether a track is old [Hz]

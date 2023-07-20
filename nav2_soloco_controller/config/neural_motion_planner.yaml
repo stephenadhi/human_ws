@@ -36,7 +36,7 @@ nav2_soloco_controller:
     max_num_agents: 5       # [maximum number of people]
     placeholder_value: 50.0 # Placeholder value for agent distance when not detected
     max_history_length: 7   # [maximum number of human past poses]
-    prediction_steps: 12    # Steps to predict into the future
+    prediction_steps: 7     # Steps to predict into the future
     interp_interval: 0.4    # [s]
     sample_batch: 1000      # For staying at 20 Hz: MPPI 1000, CEM 200
 
