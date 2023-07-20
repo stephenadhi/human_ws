@@ -68,8 +68,9 @@ class NeuralMotionPlanner(Node):
         self.declare_parameter('max_accel', 0.5)         # [m/s^2]
         self.declare_parameter('max_delta_yaw_rate', 3.2) # [rad/s^2]
         self.declare_parameter('collision_dist', 0.2)     # [m]
-        # Declare maximum number of agents        
+        # Declare maximum number of agents    and placeholder value     
         self.declare_parameter('max_num_agents', 5)     # [maximum number of people]
+        self.declare_parameter('placeholder_value', 50.0) # [Placeholder value for people distance]
         # Declare maximum history length
         self.declare_parameter('max_history_length', 7) # [maximum history length]
         self.declare_parameter('prediction_steps', 12) # [maximum history length]
@@ -81,8 +82,10 @@ class NeuralMotionPlanner(Node):
         self.debug_log = self.get_parameter('debug_log').get_parameter_value().bool_value
 
     def initialize_node(self):
-        # Device to use
+        # Get ROS parameters
         self.device= self.get_parameter('device').get_parameter_value().string_value
+        self.goal_tolerance = self.get_parameter('goal_tolerance').get_parameter_value().double_value
+        self.placeholder_value = self.get_parameter('placeholder_value').get_parameter_value().double_value
         # Initialize robot params
         self.robot_model = self.get_parameter('robot_model').get_parameter_value().string_value
         self.robot_params_dict = {}
@@ -107,13 +110,12 @@ class NeuralMotionPlanner(Node):
         self.robot_yaw = np.zeros(3)
         self.r_state = np.zeros(5)  # v_x, v_y, yaw, v_t, omega_t
         # Initialize current position of all people and goal pose
-        self.ped_pos_xy_cem = np.ones((self.max_history_length + 1, self.max_num_agents + 1, 2)) * 50 # placeholder value
+        self.ped_pos_xy_cem = np.ones((self.max_history_length + 1, self.max_num_agents + 1, 2)) * self.placeholder_value
         self.ped_pos_xy_cem[:, 0] = np.ones((self.max_history_length + 1, 2))
         self.new_goal = False
         self.trajectory_received = False
         self.global_goal = None
         self.subgoal_pose = None
-        self.goal_tolerance = self.get_parameter('goal_tolerance').get_parameter_value().double_value
         self.ogm = None
         # Initialize model
         model_name = self.get_parameter('model_name').get_parameter_value().string_value
@@ -197,13 +199,12 @@ class NeuralMotionPlanner(Node):
     '''update people state (ID 0 is reserved for robot)'''
     def human_callback(self, human_msg):
         # self.get_logger().info('Human trajectory received.')
+        # Reset human data with placeholder value
+        self.ped_pos_xy_cem[:, 1:] = np.ones((self.max_history_length + 1, self.max_num_agents, 2)) * self.placeholder_value
         if human_msg.tracks:
             for person_idx, person in enumerate(human_msg.tracks):
                 coords_array = np.array([[e.pose.position.x, e.pose.position.y] for e in person.track.poses])
                 self.ped_pos_xy_cem[:, person_idx+1] = coords_array[::-1]
-        else:
-            # Reset human data
-            self.ped_pos_xy_cem[:, 1:] = np.ones((self.max_history_length + 1, self.max_num_agents, 2)) * 50 # placeholder value
 
     def costmap_callback(self, costmap_msg):
         # Send costmap to occupancy grid manager
