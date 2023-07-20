@@ -135,7 +135,7 @@ def generate_launch_description():
         }.items())
 
     slam_toolbox_launch_cmd = TimerAction(
-        period=10.0, # wait for simulator until launching nav2
+        period=5.0, # wait for simulator until launching nav2
         actions=[
             IncludeLaunchDescription(
                 PythonLaunchDescriptionSource(os.path.join(
@@ -158,7 +158,7 @@ def generate_launch_description():
         condition=IfCondition(run_human_tf))
 
     pedsim_launch_cmd = TimerAction(
-        period=20.0, # wait for simulator until launching pedsim
+        period=10.0, # wait for simulator until launching pedsim
         actions=[
             IncludeLaunchDescription(
                 PythonLaunchDescriptionSource(os.path.join(
