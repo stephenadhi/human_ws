@@ -18,8 +18,7 @@ find_package(soloco_interfaces REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(tf2_sensor_msgs REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
-find_package(eigen3_cmake_module REQUIRED)
-find_package(Eigen3 REQUIRED)
+find_package(angles REQUIRED)
 
 set(dependencies
     rclcpp
@@ -29,6 +28,7 @@ set(dependencies
     pedsim_msgs
     tf2_ros
     tf2
+    angles
 )
 
 include_directories(include)
