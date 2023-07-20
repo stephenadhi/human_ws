@@ -286,12 +286,20 @@ class NeuralMotionPlanner(Node):
                 marker.color.a = 1.0
             # Set the pose of the Marker message
             marker.pose.orientation.w = 1.0
-            track_points = []
+
+            # Get the last observed position for the current agent
+            last_observed_pos = self.ped_pos_xy_cem[-1, i]
+            last_point = Point()
+            last_point.x = float(last_observed_pos[0])
+            last_point.y = float(last_observed_pos[1])
+            track_points = [last_point]
+            
+            # Append future
             for point in track:
-                p = PointStamped()
-                p.point.x = float(point[0])
-                p.point.y = float(point[1])
-                track_points.append(p.point)
+                p = Point()
+                p.x = float(point[0])
+                p.y = float(point[1])
+                track_points.append(p)
             marker.points = track_points
             agent_marker.markers.append(marker)
 
