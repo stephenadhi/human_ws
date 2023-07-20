@@ -147,7 +147,7 @@ def generate_launch_description():
         PythonLaunchDescriptionSource(os.path.join(
           nav2_soloco_controller_dir, 'launch', 'social_planner.launch.py')),
         launch_arguments={
-          'use_rviz': 'false',
+          'cmd_vel_topic': 'locobot/commands/velocity',
         }.items(),
         condition=IfCondition(use_soloco_controller))
 
