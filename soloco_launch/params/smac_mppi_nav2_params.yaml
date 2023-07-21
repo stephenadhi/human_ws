@@ -300,7 +300,7 @@ local_costmap:
           # Minimum range to mark obstacles in costmap. (default: 0.0)
           obstacle_min_range: 0.05
           # Maximum range to raytrace clear obstacles from costmap. (default: 3.0)
-          raytrace_max_range: 4.0
+          raytrace_max_range: 6.0
           # Minimum range to raytrace clear obstacles from costmap. (default: 0.0)
           raytrace_min_range: 0.0
 
@@ -419,7 +419,7 @@ global_costmap:
           # Whether source should raytrace clear in costmap. (default: False)
           clearing: True
           # Maximum range to mark obstacles in costmap. (default: 2.5)
-          obstacle_max_range: 10.0
+          obstacle_max_range: 6.0
           # Minimum range to mark obstacles in costmap. (default: 0.0)
           obstacle_min_range: 0.05
           # Maximum range to raytrace clear obstacles from costmap. (default: 3.0)
