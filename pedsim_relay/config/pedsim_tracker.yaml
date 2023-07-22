@@ -2,7 +2,6 @@ pedsim_relay:
   pedsim_tracker:
     ros_parameters:
       # Subscriber topics
-      odom_topic: "locobot/odom"
       detected_agents_topic: "human/simulated_agents"
       # Publisher topics
       human_track_topic: "human/interpolated_history"

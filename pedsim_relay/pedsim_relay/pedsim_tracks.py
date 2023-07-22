@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-import numpy as np
 
 import rclpy
 from rclpy.node import Node
@@ -7,7 +6,6 @@ from rclpy.time import Time
 from rclpy.qos import QoSProfile, DurabilityPolicy, ReliabilityPolicy
 
 from geometry_msgs.msg import Pose, PoseStamped, Quaternion
-from nav_msgs import Odometry
 from soloco_interfaces.msg import TrackedAgents
 from soloco_interfaces.msg import TrackedPerson, TrackedPersons
 
@@ -24,7 +22,6 @@ class PedsimTrackPublisher(Node):
             reliability=ReliabilityPolicy.RELIABLE,
             durability=DurabilityPolicy.VOLATILE)
         # Declare parameters
-        self.declare_parameter('odom_topic', 'locobot/odom')
         self.declare_parameter('detected_agents_topic', 'human/simulated_agents')
         self.declare_parameter('human_track_topic', 'human/interpolated_history')
         self.declare_parameter('pub_frame_id', 'locobot/odom')
@@ -36,7 +33,6 @@ class PedsimTrackPublisher(Node):
         self.declare_parameter('publish_rate', 15.0)
 
         # Get parameter values
-        odom_topic = self.get_parameter('odom_topic').get_parameter_value().string_value
         detected_agents_topic = self.get_parameter('detected_agents_topic').get_parameter_value().string_value
         human_track_topic = self.get_parameter('human_track_topic').get_parameter_value().string_value
         self.pub_frame_id = self.get_parameter("pub_frame_id").get_parameter_value().string_value
@@ -48,7 +44,6 @@ class PedsimTrackPublisher(Node):
         self.publish_rate = self.get_parameter('publish_rate').get_parameter_value().double_value
         # Create subscriber
         self.pedsim_sub = self.create_subscription(TrackedAgents, detected_agents_topic, self.det_agents_callback, qos)
-        self.odom_sub = self.create_subscription(Odometry, odom_topic, self.odom_callbak, qos)
         # Create publisher
         self.human_track_interpolated_pub = self.create_publisher(TrackedPersons, human_track_topic, qos)
         self.timer = self.create_timer(1/self.publish_rate, self.timer_callback)
@@ -57,38 +52,17 @@ class PedsimTrackPublisher(Node):
         self.transform_listener = TransformListener(self.tf_buffer, self)
         # Bool to check object ID
         self.new_object = True
-        # Create cache for updating robot and people history
-        self.robot_position = np.zeros(2)
+        # Create cache for updating people and robot history
         self.pedsim_tracker = TrackedAgents()
         self.people = TrackedPersons()
         self.idx = len(self.people.tracks) - 1
         self.interpolated_tracklets = []
 
-    def odom_callback(self, msg):
-        self.robot_position = np.array([msg.pose.pose.position.x, msg.pose.pose.position.y])
-
     def det_agents_callback(self, msg):
         # Store tracked agents
         self.pedsim_tracker.header = msg.header
-        closest_agents = msg.agents
-        if len(msg.agents) > self.max_num_agents: 
-            closest_agents = self.get_closest_agents(msg.agents)
-        self.pedsim_tracker.agents = closest_agents
+        self.pedsim_tracker.agents = msg.agents
 
-    def get_closest_agents(self, agents):
-        # Calculate the distance of each agent from the robot
-        distances = []
-        for agent in agents:
-            agent_position = np.array([agent.current_pose.pose.position.x, agent.current_pose.pose.position.y])
-            distance = np.linalg.norm(self.robot_position - agent_position)
-            distances.append((distance, agent))
-        # Sort the agents by distance
-        distances.sort(key=lambda x: x[0])
-        # Select the closest agents
-        closest_agents = [x[1] for x in distances[:self.max_num_agents]]
-
-        return closest_agents
-    
     def timer_callback(self):
         time_now = self.get_clock().now()
         curr_agents = self.pedsim_tracker.agents
