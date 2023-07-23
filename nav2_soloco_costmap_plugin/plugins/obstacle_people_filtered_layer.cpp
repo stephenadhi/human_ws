@@ -338,6 +338,10 @@ ObstaclePeopleFilteredLayer::agentsCallback(
   agent_states_.clear();
   agent_distances_.clear();
   for (auto person : msg->tracks){
+    // Append the last four poses of each agent to be cleared
+    agent_states_.push_back(person.track.poses.rbegin()[3]);
+    agent_states_.push_back(person.track.poses.rbegin()[2]);
+    agent_states_.push_back(person.track.poses.rbegin()[1]);
     agent_states_.push_back(person.current_pose);
     double dist = calculateRobotAgentDistance(person.current_pose.pose);
     agent_distances_.push_back(dist);

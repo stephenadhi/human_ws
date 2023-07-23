@@ -25,6 +25,8 @@ def generate_launch_description():
     cmd_vel_topic = LaunchConfiguration('cmd_vel_topic')
     pedsim_scene_file = LaunchConfiguration('pedsim_scene_file')
     pedsim_config_file = LaunchConfiguration('pedsim_config_file')
+    spawn_x_pos = LaunchConfiguration('spawn_x_pos')
+    spawn_y_pos = LaunchConfiguration('spawn_y_pos')
 
     # Get the launch directory
     bringup_dir = get_package_share_directory('soloco_launch')
@@ -33,11 +35,12 @@ def generate_launch_description():
     pedsim_dir = get_package_share_directory('pedsim_simulator')
     relay_dir = get_package_share_directory('pedsim_relay')
 
-    default_world_path = os.path.join(bringup_dir, 'worlds', 'tb3_house_demo_crowd.world')
-    default_map_path = os.path.join(pedsim_dir, 'maps', 'tb3_house_demo_crowd.yaml')
+    scene = 'tb3_house_demo_crowd'
+    default_world_path = os.path.join(bringup_dir, 'worlds', scene + '.world')
+    default_map_path = os.path.join(pedsim_dir, 'maps', scene + '.yaml')
     default_nav_to_pose_bt_xml = LaunchConfiguration('default_nav_to_pose_bt_xml')
     default_nav_through_poses_bt_xml = LaunchConfiguration('default_nav_through_poses_bt_xml')
-    default_pedsim_scene_path = os.path.join(pedsim_dir, 'scenarios', 'tb3_house_demo_crowd.xml')
+    default_pedsim_scene_path = os.path.join(pedsim_dir, 'scenarios', scene + '.xml')
     default_pedsim_config_path = os.path.join(pedsim_dir, 'config', 'params.yaml')
 
     declare_robot_model_cmd = DeclareLaunchArgument(
@@ -122,6 +125,14 @@ def generate_launch_description():
         'run_human_tf',
         default_value='False')
 
+    declare_spawn_x_pos_cmd = DeclareLaunchArgument(
+        'spawn_x_pos',
+        default_value='0.0')
+
+    declare_spawn_y_pos_cmd = DeclareLaunchArgument(
+        'spawn_y_pos',
+        default_value='0.0')
+
     simulator_launch_cmd = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(os.path.join(
           interbotix_sim_dir, 'launch', 'xslocobot_gz_classic.launch.py')),
@@ -132,6 +143,8 @@ def generate_launch_description():
           'use_rviz': 'false',
           'use_gazebo': use_gazebo_gui,
           'world_filepath': world_file,
+          '-x': spawn_x_pos,
+          '-y': spawn_y_pos,
         }.items())
 
     slam_toolbox_launch_cmd = TimerAction(
@@ -143,7 +156,7 @@ def generate_launch_description():
             launch_arguments={
             'cmd_vel_topic': cmd_vel_topic,
             'use_sim_time': 'true',
-            'map': map_file,
+            # 'map': map_file,
             'nav2_params_file': nav2_params_file,
             'default_nav_to_pose_bt_xml': default_nav_to_pose_bt_xml,
             'default_nav_through_poses_bt_xml':default_nav_through_poses_bt_xml
@@ -173,7 +186,7 @@ def generate_launch_description():
 
     pedsim_gazebo_spawner_cmd = Node(
         package='pedsim_gazebo_plugin',
-        executable='spawn_pedsim_agents.py',
+        executable='spawn_pedsim_agents',
         name='spawn_pedsim_agents',
         output='screen',
         condition=IfCondition(use_pedsim))
@@ -223,6 +236,8 @@ def generate_launch_description():
     ld.add_action(declare_pedsim_config_file_cmd)
     ld.add_action(declare_run_human_tf_cmd)
     ld.add_action(declare_use_soloco_controller_cmd)
+    ld.add_action(declare_spawn_x_pos_cmd)
+    ld.add_action(declare_spawn_y_pos_cmd)
     # Add the actions to launch all of the nodes
     ld.add_action(simulator_launch_cmd)
     ld.add_action(slam_toolbox_launch_cmd)
