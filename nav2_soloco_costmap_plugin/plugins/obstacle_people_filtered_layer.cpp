@@ -92,6 +92,7 @@ void ObstaclePeopleFilteredLayer::onInitialize()
   declareParameter("people_filtering_enabled", rclcpp::ParameterValue(true));
   declareParameter("use_people_tf", rclcpp::ParameterValue(false));
   declareParameter("tf_prefix", rclcpp::ParameterValue("agent_"));
+  declareParameter("clear_track_costmap", rclcpp::ParameterValue(false));
   declareParameter("people_topic", rclcpp::ParameterValue(std::string("")));
   declareParameter("odom_topic", rclcpp::ParameterValue(std::string("")));
   declareParameter("filter_radius", rclcpp::ParameterValue(0.32));
@@ -113,6 +114,7 @@ void ObstaclePeopleFilteredLayer::onInitialize()
 
   node->get_parameter(name_ + "." + "people_filtering_enabled", people_filtering_enabled_);
   node->get_parameter(name_ + "." + "use_people_tf", use_people_tf_);
+  node->get_parameter(name_ + "." + "clear_track_costmap", clear_track_costmap_); 
   node->get_parameter(name_ + "." + "people_topic", people_topic_);
   node->get_parameter(name_ + "." + "odom_topic", odom_topic_);
   node->get_parameter(name_ + "." + "tf_prefix", tf_prefix_);
@@ -338,10 +340,12 @@ ObstaclePeopleFilteredLayer::agentsCallback(
   agent_states_.clear();
   agent_distances_.clear();
   for (auto person : msg->tracks){
-    // Append the last four poses of each agent to be cleared
-    agent_states_.push_back(person.track.poses.rbegin()[3]);
-    agent_states_.push_back(person.track.poses.rbegin()[2]);
-    agent_states_.push_back(person.track.poses.rbegin()[1]);
+    if (clear_track_costmap_){
+        // Append the agent track to agent states for clearing costmap
+        for (unsigned int i=0; i<person.track.poses.size(); ++i){
+            agent_states_.push_back(person.track.poses.rbegin()[i]);
+        }
+    }
     agent_states_.push_back(person.current_pose);
     double dist = calculateRobotAgentDistance(person.current_pose.pose);
     agent_distances_.push_back(dist);

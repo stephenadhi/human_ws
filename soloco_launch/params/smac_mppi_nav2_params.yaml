@@ -256,6 +256,8 @@ local_costmap:
         use_people_tf: False        
         # Tf prefix of detected people. (if using people_tf)
         tf_prefix: "agent_"
+        # Whether to clear costmap for the whole track history
+        clear_track_costmap: True
         # Topic name of detected people. (if not using people_tf)
         people_topic: "/human/interpolated_history"
         # Robot odometry topic 
@@ -379,6 +381,8 @@ global_costmap:
         use_people_tf: False        
         # Tf prefix of detected people. (if using people_tf)
         tf_prefix: "agent_"
+        # Whether to clear costmap for the whole track history
+        clear_track_costmap: True
         # Topic name of detected people. (if not using people_tf)
         people_topic: "/human/interpolated_history"
         # Robot odometry topic 
