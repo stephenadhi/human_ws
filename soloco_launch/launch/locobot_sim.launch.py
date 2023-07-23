@@ -35,7 +35,7 @@ def generate_launch_description():
     pedsim_dir = get_package_share_directory('pedsim_simulator')
     relay_dir = get_package_share_directory('pedsim_relay')
 
-    scene = 'medium-hall'
+    scene = 'tb3_house_demo_crowd'
     default_world_path = os.path.join(bringup_dir, 'worlds', scene + '.world')
     default_map_path = os.path.join(pedsim_dir, 'maps', scene + '.yaml')
     default_nav_to_pose_bt_xml = LaunchConfiguration('default_nav_to_pose_bt_xml')
@@ -186,7 +186,7 @@ def generate_launch_description():
 
     pedsim_gazebo_spawner_cmd = Node(
         package='pedsim_gazebo_plugin',
-        executable='spawn_pedsim_agents.py',
+        executable='spawn_pedsim_agents',
         name='spawn_pedsim_agents',
         output='screen',
         condition=IfCondition(use_pedsim))
