@@ -3,10 +3,10 @@
 uint16 NONE=0
 
 #goal definition
-geometry_msgs/PoseStamped pose
+geometry_msgs/PoseStamped goal
 ---
 #result definition
-geometry_msgs/Twist result
+geometry_msgs/Twist command_velocity
 uint16 error_code
 ---
 #feedback definition

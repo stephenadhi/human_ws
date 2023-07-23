@@ -76,7 +76,7 @@ def generate_launch_description():
         default_value=PathJoinSubstitution([
             FindPackageShare('soloco_launch'),
             'params',
-            'smac_dwb_nav2_params.yaml'
+            'smac_soloco_nav2_params.yaml'
         ]),
         description=(
             'full path to the ROS 2 parameters file to use when configuring the Nav2 stack.'
@@ -87,14 +87,14 @@ def generate_launch_description():
         'default_nav_to_pose_bt_xml',
         default_value=os.path.join(
             get_package_share_directory('soloco_launch'),
-            'config', 'behavior_trees', 'soloco_nav_to_pose_global.xml'),
+            'config', 'behavior_trees', 'navigate_to_pose_w_replanning_and_recovery.xml'), #soloco_nav_to_pose_global
         description='Full path to the behavior tree xml file to use')
     
     declare_nav_through_poses_bt_xml = DeclareLaunchArgument(
         'default_nav_through_poses_bt_xml',
         default_value=os.path.join(
             get_package_share_directory('soloco_launch'),
-            'config', 'behavior_trees', 'soloco_nav_through_poses_global.xml'),
+            'config', 'behavior_trees', 'navigate_through_poses_w_replanning_and_recovery.xml'), #soloco_nav_through_poses_global
         description='Full path to the behavior tree xml file to use')
 
     declare_cmd_vel_topic_cmd = DeclareLaunchArgument(

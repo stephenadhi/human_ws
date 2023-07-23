@@ -6,7 +6,6 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 endif()
 
 find_package(ament_cmake REQUIRED)
-find_package(ament_cmake REQUIRED)
 find_package(rclpy REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
@@ -18,11 +17,15 @@ include_directories(include)
 
 set(dependencies_pkgs
   rclcpp
+  rclpy
   nav2_common
   pluginlib
   tf2
   geometry_msgs
+  sensor_msgs
   visualization_msgs
+  action_msgs
+  std_msgs
   nav_msgs
   nav2_core
   nav2_costmap_2d
@@ -30,6 +33,7 @@ set(dependencies_pkgs
   tf2_geometry_msgs
   tf2_eigen
   tf2_ros
+  soloco_interfaces
 )
 
 foreach(pkg IN LISTS dependencies_pkgs)
@@ -55,18 +59,15 @@ add_compile_options(-O3 -finline-limit=1000000 -ffp-contract=fast -ffast-math)
 
 add_library(soloco_controller SHARED
   src/controller.cpp
-#   src/optimizer.cpp
-#   src/critic_manager.cpp
-#   src/trajectory_visualizer.cpp
-#   src/path_handler.cpp
-#   src/parameters_handler.cpp
-#   src/noise_generator.cpp
+  src/path_handler.cpp
+  src/parameters_handler.cpp
 )
 
 set(libraries soloco_controller)
 
 foreach(lib IN LISTS libraries)
   target_compile_options(${lib} PUBLIC -fconcepts)
+  target_include_directories(${lib} PUBLIC include)
   ament_target_dependencies(${lib} ${dependencies_pkgs})
 endforeach()
 
@@ -120,6 +121,6 @@ endif()
 ament_export_libraries(${libraries})
 ament_export_dependencies(${dependencies_pkgs})
 ament_export_include_directories(include)
-pluginlib_export_plugin_description_file(nav2_core solococ.xml)
+pluginlib_export_plugin_description_file(nav2_soloco_controller solococ.xml)
 
 ament_package()

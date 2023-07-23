@@ -15,14 +15,20 @@
 #ifndef NAV2_SOLOCO_CONTROLLER__CONTROLLER_HPP_
 #define NAV2_SOLOCO_CONTROLLER__CONTROLLER_HPP_
 
-#include <string>
+#include <functional>
+#include <future>
 #include <memory>
+#include <string>
+#include <sstream>
 
 #include "nav2_soloco_controller/tools/path_handler.hpp"
-
 #include "nav2_core/controller.hpp"
 #include "nav2_core/goal_checker.hpp"
+
 #include "rclcpp/rclcpp.hpp"
+#include "rclcpp_action/rclcpp_action.hpp"
+
+#include "soloco_interfaces/action/navigate_to_xy_goal.hpp"
 
 namespace nav2_soloco_controller
 {
@@ -71,7 +77,7 @@ public:
   /**
     * @brief Reset the controller state between tasks
     */
-//   void reset() override;
+  // void reset() override;
 
   /**
     * @brief Main method to compute velocities using the optimizer
@@ -114,6 +120,11 @@ protected:
   PathHandler path_handler_;
 
   bool visualize_;
+  double max_lookahead_dist_;
+  double min_lookahead_dist_;
+  double max_speed_;
+
+  rclcpp_action::Client<soloco_interfaces::action::NavigateToXYGoal>::SharedPtr soloco_client_ptr_;
 };
 
 }  // namespace nav2_soloco_controller
