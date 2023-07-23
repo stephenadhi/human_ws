@@ -11,3 +11,6 @@
 	path = 3rdparty/laser_geometry
 	url = https://github.com/ros-perception/laser_geometry.git
 	branch = humble
+[submodule "3rdparty/fake_tf2_publisher"]
+	path = 3rdparty/fake_tf2_publisher
+	url = https://github.com/stephenadhi/fake_tf2_publisher.git

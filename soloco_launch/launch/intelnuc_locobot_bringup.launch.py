@@ -17,7 +17,8 @@ from launch.substitutions import (
 from launch_ros.substitutions import FindPackageShare
 
 def generate_launch_description():
-    # Create the launch configuration variables
+    # Create the launch configuration 
+    use_nav2_slam = LaunchConfiguration('use_nav2_slam')
     use_soloco_controller = LaunchConfiguration('use_soloco_controller')
     run_human_tf = LaunchConfiguration('run_human_tf')
     map_file = LaunchConfiguration('map_file')
@@ -39,6 +40,10 @@ def generate_launch_description():
     with open(neural_config_file_path, 'r') as file:
         planner_config = yaml.safe_load(file)['nav2_soloco_controller']['ros__parameters']
 
+    declare_use_nav2_slam_cmd = DeclareLaunchArgument(
+            'use_nav2_slam',
+            default_value='False')
+        
     declare_robot_model_cmd = DeclareLaunchArgument(
         'robot_model',
         default_value='locobot_base',
@@ -82,6 +87,7 @@ def generate_launch_description():
         executable='multi_track_visualizer.py', # 'robot_track_publisher'
         name='multi_track_visualizer',
         output='screen',
+        condition=IfCondition(use_soloco_controller)
     )
 
     human_tf2_publisher_cmd = Node(
@@ -110,15 +116,45 @@ def generate_launch_description():
         }.items(),
         condition=IfCondition(NotSubstitution(use_soloco_controller)))
 
-    nav2_soloco_controller_launch_cmd = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(os.path.join(
-          bringup_dir, 'launch', 'nav2_soloco_controller.launch.py')),
+    xslocobot_control_launch_cmd = IncludeLaunchDescription(
+        launch_description_source=PythonLaunchDescriptionSource([
+            PathJoinSubstitution([
+                FindPackageShare('interbotix_xslocobot_control'),
+                'launch',
+                'xslocobot_control.launch.py',
+            ])
+        ]),
+        launch_arguments={
+            'robot_name': 'locobot',
+            'use_lidar': 'true',
+            'lidar_type': 'rplidar_a2m8',
+            'use_rviz': 'false',
+            'rviz_frame': 'map',
+            'use_camera': 'false',
+            'rs_camera_align_depth': 'true',
+            'use_base': 'true',
+            # 'use_dock': 'true',
+            'use_sim_time': 'false',
+        }.items(),
         condition=IfCondition(use_soloco_controller))
+    
+    nav2_bringup_slam_launch_cmd  = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(os.path.join(
+          bringup_dir, 'launch', 'nav2_slam_toolbox.launch.py')),
+        condition=IfCondition(use_nav2_slam))
 
+    soloco_controller_launch_cmd = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(os.path.join(
+          nav2_soloco_controller_dir, 'launch', 'social_planner.launch.py')),
+        launch_arguments={
+          'cmd_vel_topic': 'locobot/commands/velocity',
+        }.items(),
+        condition=IfCondition(use_soloco_controller))
 
     # Create the launch description and populate
     ld = LaunchDescription()
     # Declare the launch options
+    ld.add_action(declare_use_nav2_slam_cmd)
     ld.add_action(declare_use_soloco_controller_cmd)
     ld.add_action(declare_run_human_tf_cmd)
     ld.add_action(declare_map_file_cmd)
@@ -131,7 +167,9 @@ def generate_launch_description():
     # Add the actions to launch all of the nodes
     ld.add_action(multi_track_visualizer_cmd)
     ld.add_action(human_tf2_publisher_cmd)
+    ld.add_action(xslocobot_control_launch_cmd)
     ld.add_action(locobot_nav2_bringup_slam_launch_cmd)
-    ld.add_action(nav2_soloco_controller_launch_cmd)
+    ld.add_action(soloco_controller_launch_cmd)
+    ld.add_action(nav2_bringup_slam_launch_cmd)
 
     return ld

@@ -282,6 +282,7 @@ protected:
 
   bool people_filtering_enabled_;
   bool use_people_tf_;
+  bool clear_track_costmap_;
   
   std::string tf_prefix_;
   std::string people_topic_;

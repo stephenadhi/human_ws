@@ -4,8 +4,8 @@
 # including recovery.
 bt_navigator:
   ros__parameters:
-    default_nav_to_pose_bt_xml: "/workspaces/locobot/src/human_ws/soloco_launch/config/behavior_trees/navigate_to_pose_w_replanning_and_recovery.xml"
-    default_nav_through_poses_bt_xml: "/workspaces/locobot/src/human_ws/soloco_launch/config/behavior_trees/navigate_through_poses_w_replanning_and_recovery.xml"
+    default_nav_to_pose_bt_xml: "/home/locobot/interbotix_ws/src/human_ws/soloco_launch/config/behavior_trees/navigate_to_pose_w_replanning_and_recovery.xml"
+    default_nav_through_poses_bt_xml: "/home/locobot/interbotix_ws/src/human_ws/soloco_launch/config/behavior_trees/navigate_through_poses_w_replanning_and_recovery.xml"
     # Reference frame. (default: map)
     global_frame: locobot/odom
     # Path to behavior tree XML description. (default: base_link)
@@ -133,86 +133,46 @@ controller_server:
       yaw_goal_tolerance: 0.1
     # MPPI parameters
     FollowPath:
-      plugin: "nav2_mppi_controller::MPPIController"
-      time_steps: 96
-      model_dt: 0.05
-      batch_size: 1000
-      vx_std: 0.2
-      vy_std: 0.2
-      wz_std: 0.4
-      vx_max: 0.5
-      vx_min: -0.35
-      vy_max: 0.5
-      wz_max: 1.9
-      iteration_count: 1
-      prune_distance: 4.0
+      plugin: "dwb_core::DWBLocalPlanner"
+      debug_trajectory_details: True
+      min_vel_x: 0.0
+      min_vel_y: 0.0
+      max_vel_x: 0.5
+      max_vel_y: 0.0
+      max_vel_theta: 1.0
+      min_speed_xy: 0.0
+      max_speed_xy: 0.5
+      min_speed_theta: 0.0
+      # Add high threshold velocity for turtlebot 3 issue.
+      # https://github.com/ROBOTIS-GIT/turtlebot3_simulations/issues/75
+      acc_lim_x: 1.0
+      acc_lim_y: 0.0
+      acc_lim_theta: 3.2
+      decel_lim_x: -1.0
+      decel_lim_y: 0.0
+      decel_lim_theta: -3.2
+      vx_samples: 20
+      vy_samples: 5
+      vtheta_samples: 20
+      sim_time: 2.8
+      linear_granularity: 0.05
+      angular_granularity: 0.025
       transform_tolerance: 0.2
-      temperature: 0.3
-      gamma: 0.015
-      motion_model: "DiffDrive"
-      visualize: false
-      reset_period: 1.0 # (only in Humble)
-      TrajectoryVisualizer:
-        trajectory_step: 5
-        time_step: 3
-      AckermannConstrains:
-        min_turning_r: 0.2
-      critics: ["ConstraintCritic", "ObstaclesCritic", "GoalCritic", "GoalAngleCritic", "PathAlignCritic", "PathFollowCritic", "PathAngleCritic", "PreferForwardCritic"]
-      ConstraintCritic:
-        enabled: true
-        cost_power: 1
-        cost_weight: 4.0
-      GoalCritic:
-        enabled: true
-        cost_power: 1
-        cost_weight: 5.0
-        threshold_to_consider: 1.0
-      GoalAngleCritic:
-        enabled: true
-        cost_power: 1
-        cost_weight: 3.0
-        threshold_to_consider: 0.4
-      PreferForwardCritic:
-        enabled: true
-        cost_power: 1
-        cost_weight: 5.0
-        threshold_to_consider: 0.4
-      ObstaclesCritic:
-        enabled: true
-        cost_power: 1
-        repulsion_weight: 1.5
-        critical_weight: 20.0
-        consider_footprint: false
-        collision_cost: 10000.0
-        collision_margin_distance: 0.1
-        near_goal_distance: 0.5
-        inflation_radius: 0.55 # (only in Humble)
-        cost_scaling_factor: 5.0 # (only in Humble)
-      PathAlignCritic:
-        enabled: true
-        cost_power: 1
-        cost_weight: 14.0
-        max_path_occupancy_ratio: 0.05
-        trajectory_point_step: 3
-        threshold_to_consider: 0.40
-        offset_from_furthest: 20
-      PathFollowCritic:
-        enabled: true
-        cost_power: 1
-        cost_weight: 5.0
-        offset_from_furthest: 5
-        threshold_to_consider: 0.6
-      PathAngleCritic:
-        enabled: true
-        cost_power: 1
-        cost_weight: 2.0
-        offset_from_furthest: 4
-        threshold_to_consider: 0.40
-        max_angle_to_furthest: 1.0
-      # TwirlingCritic:
-      #   enabled: true
-      #   twirling_cost_power: 1
-      #   twirling_cost_weight: 10.0
+      xy_goal_tolerance: 0.25
+      trans_stopped_velocity: 0.25
+      short_circuit_trajectory_evaluation: True
+      stateful: True
+      critics: ["RotateToGoal", "Oscillation", "BaseObstacle", "GoalAlign", "PathAlign", "PathDist", "GoalDist"]
+      BaseObstacle.scale: 0.02
+      PathAlign.scale: 32.0
+      PathAlign.forward_point_distance: 0.1
+      GoalAlign.scale: 24.0
+      GoalAlign.forward_point_distance: 0.1
+      PathDist.scale: 32.0
+      GoalDist.scale: 24.0
+      RotateToGoal.scale: 32.0
+      RotateToGoal.slowing_factor: 5.0
+      RotateToGoal.lookahead_time: -1.0
 
 # The Costmap 2D package implements a 2D grid-based costmap for environmental representations and a
 # number of sensor processing plugins. It is used in the planner and controller servers for
@@ -235,9 +195,9 @@ local_costmap:
       # Whether costmap should roll with robot base frame. (default: False)
       rolling_window: True
       # Height of costmap (m). (default: 5)
-      width: 5
+      width: 8
       # Width of costmap (m). (default: 5)
-      height: 5
+      height: 8
       # Resolution of 1 pixel of the costmap, in meters. (default: 0.1)
       resolution: 0.05
       # Robot radius to use, if footprint coordinates not provided. (default: 0.1)
@@ -256,6 +216,8 @@ local_costmap:
         use_people_tf: False        
         # Tf prefix of detected people. (if using people_tf)
         tf_prefix: "agent_"
+        # Whether to clear costmap for the whole track history
+        clear_track_costmap: True
         # Topic name of detected people. (if not using people_tf)
         people_topic: "/human/interpolated_history"
         # Robot odometry topic 
@@ -300,7 +262,7 @@ local_costmap:
           # Minimum range to mark obstacles in costmap. (default: 0.0)
           obstacle_min_range: 0.05
           # Maximum range to raytrace clear obstacles from costmap. (default: 3.0)
-          raytrace_max_range: 4.0
+          raytrace_max_range: 6.0
           # Minimum range to raytrace clear obstacles from costmap. (default: 0.0)
           raytrace_min_range: 0.0
 
@@ -339,11 +301,13 @@ global_costmap:
       # Y origin of the costmap relative to height (m). (default: 0.0)
       origin_y: 0.0
       # Frequency to publish costmap to topic. (default 1.0)
-      publish_frequency: 1.0
+      publish_frequency: 10.0
+      # Costmap update frequency. (default 5.0)
+      update_frequency: 10.0
       # Height of costmap (m). (default: 5)
-      width: 16
+      width: 20
       # Width of costmap (m). (default: 5)
-      height: 16
+      height: 20
       # Resolution of 1 pixel of the costmap, in meters. (default: 0.1)
       resolution: 0.1
       # Robot base frame. (default: base_link)
@@ -361,8 +325,6 @@ global_costmap:
       trinary_costmap: True
       # Cost of unknown space if tracking it. (default: 255)
       unknown_cost_value: 255
-      # Costmap update frequency. (default 5.0)
-      update_frequency: 5.0
       # Whether when combining costmaps to use the maximum cost or override. (default: False)
       use_maximum: False
       # List of mapped plugin names for parameter namespaces and names. Note: Each plugin namespace
@@ -379,6 +341,8 @@ global_costmap:
         use_people_tf: False        
         # Tf prefix of detected people. (if using people_tf)
         tf_prefix: "agent_"
+        # Whether to clear costmap for the whole track history
+        clear_track_costmap: True
         # Topic name of detected people. (if not using people_tf)
         people_topic: "/human/interpolated_history"
         # Robot odometry topic 
@@ -419,7 +383,7 @@ global_costmap:
           # Whether source should raytrace clear in costmap. (default: False)
           clearing: True
           # Maximum range to mark obstacles in costmap. (default: 2.5)
-          obstacle_max_range: 10.0
+          obstacle_max_range: 6.0
           # Minimum range to mark obstacles in costmap. (default: 0.0)
           obstacle_min_range: 0.05
           # Maximum range to raytrace clear obstacles from costmap. (default: 3.0)

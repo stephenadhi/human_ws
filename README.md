@@ -12,11 +12,11 @@ You need to have the following installed on your machine:
 
     ├── 3rdparty
     ├── docker
+    ├── nav2_soloco_controller
     ├── nav2_soloco_costmap_plugin
     ├── soloco_interfaces           
     ├── soloco_launch               
     ├── soloco_perception
-    ├── nav2_soloco_controller
     ├── LICENSE
     ├── README.md
     ├── .gitignore
@@ -24,20 +24,14 @@ You need to have the following installed on your machine:
 
 
 ## Installation
-1. Make a ROS 2 workspace folder and clone this repository inside src/ folder
-    ```
-    mkdir -p workspaces/humble/src
-    git clone --recursive https://git.uni-due.de/locobot/human_ws.git
-    # Build Navigation2 from source (optional, necessary for using MPPI controller)
-    git clone -b humble https://github.com/ros-planning/navigation2.git
-    ```
+For first time installation, please refer to the [installation guide](Installation.md).
 
-2. Pulling new changes locally
+1. Pulling new changes locally
     ```
     git pull --recurse-submodules
     git submodule update --init --recursive
     ```
-3. Applying new changes inside docker container
+2. Applying new changes inside docker container
     ```
     # Run container
     sudo docker run --runtime nvidia -it --rm --network host --privileged -v /dev:/dev -v /home/zedbox/ros2_ws:/home/zedbox/ros2_ws stephenadhi/ros2:humble-l4t-r35.2-zedsdk-4.0
@@ -47,26 +41,6 @@ You need to have the following installed on your machine:
     cd home/zedbox/ros2_ws
     colcon build --packages-select soloco_perception nav2_soloco_controller soloco_launch soloco_interfaces
     ```
-
-4. Install ROS dependencies
-    ```
-    cd workspaces/humble/
-    rosdep install -i -y -r --from-paths src --rosdistro humble
-    ```
-
-5. Build everything inside the workspace
-   ```
-    colcon build --packages-select zed_interfaces
-    source install/setup.bash
-    colcon build --packages-select soloco_interfaces
-    colcon build
-   ```
-
-6. Define robot base type and model
-   ```
-   export INTERBOTIX_XSLOCOBOT_BASE_TYPE=kobuki
-   export INTERBOTIX_XSLOCOBOT_ROBOT_MODEL=locobot_base
-   ```
 
 ## Custom Launch Examples
 We provide general launch files for perception and navigation. Our modified version of the LoCoBot have two computing device onboard: Intel NUC and ZED Box (Jetson Xavier NX).
@@ -86,11 +60,11 @@ Go to the directory and source installation
     
 ### Default LoCoBot launch with navigation2 stack + SLAM, and visualization:
 
-    ros2 launch soloco_launch intelnuc_locobot_nav2_bringup.launch.py nav2_param_filename:=smac_mppi_nav2_params.yaml
+    ros2 launch soloco_launch intelnuc_locobot_bringup.launch.py nav2_param_filename:=smac_mppi_nav2_params.yaml
 
 ### LoCoBot launch with custom neural motion planner as controller:
 
-    ros2 launch soloco_launch intelnuc_locobot_nav2_bringup.launch.py nav2_param_filename:=smac_mppi_nav2_params.yaml use_soloco_controller:=True
+    ros2 launch soloco_launch intelnuc_locobot_bringup.launch.py use_nav2_slam:=True nav2_param_filename:=smac_soloco_nav2_params.yaml use_soloco_controller:=True
 
 ### For launching ZED human perception and multi-tracking module:
 SSH to the ZED Box
@@ -111,8 +85,20 @@ Launch RViZ:
 
     ros2 launch soloco_launch remote_view.launch.py
 
-## Simulation Example
-Launch Locobot in Gazebo with GUI and optionally pedestrian simulator
+## Simulation Example with Pedsim
+Launch Locobot in Gazebo with GUI and optionally pedestrian simulator. Wait 5 seconds before running each commands. They must be in order.
 
-    ros2 launch soloco_launch locobot_sim.launch.py use_gazebo_gui:=true use_pedsim:=false
+    ros2 launch soloco_launch locobot_sim.launch.py use_gazebo_gui:=true use_pedsim:=true use_soloco_controller:=true
 
+Launch fake odometry tf2 publisher. Odometry is based on ground truth with gaussian noise=0.001
+
+    ros2 launch fake_tf2_publisher fake_tf2_publisher.launch.py  
+
+Launch RViZ:
+
+    ros2 launch soloco_launch remote_view.launch.py
+
+## Rosbag Example
+To record data, launch RViZ and run the following command
+
+    ros2 bag record /locobot/commands/velocity /locobot/odom /map /local_costmap/costmap /global_costmap/costmap /tf /tf_static /plan /visualization/predicted_future /visualization/human_tracks /visualization/robot_track /visualization/subgoal /visualization/human_bounding_boxes /goal_pose /locobot/robot_description /zed2_camera/left_image_raw -o my_experiment

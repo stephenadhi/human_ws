@@ -47,6 +47,9 @@ double SubGoalPublisher::getLookAheadDistance(const geometry_msgs::msg::Twist & 
   // Else, use the static look ahead distance
   double lookahead_dist = max_lookahead_dist_;
   lookahead_dist = fabs(speed.linear.x) / max_speed_ * max_lookahead_dist_;
+  if (lookahead_dist < min_lookahead_dist_) {
+    lookahead_dist = min_lookahead_dist_;
+  }
 
   return lookahead_dist;
 }

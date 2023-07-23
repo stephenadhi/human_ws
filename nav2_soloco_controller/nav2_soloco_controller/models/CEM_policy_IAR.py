@@ -10,7 +10,7 @@ from nav2_soloco_controller.models.IAR_full_Tranf import TrajectoryGenerator
 
 torch.autograd.set_detect_anomaly(True)
 from nav2_soloco_controller.data.utils import prepare_states, batched_Robot_coll_smoothed_loss, cart2pol, pol2cart, GaußNLL, actionXYtoROT
-
+from rclpy.logging import get_logger
 
 class Prediction_Model(nn.Module):
     def __init__(self, robot_params_dict, dt, feature_size,
@@ -18,6 +18,7 @@ class Prediction_Model(nn.Module):
                  sample_batch, AR_checkpoint,
                  IAR_checkpoint, device='cuda'):
         super(Prediction_Model, self).__init__()
+        self.logger = get_logger("my_logger")
         self.robot_params_dict = robot_params_dict
         self.dt = dt
         self.feature_size = feature_size
@@ -104,7 +105,7 @@ class Prediction_Model(nn.Module):
             obs_traj_pos, traj_rel, neigh_index, robot_idx, r_goal, r_pose = data[:6] # if CEM is used for bc, prep_state will produce an additional next state which we do not need here
 
             goal[robot_idx] = r_goal
-            pred_traj_rel, mu, scale, r_pose = self.pred_model_iar(traj_rel, r_pose, robotID=robot_idx, z=z,
+            pred_traj_rel, mu, scale, self.pertu_actions_clamped, self.nll = self.pred_model_iar(traj_rel, r_pose, robotID=robot_idx, z=z,
                                                 ar_step_or_DWA=ar_step_or_DWA, calc_new=calc_new)
 
             pred_traj_abs = torch.cumsum(pred_traj_rel, dim=0) + obs_traj_pos[-1]
@@ -117,14 +118,14 @@ class Prediction_Model(nn.Module):
             # plot_traj(obs_traj_pos, pred_traj_abs, goal_clamped, robot_idx)
             self.plot_list.append([obs_traj_pos, pred_traj_abs, goal_clamped, robot_idx])
             goal_cost = torch.sqrt(((goal_clamped - pred_traj_abs[:, robot_idx]) ** 2).sum(dim=-1)).sum(0)
-            speed_cost = (0.5 - r_pose[:, 3])
+           # speed_cost = (0.5 - r_pose[:, 3])
             costmap_cost = self.calc_cost_map_cost(pred_traj_abs[:, robot_idx], costmap_obj, opt_count)
            # goal_cost = self.calc_to_goal_cost(pred_traj_abs[:, robot_idx], goal[robot_idx], r_pose )
             coll_cost = batched_Robot_coll_smoothed_loss(pred_traj_abs, self.sample_batch,
                                                          predictions_steps=self.predictions_steps,
                                                          batch=True, collision_dist=self.robot_params_dict["collision_dist"]).view(self.predictions_steps, -1).sum(0)
             nll = GaußNLL(mu[:, robot_idx], scale[:, robot_idx], pred_traj_rel[:, robot_idx])
-        return goal_cost, coll_cost, nll, speed_cost, costmap_cost, pred_traj_rel[:, robot_idx]
+        return goal_cost, coll_cost, nll, 0, costmap_cost, pred_traj_rel[:, robot_idx]
 
 
 class CEM_IAR(nn.Module):
@@ -135,6 +136,7 @@ class CEM_IAR(nn.Module):
                  IAR_checkpoint='weights/SIMNoGoal-univ_IAR_Full_trans/checkpoint_with_model.pt',
                  device='cuda'):
         super(CEM_IAR, self).__init__()
+        self.logger = get_logger("my_logger")
         self.device = device
         self.sample_batch = sample_batch
         self.predictions_steps = prediction_steps

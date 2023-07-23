@@ -2,11 +2,9 @@ nav2_soloco_controller:
   ros__parameters:
     controller_frequency: 20.0 # [Hz]
     # Neural model
-    model_name: 'CEM_IAR'
+    model_name: 'MPPI'      # Choice: 'MPPI' or 'CEM_IAR'
     use_robot_model: True   # Flag for robot param constrains usage
-    AR_checkpoint: 'models/weights/SIMNoGoal-univ_fast_AR2/checkpoint_with_model.pt'
-    IAR_checkpoint: 'models/weights/SIMNoGoal-univ_IAR_Full_trans/checkpoint_with_model.pt'
-    device: 'cpu'           # Options: 'cuda' or 'cpu'
+    device: 'cuda'           # Options: 'cuda' or 'cpu'
     # Goal tolerance
     goal_tolerance: 0.1
     use_velocity_scaled_lookahead_dist: True # max_lookahead_dist scaled by speed / max_speed
@@ -29,15 +27,17 @@ nav2_soloco_controller:
     # Robot parameters
     robot_model: "differential_drive"
     max_speed: 0.5          # [m/s] # 0.7 locobot kobuki base
-    min_speed: -0.1         # [m/s]
+    min_speed: -0.0         # [m/s]
     max_yaw_rate: 1.0       # [rad/s]
     max_delta_yaw_rate: 3.2 # [rad/s^2]
     max_accel: 0.7          # [m/s^2] 0.8 kobuki base
     collision_dist: 0.5     # [m]
+    # Model paramters
     max_num_agents: 5       # [maximum number of people]
+    placeholder_value: 50.0 # Placeholder value for agent distance when not detected
     max_history_length: 7   # [maximum number of human past poses]
     prediction_steps: 7     # Steps to predict into the future
     interp_interval: 0.4    # [s]
-    sample_batch: 100
+    sample_batch: 1000      # For staying at 20 Hz: MPPI 1000, CEM 200
 
-    debug_log: false
+    debug_log: False
