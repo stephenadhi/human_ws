@@ -45,6 +45,10 @@ void SolocoController::configure(
   // Configure action client
   soloco_client_ptr_ = rclcpp_action::create_client<soloco_interfaces::action::NavigateToXYGoal>(
     node, "navigate_to_xy_goal");
+
+  if (!soloco_client_ptr_->wait_for_action_server(std::chrono::seconds(5))) {
+    RCLCPP_ERROR(logger_, "Action server not available after waiting");
+  }
   
   RCLCPP_INFO(logger_, "Configured Soloco Controller: %s", name_.c_str());
 }
@@ -77,10 +81,6 @@ geometry_msgs::msg::TwistStamped SolocoController::computeVelocityCommands(
   const geometry_msgs::msg::Twist & robot_speed,
   nav2_core::GoalChecker * goal_checker)
 {
-  #ifdef BENCHMARK_TESTING
-    auto start = std::chrono::system_clock::now();
-  #endif
-  
   auto node = parent_.lock();
   std::lock_guard<std::mutex> lock(*parameters_handler_->getLock());
   nav_msgs::msg::Path transformed_plan = path_handler_.transformPath(robot_pose);
@@ -97,47 +97,49 @@ geometry_msgs::msg::TwistStamped SolocoController::computeVelocityCommands(
 
   // Find the first pose which is at a distance greater than the lookahead distance
   auto goal_pose_it = std::find_if(
-      transformed_plan.poses.begin(), transformed_plan.poses.end(), [&](const auto & ps) {
+    transformed_plan.poses.begin(), transformed_plan.poses.end(), [&](const auto & ps) {
       return std::hypot(ps.pose.position.x- robot_pose.pose.position.x, 
-          ps.pose.position.y - robot_pose.pose.position.y) >= lookahead_dist;
-      }
+        ps.pose.position.y - robot_pose.pose.position.y) >= lookahead_dist;
+    }
   );
+
   // If the no pose is not far enough, take the last pose
   if (goal_pose_it == transformed_plan.poses.end()) {
-      goal_pose_it = std::prev(transformed_plan.poses.end());
+    goal_pose_it = std::prev(transformed_plan.poses.end());
   }
+
   geometry_msgs::msg::PoseStamped subgoal_pose;
   auto idx = std::distance(transformed_plan.poses.begin(), goal_pose_it);
   subgoal_pose = transformed_plan.poses[idx];
   subgoal_pose.header.frame_id = "locobot/odom";
   subgoal_pose.header.stamp = node->get_clock()->now();
-  
+
   auto goal_msg = soloco_interfaces::action::NavigateToXYGoal::Goal();
   goal_msg.goal = subgoal_pose;
 
-  if (!soloco_client_ptr_->wait_for_action_server()) 
-  {
-    RCLCPP_ERROR(logger_, "Action server not available after waiting");
-  }
   auto send_goal_future = soloco_client_ptr_->async_send_goal(goal_msg);
-  rclcpp::spin_until_future_complete(node, send_goal_future);
+
+  // Block until goal is accepted
   auto goal_handle = send_goal_future.get();
+  if (!goal_handle) {
+    RCLCPP_ERROR(logger_, "Failed to get goal handle");
+    // Handle the error...
+    return geometry_msgs::msg::TwistStamped();  // Return an empty message
+  }
+
   auto result_future = soloco_client_ptr_->async_get_result(goal_handle);
-  rclcpp::spin_until_future_complete(node, result_future);
+
+  // Block until result is ready
   auto result = result_future.get();
+  if (result.code != rclcpp_action::ResultCode::SUCCEEDED) {
+    RCLCPP_ERROR(logger_, "Result is null");
+    // Handle the error...
+    return geometry_msgs::msg::TwistStamped();  // Return an empty message
+  }
+
   geometry_msgs::msg::TwistStamped cmd_vel;
   cmd_vel.header.stamp = node->get_clock()->now();
   cmd_vel.twist = result.result->command_velocity;
-
-  #ifdef BENCHMARK_TESTING
-    auto end = std::chrono::system_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-    RCLCPP_INFO(logger_, "Control loop execution time: %ld [ms]", duration);
-  #endif
-
-  // if (visualize_) {
-  //   visualize(std::move(transformed_plan));
-  // }
 
   return cmd_vel;
 }
@@ -145,6 +147,15 @@ geometry_msgs::msg::TwistStamped SolocoController::computeVelocityCommands(
 void SolocoController::setPlan(const nav_msgs::msg::Path & path)
 {
   path_handler_.setPath(path);
+}
+
+void SolocoController::setSpeedLimit(const double& limit, const bool& is_percentage)
+{
+  if (is_percentage) {
+    max_speed_ = max_speed_ * limit / 100.0;
+  } else {
+    max_speed_ = limit;
+  }
 }
 
 }  // namespace nav2_soloco_controller

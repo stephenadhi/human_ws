@@ -83,6 +83,8 @@ bt_navigator:
 # progress checker and goal checker to use and call the appropriate plugins.
 controller_server:
   ros__parameters:
+    # Whether to use simulation time. This paremeter will always be rewritten from the launch file.
+    use_sim_time: False
     # Frequency to run controller (Hz). (default 20.0)
     controller_frequency: 20.0
     # The controller server filters the velocity portion of the odometry messages received before
@@ -142,6 +144,8 @@ controller_server:
 local_costmap:
   local_costmap:
     ros__parameters:
+      # Whether to use simulation time. This paremeter will always be rewritten from the launch file.
+      use_sim_time: False
       # Whether to send full costmap every update, rather than updates. (default: false)
       always_send_full_costmap: True
       # Costmap update frequency. (default 5.0)
@@ -155,9 +159,9 @@ local_costmap:
       # Whether costmap should roll with robot base frame. (default: False)
       rolling_window: True
       # Height of costmap (m). (default: 5)
-      width: 6
+      width: 8
       # Width of costmap (m). (default: 5)
-      height: 6
+      height: 8
       # Resolution of 1 pixel of the costmap, in meters. (default: 0.1)
       resolution: 0.05
       # Robot radius to use, if footprint coordinates not provided. (default: 0.1)
@@ -176,6 +180,8 @@ local_costmap:
         use_people_tf: False        
         # Tf prefix of detected people. (if using people_tf)
         tf_prefix: "agent_"
+        # Whether to clear costmap for the whole track history
+        clear_track_costmap: True
         # Topic name of detected people. (if not using people_tf)
         people_topic: "/human/interpolated_history"
         # Robot odometry topic 
@@ -220,7 +226,7 @@ local_costmap:
           # Minimum range to mark obstacles in costmap. (default: 0.0)
           obstacle_min_range: 0.05
           # Maximum range to raytrace clear obstacles from costmap. (default: 3.0)
-          raytrace_max_range: 4.0
+          raytrace_max_range: 6.0
           # Minimum range to raytrace clear obstacles from costmap. (default: 0.0)
           raytrace_min_range: 0.0
 
@@ -242,6 +248,8 @@ local_costmap:
 global_costmap:
   global_costmap:
     ros__parameters:
+      # Whether to use simulation time. This paremeter will always be rewritten from the launch file.
+      use_sim_time: False
       # Whether to send full costmap every update, rather than updates. (default: false)
       always_send_full_costmap: True
       # Amount to pad footprint (m). (default: 0.01)
@@ -257,7 +265,9 @@ global_costmap:
       # Y origin of the costmap relative to height (m). (default: 0.0)
       origin_y: 0.0
       # Frequency to publish costmap to topic. (default 1.0)
-      publish_frequency: 1.0
+      publish_frequency: 10.0
+      # Costmap update frequency. (default 5.0)
+      update_frequency: 10.0
       # Height of costmap (m). (default: 5)
       width: 20
       # Width of costmap (m). (default: 5)
@@ -273,14 +283,12 @@ global_costmap:
       # If false, treats unknown space as free space, else as unknown space. (default: False)
       track_unknown_space: True
       # TF transform tolerance. (default: 0.3)
-      transform_tolerance: 0.5
+      transform_tolerance: 0.3
       # If occupancy grid map should be interpreted as only 3 values (free, occupied, unknown) or
       # with its stored values. (default: True)
       trinary_costmap: True
       # Cost of unknown space if tracking it. (default: 255)
       unknown_cost_value: 255
-      # Costmap update frequency. (default 5.0)
-      update_frequency: 5.0
       # Whether when combining costmaps to use the maximum cost or override. (default: False)
       use_maximum: False
       # List of mapped plugin names for parameter namespaces and names. Note: Each plugin namespace
@@ -297,6 +305,8 @@ global_costmap:
         use_people_tf: False        
         # Tf prefix of detected people. (if using people_tf)
         tf_prefix: "agent_"
+        # Whether to clear costmap for the whole track history
+        clear_track_costmap: True
         # Topic name of detected people. (if not using people_tf)
         people_topic: "/human/interpolated_history"
         # Robot odometry topic 
@@ -337,7 +347,7 @@ global_costmap:
           # Whether source should raytrace clear in costmap. (default: False)
           clearing: True
           # Maximum range to mark obstacles in costmap. (default: 2.5)
-          obstacle_max_range: 10.0
+          obstacle_max_range: 6.0
           # Minimum range to mark obstacles in costmap. (default: 0.0)
           obstacle_min_range: 0.05
           # Maximum range to raytrace clear obstacles from costmap. (default: 3.0)
@@ -392,6 +402,8 @@ map_server:
 
 map_saver:
   ros__parameters:
+    # Whether to use simulation time. This paremeter will always be rewritten from the launch file.
+    use_sim_time: False
     # https://navigation.ros.org/configuration/packages/configuring-map-server.html
     # Timeout to attempt saving the map (seconds). (default: 2)
     save_map_timeout: 5.0

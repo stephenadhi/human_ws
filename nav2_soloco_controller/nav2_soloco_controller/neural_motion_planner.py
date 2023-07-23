@@ -232,6 +232,7 @@ class NeuralMotionPlanner(Node):
         self.r_state[4] = odom_msg.twist.twist.angular.z
 
     def execute_callback(self, goal_handle):
+        cmd_vel = Twist()
         if self.global_goal is not None and self.subgoal_pose is not None and self.ogm is not None and self.trajectory_received:
             # Calculate euclidian distance to goal
             distance_to_goal = hypot((self.r_pos_xy[0]-self.global_goal[0]), 
@@ -243,7 +244,6 @@ class NeuralMotionPlanner(Node):
             u, current_future = self.model.predict(x, costmap_obj=self.ogm)
             
             # Publish resulting twist to cmd_vel topic
-            cmd_vel = Twist()
             if distance_to_goal > self.goal_tolerance:
                 cmd_vel.linear.x = float(u[0])
                 cmd_vel.angular.z = float(u[1])
@@ -259,7 +259,6 @@ class NeuralMotionPlanner(Node):
                 self.global_goal = None
 
             self.visualize_future(current_future)
-        
         
         goal_handle.succeed()
         
