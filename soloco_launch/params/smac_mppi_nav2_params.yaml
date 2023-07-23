@@ -339,7 +339,9 @@ global_costmap:
       # Y origin of the costmap relative to height (m). (default: 0.0)
       origin_y: 0.0
       # Frequency to publish costmap to topic. (default 1.0)
-      publish_frequency: 1.0
+      publish_frequency: 10.0
+      # Costmap update frequency. (default 5.0)
+      update_frequency: 10.0
       # Height of costmap (m). (default: 5)
       width: 20
       # Width of costmap (m). (default: 5)
@@ -361,8 +363,6 @@ global_costmap:
       trinary_costmap: True
       # Cost of unknown space if tracking it. (default: 255)
       unknown_cost_value: 255
-      # Costmap update frequency. (default 5.0)
-      update_frequency: 5.0
       # Whether when combining costmaps to use the maximum cost or override. (default: False)
       use_maximum: False
       # List of mapped plugin names for parameter namespaces and names. Note: Each plugin namespace
