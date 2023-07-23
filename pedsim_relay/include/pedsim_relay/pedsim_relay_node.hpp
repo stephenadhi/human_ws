@@ -19,6 +19,9 @@
 #define PEDSIM_RELAY_NODE_HPP_
 
 #include <algorithm>
+#include <vector>
+#include <utility>
+#include <queue> 
 #include <math.h>
 #include <angles/angles.h>
 
@@ -45,6 +48,7 @@ private:
   double map_origin_y = 0.0;
   double map_resolution = 0.1;
   
+  int max_num_agents_ = 5;
   double field_of_view_ = 2.0944;
   double robot_theta_ = 0.0;
   geometry_msgs::msg::Pose robot_pose_;

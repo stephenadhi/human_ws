@@ -27,11 +27,13 @@ PedsimRelayNode::PedsimRelayNode() : Node("pedsim_relay_node") {
   this->declare_parameter<std::string>("costmap_topic", "global_costmap/costmap"); 
   this->declare_parameter<std::string>("detected_agents_topic", "human/simulated_agents");
   this->declare_parameter<double>("field_of_view", 2.0944);
+  this->declare_parameter<int>("max_num_agents", 5);
   this->get_parameter("odom_topic", odom_topic);
   this->get_parameter("pub_frame_id", pub_frame_id_);
   this->get_parameter("costmap_topic", costmap_topic);
   this->get_parameter("detected_agents_topic", detected_agents_topic);
   this->get_parameter("field_of_view", field_of_view_);
+  this->get_parameter("max_num_agents", max_num_agents_);
   // Subscribe to robot odometry
   odom_sub_ = this->create_subscription<nav_msgs::msg::Odometry>(
         odom_topic, 10, std::bind(&PedsimRelayNode::odomCallback, this, std::placeholders::_1));
@@ -63,7 +65,8 @@ void PedsimRelayNode::odomCallback(
 
 void PedsimRelayNode::agentsCallback(
     const pedsim_msgs::msg::AgentStates::SharedPtr msg) {
-  soloco_interfaces::msg::TrackedAgents agents_;
+  soloco_interfaces::msg::TrackedAgents tracked_agents_;
+  std::map<double, soloco_interfaces::msg::TrackedAgent> closest_agents;
   int count = 0;
   for (const auto &actor : msg->agent_states) {
     double pos_x = actor.pose.position.x;
@@ -71,26 +74,28 @@ void PedsimRelayNode::agentsCallback(
     // Check if agent is insde local costmap and fov
     bool occ_flag = check_agent_in_fov_and_costmap(pos_x, pos_y);
     if (occ_flag) {
+      // Calculate robot to agent distance
+      double agent_distance = std::hypot(robot_pose_.position.x - pos_x, robot_pose_.position.y - pos_y);
       geometry_msgs::msg::PoseStamped ps_;
       soloco_interfaces::msg::TrackedAgent agent_;
       ps_.header.frame_id = pub_frame_id_;
       ps_.header.stamp = now();
-      ps_.pose.position.x = pos_x;
-      ps_.pose.position.y = pos_y;
-      tf2::Quaternion qt;
-      double theta = std::atan2(actor.pose.position.y, actor.pose.position.x);
-      qt.setRPY(0.0, 0.0, theta);
-      qt.normalize();
-      ps_.pose.orientation = tf2::toMsg(qt);
+      ps_.pose.position = actor.pose.position;
+      ps_.pose.orientation = actor.pose.orientation;
       agent_.current_pose = ps_;
       agent_.track_id = count;
-      agents_.agents.push_back(agent_);
+      closest_agents.insert(std::make_pair(agent_distance, agent_));
     }
     count++;
   }
-  agents_.header.frame_id = pub_frame_id_;
-  agents_.header.stamp = now();
-  det_agents_pub_->publish(agents_);
+  // Publish agents
+  auto it = closest_agents.begin();
+  for (int i = 0; i < max_num_agents_ && it != closest_agents.end(); ++i, ++it) {
+    tracked_agents_.agents.push_back(it->second);
+  }
+  tracked_agents_.header.frame_id = pub_frame_id_;
+  tracked_agents_.header.stamp = now();
+  det_agents_pub_->publish(tracked_agents_);
 }
 
 void PedsimRelayNode::costmapCallback(
