@@ -10,7 +10,7 @@ from visualization_msgs.msg import Marker
 from soloco_interfaces.msg import EgoTrajectory
 
 from tf2_ros import Buffer, TransformListener
-
+from tf_transformations import euler_from_quaternion
 from soloco_perception.utils import interpolatedTracklet, pose_transform
 
 class RobotTrackPublisher(Node):
@@ -28,6 +28,7 @@ class RobotTrackPublisher(Node):
         self.declare_parameter('interp_interval', 0.4)
         self.declare_parameter('delay_tolerance', 2.0)
         self.declare_parameter('max_history_length', 7)
+        self.declare_parameter('robot_radius', 0.175)
 
         # Get parameter values
         robot_odom_topic = self.get_parameter('robot_odom_topic').get_parameter_value().string_value
@@ -36,7 +37,8 @@ class RobotTrackPublisher(Node):
         self.interp_interval = self.get_parameter("interp_interval").get_parameter_value().double_value
         self.delay_tolerance = self.get_parameter("delay_tolerance").get_parameter_value().double_value
         self.max_history_length = self.get_parameter("max_history_length").get_parameter_value().integer_value 
-        
+        self.robot_radius = self.get_parameter('robot_radius').get_parameter_value().double_value
+
         # Create subscriber
         self.odom_sub = self.create_subscription(Odometry, robot_odom_topic, self.odom_callback, qos)
         
@@ -76,6 +78,17 @@ class RobotTrackPublisher(Node):
         # Add odom point to track history
         self.interpolated_tracklet.add_interpolated_point(robot_in_pub_frame, curr_time_)
         self.update_robot_track()
+
+        # Convert quaternion to yaw
+        ori = robot_in_pub_frame.pose.orientation
+        quat = (ori.x, ori.y, ori.z, ori.w)
+        robot_yaw = euler_from_quaternion(quat)
+
+        # Data for evaluator node
+        self.ego_trajectory.position = robot_in_pub_frame.pose
+        self.ego_trajectory.yaw = robot_yaw
+        self.ego_trajectory.radius = self.robot_radius
+
         # Publish robot track
         self.robot_interpolated_track_pub.publish(self.ego_trajectory)
 

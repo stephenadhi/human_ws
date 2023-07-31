@@ -8,7 +8,7 @@ import rclpy
 from rclpy.node import Node
 from soloco_evaluator import hunav_metrics
 
-from soloco_interfaces.msg import EgoTrajectory, TrackedAgents
+from soloco_interfaces.msg import EgoTrajectory, TrackedPersons
 from std_srvs.srv import Trigger
 from geometry_msgs.msg import PoseStamped
 
@@ -71,7 +71,7 @@ class HunavEvaluatorNode(Node):
             self.get_logger().info("m: %s, value: %s" % (m, self.metrics_to_compute[m]))
 
         if(self.freq > 0.0):
-            self.agents = TrackedAgents()
+            self.agents = TrackedPersons()
             self.robot = EgoTrajectory()
             self.record_timer = self.create_timer(1/self.freq, self.timer_record_callback)
 
@@ -91,7 +91,7 @@ class HunavEvaluatorNode(Node):
         else:
             self.get_logger().error("Mode not recognized. Only modes 1 or 2 are allowed")
 
-        self.agent_sub = self.create_subscription(TrackedAgents, 'human/interpolated_history', self.human_callback, 1)
+        self.agent_sub = self.create_subscription(TrackedPersons, 'human/interpolated_history', self.human_callback, 1)
         self.robot_sub = self.create_subscription(EgoTrajectory, 'robot/ego_trajectory', self.robot_callback, 1)
         # Subscribe to the robot goal
         self.goal_sub = self.create_subscription(PoseStamped, 'goal_pose', self.goal_callback, 1)

@@ -24,7 +24,7 @@ ament_python_install_package(${PROJECT_NAME})
 
 # Install python executables
 install(PROGRAMS
-        ${PROJECT_NAME}/hunav_evaluator_node.py
+        ${PROJECT_NAME}/soloco_evaluator_node.py
         DESTINATION lib/${PROJECT_NAME}
         )
 

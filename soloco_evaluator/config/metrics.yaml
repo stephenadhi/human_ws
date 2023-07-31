@@ -38,9 +38,9 @@ hunav_evaluator_node:
       intimate_space_intrusions: true
       personal_space_intrusions: true
       social_space_intrusions: true
-      group_intimate_space_intrusions: true
-      group_personal_space_intrusions: true
-      group_social_space_intrusions: true
+      group_intimate_space_intrusions: false # not implemented
+      group_personal_space_intrusions: false # not implemented
+      group_social_space_intrusions: false # not implemented
       
       
       # N. Tsoi et al., "SEAN 2.0: Formalizing and Generating Social Situations

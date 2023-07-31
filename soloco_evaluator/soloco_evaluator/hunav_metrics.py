@@ -108,7 +108,7 @@ def avg_closest_person(agents, robot):
     for i in range(len(robot)):
         min_dist = 10000 
         for agent in agents[i].agents:
-            d = euclidean_distance(robot[i].position, agent.position) - robot[i].radius - agent.radius
+            d = euclidean_distance(robot[i].position, agent.current_pose.pose) - robot[i].radius - agent.radius
             if(d < min_dist):
                 min_dist = d
                 if min_dist < 0.0:

@@ -16,3 +16,4 @@ pedsim_relay:
       delay_tolerance: 0.05     # delay tolerance for track timeout [s]
       publish_rate: 15.0        # Rate at which to publish and check whether a track is old [Hz]
       field_of_view: 2.0944     # Robot camera field of view in the real world [radians]
+      agent_radius: 0.2         # Radius of agent for evaluator node 
