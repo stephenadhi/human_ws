@@ -5,3 +5,5 @@ nav_msgs/Path       track
 geometry_msgs/Pose position
 float32 yaw
 float32 radius
+float32 linear_vel
+float32 angular_vel

@@ -88,6 +88,8 @@ class RobotTrackPublisher(Node):
         self.ego_trajectory.position = robot_in_pub_frame.pose
         self.ego_trajectory.yaw = robot_yaw
         self.ego_trajectory.radius = self.robot_radius
+        self.ego_trajectory.linear_vel = msg.twist.twist.linear.x
+        self.ego_trajectory.angular_vel = msg.twist.twist.angular.z
 
         # Publish robot track
         self.robot_interpolated_track_pub.publish(self.ego_trajectory)
