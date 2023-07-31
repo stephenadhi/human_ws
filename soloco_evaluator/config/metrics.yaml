@@ -47,8 +47,8 @@ hunav_evaluator_node:
       # for Robot Navigation," in IEEE Robotics and Automation Letters, vol. 7,
       # no. 4, pp. 11047-11054, Oct. 2022, doi: 10.1109/LRA.2022.3196783.
       completed: true
-      minimum_distance_to_target: true
-      final_distance_to_target: true
+      minimum_distance_to_target: false
+      final_distance_to_target: false
       robot_on_person_collision: true
       person_on_robot_collision: true
       time_not_moving: true
@@ -71,8 +71,8 @@ hunav_evaluator_node:
       social_force_on_robot: true
       # social work function employed in this planner:
       # https://github.com/robotics-upo/social_force_window_planner
-      social_work: true
-      obstacle_force_on_robot: true
-      obstacle_force_on_agents: true
+      social_work: false
+      obstacle_force_on_robot: false
+      obstacle_force_on_agents: false
     
 

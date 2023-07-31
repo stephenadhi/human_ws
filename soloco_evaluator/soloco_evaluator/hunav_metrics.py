@@ -4,10 +4,9 @@ import numpy as np
 import math
 import sys
 import rclpy
-from hunav_msgs.msg import Agents
-from hunav_msgs.msg import Agent
 from geometry_msgs.msg import Pose
-from hunav_evaluator.sfm import SFM
+from soloco_interfaces.msg import TrackedPerson
+from soloco_evaluator.sfm import SFM
 
 # Teaching Robot Navigation Behaviors to Optimal RRT Planners
 # Noé Pérez-Higueras, Fernando Caballero & Luis Merino
@@ -435,7 +434,7 @@ def avg_closest_pedestrian_velocity(agents, robot):
     speed_list = []
     for i in range(len(robot)):
         min_dist = 10000 
-        closest = Agent()
+        closest = TrackedPerson()
         for agent in agents[i].agents:
             d = euclidean_distance(robot[i].position, agent.position)
             if(d < min_dist):
