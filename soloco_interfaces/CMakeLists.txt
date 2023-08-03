@@ -20,6 +20,8 @@ set(msg_files
   "msg/TrackedPersons.msg"
   "msg/TrackedAgent.msg"
   "msg/TrackedAgents.msg"
+  "msg/AgentFuture.msg"
+  "msg/AgentFutures.msg"
   "msg/SetHumanAction.msg"
   "action/NavigateToXYGoal.action"
   DEPENDENCIES builtin_interfaces geometry_msgs std_msgs nav_msgs
