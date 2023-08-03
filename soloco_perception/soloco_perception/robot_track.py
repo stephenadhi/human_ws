@@ -82,11 +82,11 @@ class RobotTrackPublisher(Node):
         # Convert quaternion to yaw
         ori = robot_in_pub_frame.pose.orientation
         quat = (ori.x, ori.y, ori.z, ori.w)
-        robot_yaw = euler_from_quaternion(quat)
+        ori_euler = euler_from_quaternion(quat)
 
         # Data for evaluator node
         self.ego_trajectory.position = robot_in_pub_frame.pose
-        self.ego_trajectory.yaw = robot_yaw
+        self.ego_trajectory.yaw = float(ori_euler[2])
         self.ego_trajectory.radius = self.robot_radius
         self.ego_trajectory.linear_vel = msg.twist.twist.linear.x
         self.ego_trajectory.angular_vel = msg.twist.twist.angular.z
