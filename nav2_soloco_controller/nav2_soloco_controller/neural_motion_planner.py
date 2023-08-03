@@ -85,8 +85,10 @@ class NeuralMotionPlanner(Node):
         self.declare_parameter('sample_batch', 200) # [maximum history length]
         self.declare_parameter('interp_interval', 0.4) # [interpolation interval]
         self.declare_parameter('controller_frequency', 20.0) # [controller frequency]
+        self.declare_parameter('visualize_future', True)
         self.declare_parameter('debug_log', False)
         
+        self.visualize_future = self.get_parameter('visualize_future').get_parameter_value().bool_value
         self.debug_log = self.get_parameter('debug_log').get_parameter_value().bool_value
 
     def initialize_node(self):
@@ -258,7 +260,7 @@ class NeuralMotionPlanner(Node):
                 self.get_logger().info(f'Distance to goal: {distance_to_goal} Goal pose achieved.')
                 self.global_goal = None
 
-            self.visualize_future(current_future)
+            self.publish_future(current_future)
         
         goal_handle.succeed()
         
@@ -267,48 +269,50 @@ class NeuralMotionPlanner(Node):
 
         return result
 
-    def visualize_future(self, current_future):
+    def publish_future(self, current_future):
         agent_marker = MarkerArray()
         for i, track in enumerate(current_future):
-            # Create a Marker message
-            marker = Marker()
-            marker.id = i + 100
-            marker.header.frame_id = self.pub_frame_id
-            marker.header.stamp = self.get_clock().now().to_msg()
-            marker.type = marker.LINE_STRIP
-            marker.action = marker.ADD
-            marker.lifetime = Duration(seconds=0.05).to_msg()
-            marker.scale.x = 0.05
-            if i == 0:
-                marker.color.r = 0.0
-                marker.color.g = 1.0
-                marker.color.b = 0.0
-                marker.color.a = 1.0
-            else:
-                marker.color.r = 1.0
-                marker.color.g = 0.5
-                marker.color.b = 0.0
-                marker.color.a = 1.0
-            # Set the pose of the Marker message
-            marker.pose.orientation.w = 1.0
+            if self.visualize_future:
+                # Create a Marker message
+                marker = Marker()
+                marker.id = i + 100
+                marker.header.frame_id = self.pub_frame_id
+                marker.header.stamp = self.get_clock().now().to_msg()
+                marker.type = marker.LINE_STRIP
+                marker.action = marker.ADD
+                marker.lifetime = Duration(seconds=0.05).to_msg()
+                marker.scale.x = 0.05
+                if i == 0:
+                    marker.color.r = 0.0
+                    marker.color.g = 1.0
+                    marker.color.b = 0.0
+                    marker.color.a = 1.0
+                else:
+                    marker.color.r = 1.0
+                    marker.color.g = 0.5
+                    marker.color.b = 0.0
+                    marker.color.a = 1.0
+                # Set the pose of the Marker message
+                marker.pose.orientation.w = 1.0
 
-            # Get the last observed position for the current agent
-            last_observed_pos = self.ped_pos_xy_cem[-1, i]
-            last_point = Point()
-            last_point.x = float(last_observed_pos[0])
-            last_point.y = float(last_observed_pos[1])
-            track_points = [last_point]
-            
-            # Append future
-            for point in track:
-                p = Point()
-                p.x = float(point[0])
-                p.y = float(point[1])
-                track_points.append(p)
-            marker.points = track_points
-            agent_marker.markers.append(marker)
+                # Get the last observed position for the current agent
+                last_observed_pos = self.ped_pos_xy_cem[-1, i]
+                last_point = Point()
+                last_point.x = float(last_observed_pos[0])
+                last_point.y = float(last_observed_pos[1])
+                track_points = [last_point]
+                
+                # Append future
+                for point in track:
+                    p = Point()
+                    p.x = float(point[0])
+                    p.y = float(point[1])
+                    track_points.append(p)
+                marker.points = track_points
+                agent_marker.markers.append(marker)
 
-        self.agent_future_publisher.publish(agent_marker) 
+        if self.visualize_future:
+            self.agent_future_publisher.publish(agent_marker) 
 
 
 def main(args=None):

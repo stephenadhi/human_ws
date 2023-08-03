@@ -40,4 +40,5 @@ nav2_soloco_controller:
     interp_interval: 0.4    # [s]
     sample_batch: 1000      # For staying at 20 Hz: MPPI 1000, CEM 200
 
+    visualize_future: True
     debug_log: False
