@@ -22,7 +22,8 @@ nav2_soloco_controller:
     robot_track_topic: 'robot/ego_trajectory'
     human_track_topic: 'human/interpolated_history'
     subgoal_marker_topic: 'visualization/subgoal'
-    future_topic: 'visualization/predicted_future'
+    future_topic: 'soloco/predicted_future'
+    future_marker_topic: 'visualization/predicted_future'
     pub_frame_id: 'locobot/odom'
     # Robot parameters
     robot_model: "differential_drive"
@@ -40,5 +41,6 @@ nav2_soloco_controller:
     interp_interval: 0.4    # [s]
     sample_batch: 1000      # For staying at 20 Hz: MPPI 1000, CEM 200
 
+    agent_radius: 0.25
     visualize_future: True
     debug_log: False
