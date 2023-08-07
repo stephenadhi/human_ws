@@ -281,10 +281,11 @@ class NeuralMotionPlanner(Node):
             future = AgentFuture()
             future.track_id = i
             future.radius = self.agent_radius
-            pose = Pose()
-            pose.position.x = float(point[0])
-            pose.position.y = float(point[1])
-            future.track.poses.append(pose)
+            pose = PoseStamped()
+            for point in track:
+                pose.pose.position.x = float(point[0])
+                pose.pose.position.y = float(point[1])
+                future.track.poses.append(pose)
             agent_futures.tracks.append(future)
             if self.visualize_future:
                 # Create a Marker message
