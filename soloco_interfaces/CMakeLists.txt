@@ -16,6 +16,7 @@ find_package(nav_msgs REQUIRED)
 
 set(msg_files
   "msg/EgoTrajectory.msg"
+  "msg/EvaluationMetrics.msg"
   "msg/TrackedPerson.msg"
   "msg/TrackedPersons.msg"
   "msg/TrackedAgent.msg"
