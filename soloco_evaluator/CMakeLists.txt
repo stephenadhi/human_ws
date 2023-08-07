@@ -7,15 +7,25 @@ endif()
 
 # find dependencies
 find_package(ament_cmake REQUIRED)
+find_package(ament_cmake_python REQUIRED)
+find_package(rclcpp REQUIRED)
+find_package(rclpy  REQUIRED)
+find_package(geometry_msgs REQUIRED)
+find_package(nav_msgs REQUIRED)
+find_package(soloco_interfaces REQUIRED)
 
+set(dependencies
+    rclcpp
+    soloco_interfaces
+    geometry_msgs
+    nav_msgs
+)
 
-add_executable(soloco_evaluator src/soloco_evaluator.cpp)
-target_include_directories(soloco_evaluator PUBLIC
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-  $<INSTALL_INTERFACE:include>)
-target_compile_features(soloco_evaluator PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
+include_directories(include)
+add_executable(prediction_evaluator src/prediction_evaluator.cpp)
+ament_target_dependencies(prediction_evaluator ${dependencies})
 
-install(TARGETS soloco_evaluator
+install(TARGETS prediction_evaluator
   DESTINATION lib/${PROJECT_NAME})
 
 
@@ -37,12 +47,7 @@ install(DIRECTORY
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
-  # the following line skips the linter which checks for copyrights
-  # comment the line when a copyright and license is added to all source files
   set(ament_cmake_copyright_FOUND TRUE)
-  # the following line skips cpplint (only works in a git repo)
-  # comment the line when this package is in a git repo and when
-  # a copyright and license is added to all source files
   set(ament_cmake_cpplint_FOUND TRUE)
   ament_lint_auto_find_test_dependencies()
 endif()
