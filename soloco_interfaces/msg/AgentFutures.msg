@@ -2,4 +2,4 @@
 #
 
 std_msgs/Header     header      # Header containing timestamp etc. of this message
-AgentFuture[]     tracks      # All persons that are currently being tracked
+AgentFuture[]     futures      # All persons that are currently being tracked
