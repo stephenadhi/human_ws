@@ -27,6 +27,7 @@ private:
   std::shared_ptr<const std::vector<soloco_interfaces::msg::AgentFuture>> agent_futures_;
 
   float agent_radius_;
+  int occupied_threshold_;
 };
 
 #endif  // PREDICTION_EVALUATOR_HPP_

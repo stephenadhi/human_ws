@@ -9,10 +9,12 @@ PredictionEvaluator::PredictionEvaluator() : Node("prediction_evaluator")
   this->declare_parameter("local_costmap_topic", "local_costmap");
   this->declare_parameter("agent_futures_topic", "agent_futures");
   this->declare_parameter("evaluation_metrics_topic", "evaluation_metrics");
+  this->declare_parameter("occupied_threshold", 96); // [0 - 100]
 
   agent_radius_ = this->get_parameter("agent_radius").as_double();
   local_costmap_topic_ = this->get_parameter("local_costmap_topic").as_string();
   agent_futures_topic_ = this->get_parameter("agent_futures_topic").as_string();
+  occupied_threshold_ = this->get_parameter("agent_futures_topic").as_int();
 
   local_costmap_subscriber_ = this->create_subscription<nav_msgs::msg::OccupancyGrid>(
       local_costmap_topic_, 10, std::bind(&PredictionEvaluator::local_costmap_callback, this, std::placeholders::_1));
@@ -59,7 +61,7 @@ float PredictionEvaluator::evaluate_obstacle_agent_collision()
           int nx = x + dx;
           int ny = y + dy;
 
-          if (local_costmap_->data[ny * local_costmap_->info.width + nx] > 0) {
+          if (local_costmap_->data[ny * local_costmap_->info.width + nx] > occupied_threshold_) {
             collision = true;
             break;
           }
