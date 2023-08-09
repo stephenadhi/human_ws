@@ -1,9 +1,7 @@
 
 import numpy as np
 import math
-import sys
-from hunav_msgs.msg import Agents
-from hunav_msgs.msg import Agent
+from soloco_interfaces.msg import TrackedPerson, TrackedPersons
 from geometry_msgs.msg import Pose
 
 
@@ -44,26 +42,6 @@ class SFM():
         desiredForce = self.forceFactorDesired * (desiredDirection * agent.desiredVelocity - agentvel) / self.relaxationTime    
         return desiredForce
     
-
-
-    def computeObstacleForce(self, agent):
-
-        obstacleForce = np.array([0.0, 0.0], dtype=np.float32)
-        agentpos = np.array([agent.position.position.x, agent.position.position.y])
-        if len(agent.closest_obs)>0:
-            for obs in agent.closest_obs:
-                agentobs = np.array([obs.x, obs.y])
-                dist = np.linalg.norm(agentpos - agentobs)
-                dirvec = (agentpos - agentobs)/dist
-                dist = dist - agent.radius
-                obstacleForce += self.forceFactorObstacle * np.exp(-dist / self.forceSigmaObstacle) * dirvec
-
-            obstacleForce = obstacleForce / len(agent.closest_obs)
-            return obstacleForce
-        
-        return obstacleForce 
-    
-
     def computeSocialForceTwoAgents(self, agent1, agent2):
         '''
         It computes the social force
@@ -71,8 +49,8 @@ class SFM():
         agent2 
         '''
         socialForce = np.array([0.0, 0.0], dtype=np.float32)
-        agent2pos = np.array([agent2.position.position.x, agent2.position.position.y])
-        agent1pos = np.array([agent1.position.position.x, agent1.position.position.y])
+        agent2pos = np.array([agent2.current_pose.pose.position.x, agent2.current_pose.pose.position.y])
+        agent1pos = np.array([agent1.current_pose.pose.position.x, agent1.current_pose.pose.position.y])
         diff = agent1pos - agent2pos
         diffDirection = diff/np.linalg.norm(agent1pos - agent2pos)
 
@@ -101,8 +79,8 @@ class SFM():
         agent 
         '''
         socialForce = np.array([0.0, 0.0], dtype=np.float32)
-        for a in agents.agents:
-            if a.id == agent.id:
+        for a in agents.tracks:
+            if a.track_id == agent.track_id:
                 continue
             # force provoked by agent 'a' in agent 'agent'
             socialForce += self.computeSocialForceTwoAgents(a, agent)
@@ -115,8 +93,8 @@ class SFM():
         the social force provoked by the agents in the agent 
         '''
         socialForceMod = 0.0
-        for a in agents.agents:
-            if a.id == agent.id:
+        for a in agents.tracks:
+            if a.track_id == agent.track_id:
                 continue
             # force provoked by agent 'a' in agent 'agent'
             socialForceMod += np.linalg.norm(self.computeSocialForceTwoAgents(a, agent))
@@ -130,8 +108,8 @@ class SFM():
         rest of agents 
         '''
         socialForce = np.array([0.0, 0.0], dtype=np.float32)
-        for a in agents.agents:
-            if a.id == agent.id:
+        for a in agents.tracks:
+            if a.track_id == agent.track_id:
                 continue
             # force provoked by agent 'agent' in agent 'a'
             socialForce += self.computeSocialForceTwoAgents(agent, a)
@@ -145,8 +123,8 @@ class SFM():
         in the rest of agents 
         '''
         socialForceMod = 0.0
-        for a in agents.agents:
-            if a.id == agent.id:
+        for a in agents.tracks:
+            if a.track_id == agent.track_id:
                 continue
             # force provoked by agent 'agent' in agent 'a'
             socialForceMod += np.linalg.norm(self.computeSocialForceTwoAgents(agent, a))
@@ -163,8 +141,8 @@ class SFM():
         # compute the social work provoked by the
         # robot in the other agents
         wa = 0.0
-        for a in agents.agents:
-            if a.id == agent_robot.id:
+        for a in agents.tracks:
+            if a.track_id == agent_robot.track_id:
                 continue
             # force provoked by agent robot in agent 'a'
             wa += np.linalg.norm(self.computeSocialForceTwoAgents(agent_robot, a))

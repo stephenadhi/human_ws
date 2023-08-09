@@ -12,10 +12,10 @@ from soloco_interfaces.msg import EgoTrajectory, TrackedPersons
 from std_srvs.srv import Trigger
 from geometry_msgs.msg import PoseStamped
 
-class HunavEvaluatorNode(Node):
+class SolocoEvaluatorNode(Node):
 
     def __init__(self):
-        super().__init__("hunav_evaluator_node")
+        super().__init__("soloco_evaluator_node")
         
         name = 'hunav_evaluator'
         self.agents_list = []
@@ -198,14 +198,11 @@ class HunavEvaluatorNode(Node):
         beh_active = [0]*len(self.agents_list)
         i=0
         for (la, lr) in zip(self.agents_list, self.robot_list):
-            ag = Agents()
+            ag = TrackedPersons()
             ag.header = la.header
-            for a in la.agents:
-                if a.behavior == behavior:
-                    ag.agents.append(a)
-                if a.behavior_state != a.BEH_NO_ACTIVE:
-                    beh_active[i]=1
-            if len(ag.agents) > 0:
+            for a in la.tracks:
+                ag.tracks.append(a)
+            if len(ag.tracks) > 0:
                 beh_agents.append(ag)
                 beh_robot.append(lr)  
             else:
@@ -295,7 +292,7 @@ class HunavEvaluatorNode(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-    node = HunavEvaluatorNode()
+    node = SolocoEvaluatorNode()
     rclpy.spin(node)
     node.destroy_node()
     rclpy.shutdown()

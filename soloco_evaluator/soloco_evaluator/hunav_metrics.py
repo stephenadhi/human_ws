@@ -14,42 +14,19 @@ from soloco_evaluator.sfm import SFM
 def euclidean_distance(pose, pose1):
     return math.sqrt((pose.position.x - pose1.position.x)**2 + (pose.position.y - pose1.position.y)**2)
 
-def get_group_center(agents_i, group_id, distance):
-    group = []
-    for agent in agents_i:
-        if agent.group_id == group_id:
-            pose = Pose()
-            pose.position.x = agent.position.position.x + (distance * math.cos(agent.yaw))
-            pose.position.y = agent.position.position.y + (distance * math.sin(agent.yaw))
-            group.append(pose)
-
-    interaction_center = Pose()    
-    for p in group:
-        interaction_center.position.x += p.position.x
-        interaction_center.position.y += p.position.y
-    
-    interaction_center.position.x = float(interaction_center.position.x/len(group))
-    interaction_center.position.y = float(interaction_center.position.y/len(group))
-    return interaction_center
-
 def indicator_function(norm, k):
     if k == 'intimate':
-        if norm < 0.45:
+        if norm < 0.3:
             return 1
         else:
             return 0
     elif k == 'personal':
-        if norm >= 0.45 and norm < 1.2:
+        if norm >= 0.3 and norm < 0.5:
             return 1
         else:
             return 0
     elif k == 'social':
-        if norm >= 1.2 and norm < 3.6:
-            return 1
-        else:
-            return 0
-    elif k == 'public':
-        if norm >= 3.6:
+        if norm >= 0.5 and norm < 1.5:
             return 1
         else:
             return 0
@@ -106,13 +83,13 @@ def avg_closest_person(agents, robot):
     avg_dist = 0
     for i in range(len(robot)):
         min_dist = 10000 
-        for agent in agents[i].agents:
+        for agent in agents[i].tracks:
             d = euclidean_distance(robot[i].position, agent.current_pose.pose) - robot[i].radius - agent.radius
             if(d < min_dist):
                 min_dist = d
                 if min_dist < 0.0:
                     min_dist = 0.0
-        if(len(agents[i].agents)>0):
+        if(len(agents[i].tracks)>0):
             avg_dist += min_dist
             min_dist_list.append(min_dist)
 
@@ -125,8 +102,8 @@ def minimum_distance_to_people(agents, robot):
     min_distance = list()
 
     for i in range(len(robot)):
-        for agent in agents[i].agents:
-            d = euclidean_distance(robot[i].position, agent.position) - robot[i].radius - agent.radius
+        for agent in agents[i].tracks:
+            d = euclidean_distance(robot[i].position, agent.current_pose.pose) - robot[i].radius - agent.radius
             if d<0.0:
                 d = 0.0
             min_distance.append(d) 
@@ -137,27 +114,14 @@ def minimum_distance_to_people(agents, robot):
 
     return [min_dist]
 
-def maximum_distance_to_people(agents, robot):
-    max_distance = list()
-
-    for i in range(len(robot)):
-        for agent in agents[i].agents:
-            max_distance.append(euclidean_distance(robot[i].position, agent.position) - robot[i].radius)
-    
-    max_dist = max(max_distance)
-    
-    print('Maximum_distance_to_people: %.2f m' % max_dist)
-
-    return [max_dist]
-
 def space_intrusions(agents, robot, k):
     space_intrusions = 0
     space_intrusions_list = [0] * len(robot)
 
     for i in range(len(robot)):
         min_dist = 10000
-        for agent in agents[i].agents:
-            d = euclidean_distance(robot[i].position, agent.position) - robot[i].radius - agent.radius
+        for agent in agents[i].tracks:
+            d = euclidean_distance(robot[i].position, agent.current_pose.pose) - robot[i].radius - agent.radius
             if d < min_dist:
                 min_dist = d
                 if min_dist < 0.0:
@@ -187,55 +151,6 @@ def social_space_intrusions(agents, robot):
     print('Social_space_intrusions: %.2f %% of the total time' % percentage)
     return [percentage, slist]
 
-def detect_groups(agents):
-    group_ids = []
-    for a in agents[0].agents:
-        if(a.group_id != -1 and ((a.group_id in group_ids) == False)):
-            group_ids.append(a.group_id)
-
-    return group_ids
-
-def group_space_intrusions(agents, robot, k):
-    group_ids = detect_groups(agents)
-    if(len(group_ids)==0):
-        return [0.0]
-
-    d=1.5
-    space_intrusions = 0
-    group_list = [0] * len(robot)
-    for i in range(len(robot)):
-        min_dist = 10000
-        for id in group_ids:
-            group_center = get_group_center(agents[i].agents, id, d)
-            dist = euclidean_distance(robot[i].position, group_center.position) - robot[i].radius
-            if dist < min_dist:
-                min_dist = dist
-        indicator = indicator_function(min_dist, k)
-        if indicator == 1:
-            space_intrusions += 1
-            group_list[i] = 1
-
-    space_intrusions = space_intrusions / len(robot)
-    percentage = space_intrusions * 100.0
-
-    return [percentage, group_list]
-
-def group_intimate_space_intrusions(agents, robot):
-    r = group_space_intrusions(agents, robot, 'intimate')
-    print('Group_intimate_space_intrusions: %.2f %% of the total time' % r[0])
-    return r
-
-def group_personal_space_intrusions(agents, robot):
-    r =  group_space_intrusions(agents, robot, 'personal')
-    print('Group_personal_space_intrusions: %.2f %% of the total time' % r[0])
-    return r
-
-def group_social_space_intrusions(agents, robot):
-    r =  group_space_intrusions(agents, robot, 'social')
-    print('Group_social_space_intrusions: %.2f %% of the total time' % r[0])
-    return r          
-
-
 # SEAN 2.0: Formalizing and Generating Social Situations for Robot Navigation
 # Nathan Tsoi, Alec Xiang, Peter Yu, Samuel S. Sohn, Greg Schwartz, Subashri Ramesh, Mohamed Hussein, Anjali W. Gupta, Mubbasir Kapadia, and Marynel Vázquez
 
@@ -250,18 +165,18 @@ def collisions(agents, robot):
     person_collisions = 0
 
     for i in range(len(robot)):
-        for agent in agents[i].agents:
+        for agent in agents[i].tracks:
 
-            if euclidean_distance(robot[i].position, agent.position) - robot[i].radius - agent.radius < 0.02:
+            if euclidean_distance(robot[i].position, agent.current_pose.pose) - robot[i].radius - agent.radius < 0.02:
                 
                 # Robot's angle
-                nrx = (robot[i].position.position.x - agent.position.position.x) * math.cos(agent.yaw) + (robot[i].position.position.y - agent.position.position.y) * math.sin(agent.yaw)
-                nry = -(robot[i].position.position.x - agent.position.position.x) * math.sin(agent.yaw) + (robot[i].position.position.y - agent.position.position.y) * math.cos(agent.yaw)
+                nrx = (robot[i].position.position.x - agent.current_pose.pose.position.x) * math.cos(agent.yaw) + (robot[i].position.position.y - agent.current_pose.pose.position.y) * math.sin(agent.yaw)
+                nry = -(robot[i].position.position.x - agent.current_pose.pose.position.x) * math.sin(agent.yaw) + (robot[i].position.position.y - agent.current_pose.pose.position.y) * math.cos(agent.yaw)
                 alpha = math.atan2(nry, nrx)
 
                 # Agent's angle
-                nrx = (agent.position.position.x - robot[i].position.position.x) * math.cos(robot[i].yaw) + (agent.position.position.y - robot[i].position.position.y) * math.sin(robot[i].yaw)
-                nry = -(agent.position.position.x - robot[i].position.position.x) * math.sin(robot[i].yaw) + (agent.position.position.y - robot[i].position.position.y) * math.cos(robot[i].yaw)
+                nrx = (agent.current_pose.pose.position.x - robot[i].position.position.x) * math.cos(robot[i].yaw) + (agent.current_pose.pose.position.y - robot[i].position.position.y) * math.sin(robot[i].yaw)
+                nry = -(agent.current_pose.pose.position.x - robot[i].position.position.x) * math.sin(robot[i].yaw) + (agent.current_pose.pose.position.y - robot[i].position.position.y) * math.cos(robot[i].yaw)
                 alpha2 = math.atan2(nrx, nry)
 
                 if abs(alpha) < abs(alpha2) and robot[i].linear_vel > agent.linear_vel:
@@ -310,34 +225,6 @@ def time_not_moving(agents, robot):
     time_stopped = time_step*count
     print('Time stopped: %i secs' % time_stopped)
     return [time_stopped, not_moving]
-
-def goal_reached(agents, robot):
-    mind = 0.0
-    if(len(robot[-1].goals)):
-        for g in robot[-1].goals:
-            d = euclidean_distance(robot[-1].position, g) - robot[-1].goal_radius
-            if d<mind:
-                return [True]
-    return [False]
-   
-def final_goal_distance(agents, robot):
-    min_dist = 10000
-    if(len(robot[-1].goals)):
-        for g in robot[-1].goals:
-            d = euclidean_distance(robot[-1].position, g)
-            if d<min_dist:
-                min_dist = d
-    return [min_dist]
-    
-def minimum_goal_distance(agents, robot):
-    min_dist = 10000
-    for r in robot:
-        if(len(r.goals)):
-            for g in r.goals:
-                d = euclidean_distance(r.position, g)
-                if d<min_dist:
-                    min_dist = d
-    return [min_dist]
 
 # SocNavBench: A Grounded Simulation Testing Framework for Evaluating Social Navigation
 #ABHIJAT BISWAS, ALLAN WANG, GUSTAVO SILVERA, AARON STEINFELD, and HENNY AD-MONI, Carnegie Mellon University
@@ -413,46 +300,6 @@ def avg_overacceleration(agents, robot):
 # Learning a Group-Aware Policy for Robot Navigation
 # Kapil Katyal ∗1,2 , Yuxiang Gao ∗2 , Jared Markowitz 1 , Sara Pohland 3 , Corban Rivera 1 , I-Jeng Wang 1 , Chien-Ming Huang 2
 
-def avg_pedestrian_velocity(agents, robot):
-    speed = 0
-    speed_list = []
-    for i in range(len(agents)):
-        speed2 = 0.0
-        for agent in agents[i].agents:
-            speed += agent.linear_vel
-            speed2 += agent.linear_vel
-        speed_list.append(speed2/len(agents[i].agents))
-
-    speed = speed / (len(agents) * len(agents[0].agents))
-
-    print('Average_Pedestrian_speed: %.2f m/s' % speed)
-    
-    return [speed, speed_list]
-
-def avg_closest_pedestrian_velocity(agents, robot):
-    speed = 0
-    speed_list = []
-    for i in range(len(robot)):
-        min_dist = 10000 
-        closest = TrackedPerson()
-        for agent in agents[i].agents:
-            d = euclidean_distance(robot[i].position, agent.position)
-            if(d < min_dist):
-                min_dist = d
-                closest = agent
-                if min_dist < 0.0:
-                    min_dist = 0.0
-        
-        speed += closest.linear_vel
-        speed_list.append(closest.linear_vel)
-    
-    speed = speed/len(robot)
-    print('Speed average closest person: %.2f m/s' % speed)
-    return [speed, speed_list]
-
-def avg_pedestrian_angle(agents, robot):
-    pass
-
 # metrics based on social force model
 
 # cumulative modulus of the social force provoked 
@@ -479,43 +326,6 @@ def social_force_on_robot(agents, robot):
         sf_list.append(f)
     return [sf, sf_list]
 
-# cumulative social work employed in this planner:
-# https://github.com/robotics-upo/social_force_window_planner
-def social_work(agents, robot):
-    sfm = SFM()
-    sw = 0.0
-    sw_list = []
-    for agts, rb in zip(agents, robot):
-        f = sfm.computeSocialWork(rb, agts)
-        sw += f
-        sw_list.append(f)
-    return [sw, sw_list]
-
-# cumulative obstacle force on the agents
-def obstacle_force_on_agents(agents, robot):
-    sfm = SFM()
-    of = 0.0
-    of_list = []
-    for agts in agents:
-        avg = 0.0
-        for a in agts.agents:
-            avg += np.linalg.norm(sfm.computeObstacleForce(a))
-        avg =avg/len(agts.agents)
-        of += avg
-        of_list.append(avg)
-    return [of, of_list]
-
-# cumulative obstacle force on the robot
-def obstacle_force_on_robot(agents, robot):
-    sfm = SFM()
-    of = 0.0
-    of_list = []
-    for r in robot:
-        f = np.linalg.norm(sfm.computeObstacleForce(r))
-        of += f
-        of_list.append(f)
-    return [of, of_list]
-
 #TODO
 def path_irregularity(agents, robot):
     pass
@@ -523,26 +333,6 @@ def path_irregularity(agents, robot):
 #TODO
 def path_efficiency(agents, robot):
     pass
-
-# TODO
-def static_obs_collision(agents, robot):
-    pass
-
-
-# Evaluation of Socially-Aware Robot Navigation
-# Yuxiang Gao * and Chien-Ming Huang
-# Department of Computer Science, The Johns Hopkins University, Baltimore, MD, United States
-
-# TODO: 
-# Average Displacement Error --> Trajectory needed
-# Final Displacement Error --> Trajectory needed
-# Asymmetric Dynamic Time Warping --> Trajectory needed
-# Topological Complexity --> Path needed
-# Path irregularity and Path efficiency are similar to the ones in SEAN paper .
-# Personal space and o/p/r-space metrics are similar to the ones in Teaching Robot Navigation Behaviors to Optimal RRT Planners paper.
-
-
-
 
 metrics = {
     # N. Perez-Higueras, F. Caballero, and L. Merino, “Teaching Robot Nav-
@@ -553,13 +343,9 @@ metrics = {
     'cumulative_heading_changes': cumulative_heading_changes,
     'avg_distance_to_closest_person': avg_closest_person,
     'minimum_distance_to_people': minimum_distance_to_people,
-    'maximum_distance_to_people': maximum_distance_to_people,
     'intimate_space_intrusions': intimate_space_intrusions,
     'personal_space_intrusions': personal_space_intrusions,
     'social_space_intrusions': social_space_intrusions,
-    'group_intimate_space_intrusions': group_intimate_space_intrusions,
-    'group_personal_space_intrusions': group_personal_space_intrusions,
-    'group_social_space_intrusions': group_social_space_intrusions,
     # N. Tsoi, A. Xiang, P. Yu, S. S. Sohn, G. Schwartz, S. Ramesh,
     # M. Hussein, A. W. Gupta, M. Kapadia, and M. V ́azquez, “Sean 2.0:
     # Formalizing and generating social situations for robot navigation,”
@@ -575,11 +361,6 @@ metrics = {
     # true when the robot's final pose is within a specified distance of the goal. 
     # The final distance threshold is easily adjustable by the user, but defaults 
     # to 1.2m.
-    'completed': goal_reached,
-    #(meters): the closest the robot passes to the target position.
-    'minimum_distance_to_target': minimum_goal_distance,  
-    #(meters): distance between the last robot position and the target position.
-    'final_distance_to_target': final_goal_distance, 
     #   - 'Robot on Person Personal Distance Violation': number of times a robot 
     # approaches a person within the personal distance of the robot.
     # Similar to 'personal_space_intrusions'
@@ -592,8 +373,6 @@ metrics = {
     'robot_on_person_collision': robot_on_person_collision,
     'person_on_robot_collision': person_on_robot_collision,
     'time_not_moving': time_not_moving,
-    # TODO: 'static_obstacle_collision': static_obs_collision,
-    # number of times the robot collides with a static obstacle.
 
     # SocNavBench: A Grounded Simulation Testing Framework for Evaluating Social Navigation
     #ABHIJAT BISWAS, ALLAN WANG, GUSTAVO SILVERA, AARON STEINFELD, and HENNY AD-MONI, Carnegie Mellon University
@@ -602,17 +381,9 @@ metrics = {
     'avg_acceleration': avg_acceleration,
     'avg_overacceleration': avg_overacceleration,
 
-    # Learning a Group-Aware Policy for Robot Navigation
-    # Kapil Katyal ∗1,2 , Yuxiang Gao ∗2 , Jared Markowitz 1 , Sara Pohland 3 , Corban Rivera 1 , I-Jeng Wang 1 , Chien-Ming Huang 2
-    'avg_pedestrian_velocity': avg_pedestrian_velocity,
-    'avg_closest_pedestrian_velocity': avg_closest_pedestrian_velocity,
-
     # metrics based on Social Force Model employed in different papers
     'social_force_on_agents': social_force_on_agents,
     'social_force_on_robot': social_force_on_robot,
-    'social_work': social_work,
-    'obstacle_force_on_robot': obstacle_force_on_robot,
-    'obstacle_force_on_agents': obstacle_force_on_agents,
 }
 
 
