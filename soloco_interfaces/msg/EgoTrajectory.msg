@@ -3,6 +3,8 @@ nav_msgs/Path       track
 
 # For evaluator node
 geometry_msgs/Pose position
+geometry_msgs/Pose[] goals
+float32 goal_radius
 float32 yaw
 float32 radius
 float32 linear_vel
