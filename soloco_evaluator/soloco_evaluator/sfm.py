@@ -20,27 +20,6 @@ class SFM():
         self.n = 2.0
         self.nPrime = 3.0
         self.relaxationTime = 0.5
-
-
-    def computeDesiredForce(self, agent):
-        
-        desiredForce = np.array([0.0, 0.0], dtype=np.float32)
-        agentvel = np.array([agent.velocity.linear.x, agent.velocity.linear.y])
-        if len(agent.goals) == 0:
-            desiredForce = -agentvel / self.relaxationTime 
-            return desiredForce
-
-        agentpos = np.array([agent.position.position.x, agent.position.position.y])
-        agentgoal = np.array([agent.goals[0].position.x, agent.goals[0].position.y])
-        dist = np.linalg.norm(agentgoal - agentpos)
-        desiredDirection = (agentgoal - agentpos) / dist
-
-        if (dist < agent.goal_radius):
-            desiredForce = -agentvel / self.relaxationTime 
-            return desiredForce
-
-        desiredForce = self.forceFactorDesired * (desiredDirection * agent.desiredVelocity - agentvel) / self.relaxationTime    
-        return desiredForce
     
     def computeSocialForceTwoAgents(self, agent1, agent2):
         '''
@@ -54,8 +33,12 @@ class SFM():
         diff = agent1pos - agent2pos
         diffDirection = diff/np.linalg.norm(agent1pos - agent2pos)
 
-        agent2vel = np.array([agent2.velocity.linear.x, agent2.velocity.linear.y])
-        agent1vel = np.array([agent1.velocity.linear.x, agent1.velocity.linear.y])
+        agent1_vel_x = (agent1.track.poses[-1].pose.position.x - agent1.track.poses[-2].pose.position.x) / 0.4
+        agent1_vel_y = (agent1.track.poses[-1].pose.position.y - agent1.track.poses[-2].pose.position.y) / 0.4
+        agent2_vel_x = (agent2.track.poses[-1].pose.position.x - agent2.track.poses[-2].pose.position.x) / 0.4
+        agent2_vel_y = (agent2.track.poses[-1].pose.position.y - agent2.track.poses[-2].pose.position.y) / 0.4
+        agent2vel = np.array([agent2_vel_x, agent2_vel_y])
+        agent1vel = np.array([agent1_vel_x, agent1_vel_y])
         velDiff = agent2vel - agent1vel
         interactionVector = self.lambda_ * velDiff + diffDirection
         interactionLength = np.linalg.norm(interactionVector)
@@ -129,25 +112,6 @@ class SFM():
             # force provoked by agent 'agent' in agent 'a'
             socialForceMod += np.linalg.norm(self.computeSocialForceTwoAgents(agent, a))
         return socialForceMod 
-
-
-    def computeSocialWork(self, agent_robot, agents):
-
-        # compute social work of the robot
-        socForceRobot = self.computeSocialForce(agent_robot, agents)
-        obsForceRobot = self.computeObstacleForce(agent_robot)
-        wr = np.linalg.norm(socForceRobot) + np.linalg.norm(obsForceRobot)
-
-        # compute the social work provoked by the
-        # robot in the other agents
-        wa = 0.0
-        for a in agents.tracks:
-            if a.track_id == agent_robot.track_id:
-                continue
-            # force provoked by agent robot in agent 'a'
-            wa += np.linalg.norm(self.computeSocialForceTwoAgents(agent_robot, a))
-
-        return wr + wa
 
     def normalize_angle(self, theta):
         # theta should be in the range [-pi, pi]

@@ -226,6 +226,15 @@ def time_not_moving(agents, robot):
     print('Time stopped: %i secs' % time_stopped)
     return [time_stopped, not_moving]
 
+def goal_reached(agents, robot):
+    mind = 0.0
+    if(len(robot[-1].goals)):
+        for g in robot[-1].goals:
+            d = euclidean_distance(robot[-1].position, g) - robot[-1].goal_radius
+            if d<mind:
+                return [True]
+    return [False]
+
 # SocNavBench: A Grounded Simulation Testing Framework for Evaluating Social Navigation
 #ABHIJAT BISWAS, ALLAN WANG, GUSTAVO SILVERA, AARON STEINFELD, and HENNY AD-MONI, Carnegie Mellon University
 
@@ -335,6 +344,7 @@ def path_efficiency(agents, robot):
     pass
 
 metrics = {
+    'completed': goal_reached,
     # N. Perez-Higueras, F. Caballero, and L. Merino, “Teaching Robot Nav-
     # igation Behaviors to Optimal RRT Planners,” International Journal of
     # Social Robotics, vol. 10, no. 2, pp. 235–249, 2018.
