@@ -1,0 +1,66 @@
+// useful source: https://github.com/athackst/vscode_ros2_workspace
+{
+    "name": "locobot-development",
+    "dockerFile": "../docker/Dockerfile",
+	"build": {
+		"args": {
+			"WORKSPACE": "${containerWorkspaceFolder}"
+		}
+	},
+    "remoteUser": "ros-user",
+    "workspaceMount": "source=${localWorkspaceFolder},target=/workspaces/locobot,type=bind",
+    "workspaceFolder": "/workspaces/locobot",
+    "runArgs": [
+        "--network=host",
+        "--ipc=host",
+        "--runtime=nvidia",
+        "--gpus", "all",
+        "--cap-add=SYS_PTRACE",
+        "--security-opt=seccomp:unconfined",
+        "--security-opt=apparmor:unconfined",
+        "--volume=/tmp/.X11-unix:/tmp/.X11-unix",
+        "--device=/dev/ttyUSB*",
+        "--interactive",
+        "--privileged"
+    ],
+    //Linux GUI
+    "containerEnv": { "DISPLAY": "${localEnv:DISPLAY}",
+                        "NVIDIA_VISIBLE_DEVICES": "all",
+                        "NVIDIA_DRIVER_CAPABILITIES": "all",
+                        "WAYLAND_DISPLAY": "${localEnv:WAYLAND_DISPLAY}",
+                        "XDG_RUNTIME_DIR": "${localEnv:XDG_RUNTIME_DIR}",
+                        "PULSE_SERVER": "${localEnv:PULSE_SERVER}",
+                        "LIBGL_ALWAYS_SOFTWARE": "1" // Needed for software rendering of opengl
+                    },
+    //WIndows GUI
+    //"containerEnv": { "DISPLAY": "host.docker.internal:0.0" },
+
+    // Set *default* container specific settings.json values on container create.
+    "settings": {
+        "terminal.integrated.profiles.linux": {
+            "bash": {
+                "path": "bash"
+            },
+        },
+        "terminal.integrated.defaultProfile.linux": "bash"
+    },
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"althack.ament-task-provider",
+				"betwo.b2-catkin-tools",
+				"DotJoshJohnson.xml",
+				"ms-azuretools.vscode-docker",
+				"ms-iot.vscode-ros",
+				"ms-python.python",
+				"ms-vscode.cpptools",
+				"redhat.vscode-yaml",
+				"smilerobotics.urdf",
+				"streetsidesoftware.code-spell-checker",
+				"twxs.cmake",
+				"yzhang.markdown-all-in-one",
+				"zachflower.uncrustify"
+			]
+		}
+	}
+}
