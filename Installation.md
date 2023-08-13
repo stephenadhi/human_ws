@@ -1,9 +1,7 @@
 ## Installation
 1. Make a ROS 2 workspace folder and clone this repository inside src/ folder
     ```
-    mkdir -p workspaces/humble/src
-    git clone --recursive https://git.uni-due.de/locobot/human_ws.git
-    git submodule update --init --recursive
+    git clone --recursive https://github.com/stephenadhi/human_ws.git
     ```
 2. Clone Interbotix Locobot packages
     ```
@@ -14,7 +12,7 @@
     ```
 2. Clone navigation2 from source (optional, necessary for using MPPI controller)
     ```
-    git clone -b humble https://github.com/ros-planning/navigation2.git
+    git clone -b humble https://github.com/stephenadhi/navigation2.git
     ```
 
 3. Clone Pedestrian Simulator (optional, otherwise create COLCON_IGNORE for pedsim_relay package)
@@ -23,8 +21,9 @@
     ```
 4. Install ROS dependencies
     ```
-    cd workspaces/humble/
+    cd <your_workspace>
     rosdep install -i -y -r --from-paths src --rosdistro humble
+    sudo apt install ros-humble-dynamixel-workbench-toolbox
     ```
 
 5. Build everything inside the workspace
@@ -36,5 +35,5 @@
 
 6. Define robot base type and model
    ```
-   export INTERBOTIX_XSLOCOBOT_BASE_TYPE=kobuki
-   export INTERBOTIX_XSLOCOBOT_ROBOT_MODEL=locobot_base
+   echo "export INTERBOTIX_XSLOCOBOT_BASE_TYPE=kobuki" >> ~/.bashrc
+   echo "export INTERBOTIX_XSLOCOBOT_ROBOT_MODEL=locobot_base" >> ~/.bashrc
