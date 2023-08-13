@@ -19,11 +19,12 @@
     ```
     git clone -b humble https://github.com/stephenadhi/pedsim_ros.git
     ```
-4. Install ROS dependencies
+4. Install dependencies
     ```
     cd <your_workspace>
     rosdep install -i -y -r --from-paths src --rosdistro humble
     sudo apt install ros-humble-dynamixel-workbench-toolbox
+    pip3 install -r requirements.txt
     ```
 
 5. Build everything inside the workspace
