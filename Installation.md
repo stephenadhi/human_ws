@@ -1,4 +1,5 @@
-## Installation
+## Manual Installation
+This documentation provides the instruction for manual installation. For ease of use, we provided a Dockerfile for both development and deployment.
 1. Make a ROS 2 workspace folder and clone this repository inside src/ folder
     ```
     git clone --recursive https://github.com/stephenadhi/human_ws.git
@@ -23,13 +24,12 @@
     ```
     cd <your_workspace>
     rosdep install -i -y -r --from-paths src --rosdistro humble
-    sudo apt install ros-humble-dynamixel-workbench-toolbox
     pip3 install -r requirements.txt
     ```
 
 5. Build everything inside the workspace
    ```
-    colcon build --packages-select zed_interfaces soloco_interfaces pedsim_msgs interbotix_xs_msgs interbotix_xs_driver
+    colcon build --packages-select zed_interfaces soloco_interfaces pedsim_msgs interbotix_xs_msgs interbotix_xs_driver dynamixel_workbench_toolbox
     source install/setup.bash
     colcon build
    ```
