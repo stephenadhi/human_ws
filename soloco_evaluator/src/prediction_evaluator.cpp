@@ -14,7 +14,7 @@ PredictionEvaluator::PredictionEvaluator() : Node("prediction_evaluator")
   agent_radius_ = this->get_parameter("agent_radius").as_double();
   local_costmap_topic_ = this->get_parameter("local_costmap_topic").as_string();
   agent_futures_topic_ = this->get_parameter("agent_futures_topic").as_string();
-  occupied_threshold_ = this->get_parameter("occupied_threshold_").as_int();
+  occupied_threshold_ = this->get_parameter("occupied_threshold").as_int();
 
   local_costmap_subscriber_ = this->create_subscription<nav_msgs::msg::OccupancyGrid>(
       local_costmap_topic_, 10, std::bind(&PredictionEvaluator::local_costmap_callback, this, std::placeholders::_1));
