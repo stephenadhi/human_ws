@@ -7,7 +7,6 @@
 			"WORKSPACE": "${containerWorkspaceFolder}"
 		}
 	},
-    "remoteUser": "ros-user",
     "workspaceMount": "source=${localWorkspaceFolder},target=/workspaces/locobot,type=bind",
     "workspaceFolder": "/workspaces/locobot",
     "runArgs": [
