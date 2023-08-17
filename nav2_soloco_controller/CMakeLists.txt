@@ -81,24 +81,20 @@ install(DIRECTORY include/
   DESTINATION include/
 )
 
-add_executable(subgoal_publisher src/subgoal_publisher.cpp)
-ament_target_dependencies(subgoal_publisher
+add_executable(subgoal_visualizer src/subgoal_visualizer.cpp)
+ament_target_dependencies(subgoal_visualizer
        rclcpp
        geometry_msgs
        nav_msgs
        visualization_msgs
        )
-install(TARGETS subgoal_publisher
+install(TARGETS subgoal_visualizer
   DESTINATION lib/${PROJECT_NAME})
 
 # Install Python modules
 ament_python_install_package(${PROJECT_NAME})
 
 # Install python executables
-install(PROGRAMS
-        ${PROJECT_NAME}/global_nav2_client.py
-        DESTINATION lib/${PROJECT_NAME}
-        )
 install(PROGRAMS
         ${PROJECT_NAME}/neural_motion_planner.py
         DESTINATION lib/${PROJECT_NAME}

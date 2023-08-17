@@ -29,6 +29,7 @@
 #include "rclcpp_action/rclcpp_action.hpp"
 
 #include "soloco_interfaces/action/navigate_to_xy_goal.hpp"
+#include <visualization_msgs/msg/marker.hpp>
 
 namespace nav2_soloco_controller
 {
@@ -124,7 +125,9 @@ protected:
   double min_lookahead_dist_;
   double max_speed_;
 
+  rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr subgoal_pub_;
   rclcpp_action::Client<soloco_interfaces::action::NavigateToXYGoal>::SharedPtr soloco_client_ptr_;
+
 };
 
 }  // namespace nav2_soloco_controller

@@ -35,12 +35,15 @@ void SolocoController::configure(
   auto node = parent_.lock();
   // Get high-level controller parameters
   auto getParam = parameters_handler_->getParamGetter(name_);
-  getParam(visualize_, "visualize", false);
+  getParam(visualize_, "visualize", true);
   getParam(max_lookahead_dist_, "max_lookahead_dist", 0.4);
   getParam(min_lookahead_dist_, "min_lookahead_dist", 2.4);
   getParam(max_speed_, "max_speed", 0.5);
   // Configure composed objects
   path_handler_.initialize(parent_, name_, costmap_ros_, tf_buffer_, parameters_handler_.get());
+  
+  // Configure subgoal publisher
+  subgoal_pub_ = node->create_publisher<geometry_msgs::msg::PoseStamped>("subgoal_pose", 10);
 
   // Configure action client
   soloco_client_ptr_ = rclcpp_action::create_client<soloco_interfaces::action::NavigateToXYGoal>(
@@ -113,6 +116,8 @@ geometry_msgs::msg::TwistStamped SolocoController::computeVelocityCommands(
   subgoal_pose = transformed_plan.poses[idx];
   subgoal_pose.header.frame_id = "locobot/odom";
   subgoal_pose.header.stamp = node->get_clock()->now();
+
+  subgoal_pub_->publish(subgoal_pose);
 
   auto goal_msg = soloco_interfaces::action::NavigateToXYGoal::Goal();
   goal_msg.goal = subgoal_pose;
