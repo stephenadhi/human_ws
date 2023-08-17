@@ -121,6 +121,6 @@ endif()
 ament_export_libraries(${libraries})
 ament_export_dependencies(${dependencies_pkgs})
 ament_export_include_directories(include)
-pluginlib_export_plugin_description_file(nav2_soloco_controller solococ.xml)
+pluginlib_export_plugin_description_file(nav2_core solococ.xml)
 
 ament_package()
