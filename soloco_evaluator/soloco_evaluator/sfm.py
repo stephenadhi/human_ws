@@ -107,8 +107,6 @@ class SFM():
         '''
         socialForceMod = 0.0
         for a in agents.tracks:
-            if a.track_id == agent.track_id:
-                continue
             # force provoked by agent 'agent' in agent 'a'
             socialForceMod += np.linalg.norm(self.computeSocialForceTwoAgents(agent, a))
         return socialForceMod 

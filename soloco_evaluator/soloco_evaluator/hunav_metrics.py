@@ -7,6 +7,7 @@ import rclpy
 from geometry_msgs.msg import Pose
 from soloco_interfaces.msg import TrackedPerson
 from soloco_evaluator.sfm import SFM
+from tf_transformations import euler_from_quaternion
 
 # Teaching Robot Navigation Behaviors to Optimal RRT Planners
 # Noé Pérez-Higueras, Fernando Caballero & Luis Merino
@@ -166,12 +167,15 @@ def collisions(agents, robot):
 
     for i in range(len(robot)):
         for agent in agents[i].tracks:
-
+            ori = agent.current_pose.pose.orientation
+            quat = (ori.x, ori.y, ori.z, ori.w)
+            agent_ori = euler_from_quaternion(quat)
+            agent_yaw = agent_ori[2]
             if euclidean_distance(robot[i].position, agent.current_pose.pose) - robot[i].radius - agent.radius < 0.02:
                 
                 # Robot's angle
-                nrx = (robot[i].position.position.x - agent.current_pose.pose.position.x) * math.cos(agent.yaw) + (robot[i].position.position.y - agent.current_pose.pose.position.y) * math.sin(agent.yaw)
-                nry = -(robot[i].position.position.x - agent.current_pose.pose.position.x) * math.sin(agent.yaw) + (robot[i].position.position.y - agent.current_pose.pose.position.y) * math.cos(agent.yaw)
+                nrx = (robot[i].position.position.x - agent.current_pose.pose.position.x) * math.cos(agent_yaw) + (robot[i].position.position.y - agent.current_pose.pose.position.y) * math.sin(agent_yaw)
+                nry = -(robot[i].position.position.x - agent.current_pose.pose.position.x) * math.sin(agent_yaw) + (robot[i].position.position.y - agent.current_pose.pose.position.y) * math.cos(agent_yaw)
                 alpha = math.atan2(nry, nrx)
 
                 # Agent's angle

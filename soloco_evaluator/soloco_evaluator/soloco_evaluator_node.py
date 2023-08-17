@@ -70,14 +70,13 @@ class SolocoEvaluatorNode(Node):
         for m in self.metrics_to_compute.keys():
             self.get_logger().info("m: %s, value: %s" % (m, self.metrics_to_compute[m]))
 
+        self.recording_srv = self.create_service(Trigger, 'hunav_trigger_recording', self.recording_service)
+
         if(self.freq > 0.0):
             self.agents = TrackedPersons()
             self.robot = EgoTrajectory()
             self.record_timer = self.create_timer(1/self.freq, self.timer_record_callback)
 
-        if(self.mode == 1):
-            self.recording = False
-            self.recording_srv = self.create_service(Trigger, 'hunav_trigger_recording', self.recording_service)
         elif(self.mode == 2):
             if self.use_navgoal_to_start == True:
                 self.recording = False
