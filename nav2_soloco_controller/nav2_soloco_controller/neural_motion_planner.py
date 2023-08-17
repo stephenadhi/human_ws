@@ -245,13 +245,13 @@ class NeuralMotionPlanner(Node):
             distance_to_goal = hypot((self.r_pos_xy[0]-self.global_goal[0]), 
                                  (self.r_pos_xy[1]-self.global_goal[1]))
 
-            # Concatenate information about people track, robot state, and goal
-            x = np.concatenate([self.ped_pos_xy_cem.flatten(), self.neigh_matrix.flatten(), self.r_state, self.subgoal_pose[:2]])
-            # Get command from neural model forward pass, given costmap object
-            u, current_future = self.model.predict(x, costmap_obj=self.ogm)
-            
-            # Publish resulting twist to cmd_vel topic
             if distance_to_goal > self.goal_tolerance:
+                # Concatenate information about people track, robot state, and goal
+                x = np.concatenate([self.ped_pos_xy_cem.flatten(), self.neigh_matrix.flatten(), self.r_state, self.subgoal_pose[:2]])
+                # Get command from neural model forward pass, given costmap object
+                u, current_future = self.model.predict(x, costmap_obj=self.ogm)
+                
+                # Publish resulting twist to cmd_vel topic
                 cmd_vel.linear.x = float(u[0])
                 cmd_vel.angular.z = float(u[1])
                 self.cmd_vel_publisher.publish(cmd_vel)
