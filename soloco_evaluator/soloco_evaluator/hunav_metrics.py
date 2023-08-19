@@ -55,7 +55,7 @@ def total_time(agents, robot):
 def robot_path_length(agents, robot):
     path_length = 0.0
     for i in range(len(robot)-1):
-        path_length += euclidean_distance(robot[i+1].position, robot[i].position)
+        path_length += euclidean_distance(robot[i+1].current_pose.pose, robot[i].current_pose.pose)
     print('Path_length computed: %.2f m' % path_length)
     return [path_length]
 
@@ -85,7 +85,7 @@ def avg_closest_person(agents, robot):
     for i in range(len(robot)):
         min_dist = 10000 
         for agent in agents[i].tracks:
-            d = euclidean_distance(robot[i].position, agent.current_pose.pose) - robot[i].radius - agent.radius
+            d = euclidean_distance(robot[i].current_pose.pose, agent.current_pose.pose) - robot[i].radius - agent.radius
             if(d < min_dist):
                 min_dist = d
                 if min_dist < 0.0:
@@ -104,7 +104,7 @@ def minimum_distance_to_people(agents, robot):
 
     for i in range(len(robot)):
         for agent in agents[i].tracks:
-            d = euclidean_distance(robot[i].position, agent.current_pose.pose) - robot[i].radius - agent.radius
+            d = euclidean_distance(robot[i].current_pose.pose, agent.current_pose.pose) - robot[i].radius - agent.radius
             if d<0.0:
                 d = 0.0
             min_distance.append(d) 
@@ -122,7 +122,7 @@ def space_intrusions(agents, robot, k):
     for i in range(len(robot)):
         min_dist = 10000
         for agent in agents[i].tracks:
-            d = euclidean_distance(robot[i].position, agent.current_pose.pose) - robot[i].radius - agent.radius
+            d = euclidean_distance(robot[i].current_pose.pose, agent.current_pose.pose) - robot[i].radius - agent.radius
             if d < min_dist:
                 min_dist = d
                 if min_dist < 0.0:
@@ -171,16 +171,16 @@ def collisions(agents, robot):
             quat = (ori.x, ori.y, ori.z, ori.w)
             agent_ori = euler_from_quaternion(quat)
             agent_yaw = agent_ori[2]
-            if euclidean_distance(robot[i].position, agent.current_pose.pose) - robot[i].radius - agent.radius < 0.02:
+            if euclidean_distance(robot[i].current_pose.pose, agent.current_pose.pose) - robot[i].radius - agent.radius < 0.02:
                 
                 # Robot's angle
-                nrx = (robot[i].position.position.x - agent.current_pose.pose.position.x) * math.cos(agent_yaw) + (robot[i].position.position.y - agent.current_pose.pose.position.y) * math.sin(agent_yaw)
-                nry = -(robot[i].position.position.x - agent.current_pose.pose.position.x) * math.sin(agent_yaw) + (robot[i].position.position.y - agent.current_pose.pose.position.y) * math.cos(agent_yaw)
+                nrx = (robot[i].current_pose.pose.position.x - agent.current_pose.pose.position.x) * math.cos(agent_yaw) + (robot[i].current_pose.pose.position.y - agent.current_pose.pose.position.y) * math.sin(agent_yaw)
+                nry = -(robot[i].current_pose.pose.position.x - agent.current_pose.pose.position.x) * math.sin(agent_yaw) + (robot[i].current_pose.pose.position.y - agent.current_pose.pose.position.y) * math.cos(agent_yaw)
                 alpha = math.atan2(nry, nrx)
 
                 # Agent's angle
-                nrx = (agent.current_pose.pose.position.x - robot[i].position.position.x) * math.cos(robot[i].yaw) + (agent.current_pose.pose.position.y - robot[i].position.position.y) * math.sin(robot[i].yaw)
-                nry = -(agent.current_pose.pose.position.x - robot[i].position.position.x) * math.sin(robot[i].yaw) + (agent.current_pose.pose.position.y - robot[i].position.position.y) * math.cos(robot[i].yaw)
+                nrx = (agent.current_pose.pose.position.x - robot[i].current_pose.pose.position.x) * math.cos(robot[i].yaw) + (agent.current_pose.pose.position.y - robot[i].current_pose.pose.position.y) * math.sin(robot[i].yaw)
+                nry = -(agent.current_pose.pose.position.x - robot[i].current_pose.pose.position.x) * math.sin(robot[i].yaw) + (agent.current_pose.pose.position.y - robot[i].current_pose.pose.position.y) * math.cos(robot[i].yaw)
                 alpha2 = math.atan2(nrx, nry)
 
                 if abs(alpha) < abs(alpha2) and robot[i].linear_vel > agent.linear_vel:
@@ -234,7 +234,7 @@ def goal_reached(agents, robot):
     mind = 0.0
     if(len(robot[-1].goals)):
         for g in robot[-1].goals:
-            d = euclidean_distance(robot[-1].position, g) - robot[-1].goal_radius
+            d = euclidean_distance(robot[-1].current_pose.pose, g) - robot[-1].goal_radius
             if d<mind:
                 return [True]
     return [False]
