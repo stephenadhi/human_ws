@@ -23,7 +23,6 @@ class SolocoEvaluatorNode(Node):
         self.robot_goal = None
         self.metrics_to_compute = {}
         self.metrics_lists = {}
-        self.number_of_behaviors = 6
 
         # Two modes:
         # 1- The user start/stop the recording through the
@@ -33,10 +32,8 @@ class SolocoEvaluatorNode(Node):
         #    It stops when a certain time pass without receiving data. 
         self.mode = self.declare_parameter('mode', 2).get_parameter_value().integer_value
 
-        # Indicate the frequency of capturing the data 
-        # (it must be slower than data publishing).
-        # If the value is set to zero, the data is captured
-        # at the same frequency than it is published.
+        # Indicate the frequency of capturing the data  (it must be slower than data publishing).
+        # If the value is set to zero, the data is captured at the same frequency than it is published.
         self.freq = self.declare_parameter('frequency', 0.0).get_parameter_value().double_value
 
         # base name of the result files
@@ -47,8 +44,7 @@ class SolocoEvaluatorNode(Node):
         self.declare_parameter('experiment_tag', '1')
         self.exp_tag = self.get_parameter('experiment_tag').get_parameter_value().string_value
 
-        # optionally, the data recording can be started when
-        # a robot navigation goal is received
+        # optionally, the data recording can be started when a robot navigation goal is received
         self.declare_parameter('use_nav_goal_to_start', True)
         self.use_navgoal_to_start = self.get_parameter('use_nav_goal_to_start').get_parameter_value().bool_value
 
@@ -67,16 +63,18 @@ class SolocoEvaluatorNode(Node):
         self.get_logger().info("result_file: %s" % self.result_file_path)
         self.get_logger().info("experiment_tag: %s" % self.exp_tag)
         self.get_logger().info("Metrics:")
+
         for m in self.metrics_to_compute.keys():
             self.get_logger().info("m: %s, value: %s" % (m, self.metrics_to_compute[m]))
-
-        self.recording_srv = self.create_service(Trigger, 'hunav_trigger_recording', self.recording_service)
 
         if(self.freq > 0.0):
             self.agents = TrackedPersons()
             self.robot = EgoTrajectory()
             self.record_timer = self.create_timer(1/self.freq, self.timer_record_callback)
 
+        if(self.mode == 1):
+            self.recording = False
+            self.recording_srv = self.create_service(Trigger, 'hunav_trigger_recording', self.recording_service)
         elif(self.mode == 2):
             if self.use_navgoal_to_start == True:
                 self.recording = False
@@ -90,17 +88,15 @@ class SolocoEvaluatorNode(Node):
         else:
             self.get_logger().error("Mode not recognized. Only modes 1 or 2 are allowed")
 
+        # Define subscribers
         self.agent_sub = self.create_subscription(TrackedPersons, 'human/interpolated_history', self.human_callback, 1)
         self.robot_sub = self.create_subscription(EgoTrajectory, 'robot/ego_trajectory', self.robot_callback, 1)
-        # Subscribe to the robot goal
         self.goal_sub = self.create_subscription(PoseStamped, 'goal_pose', self.goal_callback, 1)
 
     def human_callback(self, msg):
         if(self.mode == 2):
             self.init = True
             self.last_time = self.get_clock().now()
-            #self.end_timer.reset()
-            #self.get_logger().info("reseting1")
         if(self.recording == True):
             #self.get_logger().info("human received")
             if(self.freq == 0.0):
@@ -112,8 +108,6 @@ class SolocoEvaluatorNode(Node):
         if(self.mode == 2):
             self.init = True
             self.last_time = self.get_clock().now()
-            #self.end_timer.reset()
-            #self.get_logger().info("reseting2")
         if(self.recording == True):
             #self.get_logger().info("robot received")
             robot_msg = msg
@@ -121,7 +115,6 @@ class SolocoEvaluatorNode(Node):
                 robot_msg.goals.clear()
                 robot_msg.goals.append(self.robot_goal.pose)
                 robot_msg.goal_radius = 0.2
-
             if(self.freq == 0.0):
                 self.robot_list.append(robot_msg)
             else:
@@ -136,17 +129,12 @@ class SolocoEvaluatorNode(Node):
 
     def recording_service(self, request, response):
         response.success = True
-        if(self.recording == True):
-            self.get_logger().info("Hunav evaluator stopping recording!")
-            self.recording = False
-            response.message = 'Hunav recording stopped'
-            #self.agent_sub.destroy()
-            #self.robot_sub.destroy()
+        status = "stopping" if self.recording else "started"
+        self.get_logger().info(f"Hunav evaluator {status} recording!")
+        self.recording = not self.recording
+        response.message = f'Hunav recording {status}'
+        if status == "stopping":
             self.compute_metrics()
-        else:
-            self.get_logger().info("Hunav evaluator started recording!")
-            self.recording = True
-            response.message = 'Hunav recording started'
         
     def timer_end_callback(self):
         if(self.init == True):
@@ -181,49 +169,10 @@ class SolocoEvaluatorNode(Node):
         print('Metrics computed:')
         print(self.metrics_to_compute)
         self.store_metrics(self.result_file_path)
-        
-        # Now, filter according to the different behaviors
-        for i in range(1,(self.number_of_behaviors+1)):
-          self.compute_metrics_behavior(i)  
 
         self.destroy_node()
         sys.exit()
         #return
-
-    def compute_metrics_behavior(self, behavior):
-        # first, get the agents with the indicated behavior
-        beh_agents = []
-        beh_robot = []
-        beh_active = [0]*len(self.agents_list)
-        i=0
-        for (la, lr) in zip(self.agents_list, self.robot_list):
-            ag = TrackedPersons()
-            ag.header = la.header
-            for a in la.tracks:
-                ag.tracks.append(a)
-            if len(ag.tracks) > 0:
-                beh_agents.append(ag)
-                beh_robot.append(lr)  
-            else:
-                print("No agents of behavior %i" % behavior)
-                return None
-            i += 1 
-
-        self.metrics_lists['behavior_active']=beh_active
-        # then, compute the metrics for those agents
-        for m in self.metrics_to_compute.keys():
-            metric = hunav_metrics.metrics[m](beh_agents, beh_robot)
-            self.metrics_to_compute[m] = metric[0]
-            if len(metric) > 1:
-                self.metrics_lists[m]=metric[1]
-
-        print('Metrics computed behavior %i:' % behavior)
-        print(self.metrics_to_compute)
-        store_file = self.result_file_path
-        if store_file.endswith(".txt"):
-            store_file = store_file[:-4]
-        store_file += '_beh_'+str(behavior)+'.txt'
-        self.store_metrics(store_file)
 
     def store_metrics(self, result_file):
         list_file = result_file
