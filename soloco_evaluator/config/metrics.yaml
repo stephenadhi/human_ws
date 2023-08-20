@@ -1,5 +1,12 @@
 hunav_evaluator_node:
   ros__parameters:
+    # Two modes:
+    # 1- The user start/stop the recording through the
+    #    the service /hunav_trigger_recording
+    # 2- The recording start/stop process is semi-automatic:
+    #    It starts when the first topic is received or a navigation goal is received.
+    #    It stops when a certain time pass without receiving data. 
+    mode: 2
 
     # Specify the frecuency of data capture (Hz).
     # value 0.0 indicates that data is captured as the same 
