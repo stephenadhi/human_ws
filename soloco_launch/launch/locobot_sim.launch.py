@@ -182,6 +182,7 @@ def generate_launch_description():
             launch_arguments={
             'cmd_vel_topic': cmd_vel_topic,
             'use_sim_time': 'true',
+            'namespace': '',
             # 'map': map_file,
             'nav2_params_file': nav2_params_file,
             'default_nav_to_pose_bt_xml': default_nav_to_pose_bt_xml,
@@ -205,7 +206,7 @@ def generate_launch_description():
         launch_arguments={
           'scene_file': pedsim_scene_file,
           'config_file': pedsim_config_file,
-          'namespace': namespace,
+          'namespace': '',
         }.items(),
         condition=IfCondition(use_pedsim))
         ])
