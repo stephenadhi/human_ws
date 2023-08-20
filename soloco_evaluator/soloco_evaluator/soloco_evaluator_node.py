@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import numpy as np
+import math
 import sys
 import os
 
@@ -23,6 +24,9 @@ class SolocoEvaluatorNode(Node):
         self.robot_goal = None
         self.metrics_to_compute = {}
         self.metrics_lists = {}
+
+        self.declare_parameter('goal_tolerance', 0.2)
+        self.goal_tolerance = self.get_parameter('goal_tolerance').get_parameter_value().double_value
 
         # Two modes:
         # 1- The user start/stop the recording through the
@@ -53,19 +57,16 @@ class SolocoEvaluatorNode(Node):
             ok = self.declare_parameter('metrics.'+m, True).get_parameter_value().bool_value
             if(ok):
                 self.metrics_to_compute[m] = 0.0
-        for me in self.metrics_to_compute.keys():
-            self.get_logger().info("m: %s, value: %s" % (me, self.metrics_to_compute[me]))
         
-        self.get_logger().info("Hunav evaluator:")
+        self.get_logger().info("Started Hunav evaluator:")
         self.get_logger().info("mode: %i" % self.mode)
         self.get_logger().info("freq: %.1f" % self.freq)
         self.get_logger().info("use_nav_goal_to_start: %i" % self.use_navgoal_to_start)
         self.get_logger().info("result_file: %s" % self.result_file_path)
         self.get_logger().info("experiment_tag: %s" % self.exp_tag)
-        self.get_logger().info("Metrics:")
-
-        for m in self.metrics_to_compute.keys():
-            self.get_logger().info("m: %s, value: %s" % (m, self.metrics_to_compute[m]))
+        # self.get_logger().info("Metrics:")
+        # for m in self.metrics_to_compute.keys():
+        #     self.get_logger().info("m: %s, value: %s" % (m, self.metrics_to_compute[m]))
 
         if(self.freq > 0.0):
             self.agents = TrackedPersons()
@@ -80,10 +81,10 @@ class SolocoEvaluatorNode(Node):
                 self.recording = False
             else:
                 self.recording = True
-            self.time_period = 3.0  # seconds
+            self.timeout_period = 30.0  # seconds
             self.last_time = self.get_clock().now()
             self.init = False
-            self.end_timer = self.create_timer(1.0, self.timer_end_callback)
+            self.end_timer = self.create_timer(self.timeout_period, self.timer_end_callback)
             #self.end_timer.cancel()
         else:
             self.get_logger().error("Mode not recognized. Only modes 1 or 2 are allowed")
@@ -120,6 +121,18 @@ class SolocoEvaluatorNode(Node):
             else:
                 self.robot = robot_msg
 
+        # Stop recording and compute metrics 
+        if(self.robot_goal is not None and self.recording):
+            distance_to_goal = math.hypot(
+            msg.current_pose.pose.position.x - self.robot_goal.pose.position.x,
+            msg.current_pose.pose.position.y - self.robot_goal.pose.position.y
+        )
+
+            if distance_to_goal <= self.goal_tolerance:
+                self.recording = False
+                self.get_logger().info("Goal reached! Hunav evaluator stopped recording!")
+                self.compute_metrics()
+
     def goal_callback(self, msg):
         self.robot_goal = msg
         if self.use_navgoal_to_start == True:
@@ -140,9 +153,9 @@ class SolocoEvaluatorNode(Node):
         if(self.init == True):
             secs = (self.get_clock().now() - self.last_time).to_msg().sec
             #self.get_logger().info("secs: %.2f" % secs)
-            if(secs >= self.time_period):
+            if(secs >= self.timeout_period):
                 self.recording == False
-                self.get_logger().info("Hunav evaluator stopping recording!")
+                self.get_logger().info("Time period reached! Hunav evaluator stopped recording!")
                 self.compute_metrics()
 
     def timer_record_callback(self):
