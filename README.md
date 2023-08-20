@@ -86,17 +86,9 @@ Launch RViZ:
     ros2 launch soloco_launch remote_view.launch.py
 
 ## Simulation Example with Pedsim
-Launch Locobot in Gazebo with GUI and optionally pedestrian simulator. Wait 5 seconds before running each commands. They must be in order.
+Launch Locobot in Gazebo, optionally with GUI, pedestrian simulator, and RViZ. Odometry is based on ground truth with gaussian noise=0.001. The default launch is the following command:
 
-    ros2 launch soloco_launch locobot_sim.launch.py use_gazebo_gui:=true use_pedsim:=true use_soloco_controller:=true
-
-Launch fake odometry tf2 publisher. Odometry is based on ground truth with gaussian noise=0.001
-
-    ros2 launch fake_tf2_publisher fake_tf2_publisher.launch.py  
-
-Launch RViZ:
-
-    ros2 launch soloco_launch remote_view.launch.py
+    ros2 launch soloco_launch locobot_sim.launch.py use_gazebo_gui:=false use_pedsim:=true use_soloco_controller:=true launch_remote_view_cmd=false
 
 ## Rosbag Example
 To record data, launch RViZ and run the following command

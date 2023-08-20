@@ -37,6 +37,7 @@ def generate_launch_description():
     nav2_soloco_controller_dir = get_package_share_directory('nav2_soloco_controller')
     pedsim_dir = get_package_share_directory('pedsim_simulator')
     relay_dir = get_package_share_directory('pedsim_relay')
+    fake_tf2_dir = get_package_share_directory('fake_tf2_publisher')
 
     scene = 'tb3_house_demo_crowd'
     default_world_path = os.path.join(bringup_dir, 'worlds', scene + '.world')
@@ -221,6 +222,17 @@ def generate_launch_description():
           relay_dir, 'launch', 'pedsim_tracker.launch.py')),
         condition=IfCondition(use_pedsim))
 
+    fake_tf2_publisher_cmd = TimerAction(
+        period=3.0, # wait
+        actions=[
+            IncludeLaunchDescription(
+                PythonLaunchDescriptionSource(os.path.join(
+                    fake_tf2_dir, 'launch', 'fake_tf2_publisher.launch.py')),
+                launch_arguments={
+                    'namespace': 'locobot',
+            }.items())
+        ])
+
     robot_tracker_cmd = Node(
         package='soloco_perception',
         executable='robot_track.py',
@@ -290,6 +302,7 @@ def generate_launch_description():
     ld.add_action(soloco_controller_launch_cmd)
     ld.add_action(multi_track_visualizer_cmd)
     ld.add_action(robot_tracker_cmd)
+    ld.add_action(fake_tf2_publisher_cmd)
     ld.add_action(remote_view_launch_cmd)
 
     return ld
