@@ -17,8 +17,7 @@ class SolocoEvaluatorNode(Node):
 
     def __init__(self):
         super().__init__("soloco_evaluator_node")
-        
-        name = 'hunav_evaluator'
+
         self.agents_list = []
         self.robot_list = []
         self.robot_goal = None
@@ -34,11 +33,12 @@ class SolocoEvaluatorNode(Node):
         # 2- The recording start/stop process is semi-automatic:
         #    It starts when the first topic is received or a navigation goal is received.
         #    It stops when a certain time pass without receiving data. 
-        self.mode = self.declare_parameter('mode', 2).get_parameter_value().integer_value
-
+        self.declare_parameter('mode', 2)
+        self.mode = self.get_parameter('mode').get_parameter_value().integer_value
         # Indicate the frequency of capturing the data  (it must be slower than data publishing).
         # If the value is set to zero, the data is captured at the same frequency than it is published.
-        self.freq = self.declare_parameter('frequency', 0.0).get_parameter_value().double_value
+        self.declare_parameter('frequency', 0.0)
+        self.freq = self.get_parameter('frequency').get_parameter_value().double_value
 
         # base name of the result files
         self.declare_parameter('result_file', 'metrics')
@@ -81,7 +81,7 @@ class SolocoEvaluatorNode(Node):
                 self.recording = False
             else:
                 self.recording = True
-            self.timeout_period = 30.0  # seconds
+            self.timeout_period = 60.0  # seconds
             self.last_time = self.get_clock().now()
             self.init = False
             self.end_timer = self.create_timer(self.timeout_period, self.timer_end_callback)
@@ -97,9 +97,8 @@ class SolocoEvaluatorNode(Node):
     def human_callback(self, msg):
         if(self.mode == 2):
             self.init = True
-            self.last_time = self.get_clock().now()
         if(self.recording == True):
-            #self.get_logger().info("human received")
+            # self.get_logger().info("human received")
             if(self.freq == 0.0):
                 self.agents_list.append(msg)
             else:
@@ -108,26 +107,23 @@ class SolocoEvaluatorNode(Node):
     def robot_callback(self, msg):
         if(self.mode == 2):
             self.init = True
-            self.last_time = self.get_clock().now()
         if(self.recording == True):
-            #self.get_logger().info("robot received")
+            # self.get_logger().info("robot received")
             robot_msg = msg
+            robot_msg.track_id = 0
             if(self.robot_goal is not None):
                 robot_msg.goals.clear()
                 robot_msg.goals.append(self.robot_goal.pose)
-                robot_msg.goal_radius = 0.2
+                robot_msg.goal_radius = 0.2                
+                distance_to_goal = math.hypot(
+                    msg.current_pose.pose.position.x - self.robot_goal.pose.position.x,
+                    msg.current_pose.pose.position.y - self.robot_goal.pose.position.y)
             if(self.freq == 0.0):
                 self.robot_list.append(robot_msg)
             else:
                 self.robot = robot_msg
 
-        # Stop recording and compute metrics 
-        if(self.robot_goal is not None and self.recording):
-            distance_to_goal = math.hypot(
-            msg.current_pose.pose.position.x - self.robot_goal.pose.position.x,
-            msg.current_pose.pose.position.y - self.robot_goal.pose.position.y
-        )
-
+            # Stop recording and compute metrics if within goal tolerance
             if distance_to_goal <= self.goal_tolerance:
                 self.recording = False
                 self.get_logger().info("Goal reached! Hunav evaluator stopped recording!")
@@ -150,7 +146,7 @@ class SolocoEvaluatorNode(Node):
             self.compute_metrics()
         
     def timer_end_callback(self):
-        if(self.init == True):
+        if(self.init == True and self.recording == True):
             secs = (self.get_clock().now() - self.last_time).to_msg().sec
             #self.get_logger().info("secs: %.2f" % secs)
             if(secs >= self.timeout_period):
@@ -160,7 +156,7 @@ class SolocoEvaluatorNode(Node):
 
     def timer_record_callback(self):
         if(self.recording == True and self.init == True):
-            #self.get_logger().info("Saving data...")
+            self.get_logger().info("Saving data...")
             self.agents_list.append(self.agents)
             self.robot_list.append(self.robot)
 
@@ -221,21 +217,6 @@ class SolocoEvaluatorNode(Node):
             file.write('\t')
         file.write('\n')
         file.close()
-
-        # open and write the second file (metric for each step)
-        file2 = open(list_file,'w')
-        for m in self.metrics_lists.keys():
-            file2.write(m)
-            file2.write('\t')
-        file2.write('\n')
-        length = len(self.metrics_lists['time_stamps'])
-        for i in range(length):
-            for m in self.metrics_lists.keys():
-                v = self.metrics_lists[m]
-                file2.write(str(v[i]))
-                file2.write('\t')
-            file2.write('\n')
-        file2.close()
 
     def check_data(self):
         #First check the number of messages

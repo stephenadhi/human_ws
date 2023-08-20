@@ -9,3 +9,4 @@ float32 yaw
 float32 radius
 float32 linear_vel
 float32 angular_vel
+int16 track_id # always 0
