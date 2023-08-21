@@ -18,7 +18,7 @@ This documentation provides the instruction for manual installation. For ease of
 
 3. Clone Pedestrian Simulator (optional, otherwise create COLCON_IGNORE for pedsim_relay package)
     ```
-    git clone -b humble https://github.com/stephenadhi/pedsim_ros.git
+    git clone -b locobot_pedsim_humble https://github.com/stephenadhi/pedsim_ros.git
     ```
 4. Install dependencies
     ```
