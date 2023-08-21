@@ -23,7 +23,7 @@ def generate_launch_description():
     run_human_tf = LaunchConfiguration('run_human_tf')
     map_file = LaunchConfiguration('map_file')
     namespace = LaunchConfiguration('namespace')
-    nav2_params_file = LaunchConfiguration('nav2_param_file')
+    nav2_params_file = LaunchConfiguration('nav2_params_file')
     robot_model = LaunchConfiguration('robot_model')
     robot_name = LaunchConfiguration('robot_name')
 
@@ -36,7 +36,7 @@ def generate_launch_description():
     default_map_path = os.path.join(bringup_dir, 'maps', 'tb3_house_demo_crowd.yaml')
     # get config file path and loading it
     neural_config_file_path = os.path.join(
-        bringup_dir, 'config', 'neural_motion_planner.yaml')
+        nav2_soloco_controller_dir, 'config', 'neural_motion_planner.yaml')
     with open(neural_config_file_path, 'r') as file:
         planner_config = yaml.safe_load(file)['nav2_soloco_controller']['ros__parameters']
 
@@ -66,16 +66,16 @@ def generate_launch_description():
         'map_file',
         default_value=default_map_path)
 
-    declare_nav2_param_filename_cmd = DeclareLaunchArgument(
-        'nav2_param_filename',
-        default_value='smac_soloco_nav2_params.yaml')
+    declare_nav2_params_filename_cmd = DeclareLaunchArgument(
+        'nav2_params_filename',
+        default_value='smac_mppi_nav2_params.yaml')
 
-    declare_nav2_param_file_cmd = DeclareLaunchArgument(
+    declare_nav2_params_file_cmd = DeclareLaunchArgument(
         'nav2_params_file',
         default_value=PathJoinSubstitution([
             FindPackageShare("soloco_launch"),
             'params',
-            LaunchConfiguration('nav2_param_filename')]))
+            LaunchConfiguration('nav2_params_filename')]))
 
     declare_namespace_cmd = DeclareLaunchArgument(
         'namespace',
@@ -167,8 +167,8 @@ def generate_launch_description():
     ld.add_action(declare_run_human_tf_cmd)
     ld.add_action(declare_map_file_cmd)
     ld.add_action(declare_namespace_cmd)
-    ld.add_action(declare_nav2_param_filename_cmd)
-    ld.add_action(declare_nav2_param_file_cmd)
+    ld.add_action(declare_nav2_params_filename_cmd)
+    ld.add_action(declare_nav2_params_file_cmd)
     ld.add_action(declare_robot_model_cmd)
     ld.add_action(declare_robot_name_cmd)
 
