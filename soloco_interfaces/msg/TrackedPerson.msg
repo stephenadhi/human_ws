@@ -19,3 +19,6 @@ float32 bbox_z_length
 
 # interpolated pose history of the track
 nav_msgs/Path track
+
+# For evaluator node
+float32 radius

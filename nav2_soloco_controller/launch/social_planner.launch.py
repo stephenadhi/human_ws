@@ -35,26 +35,17 @@ def generate_launch_description():
         ],
     )
 
-    global_nav2_client_cmd = Node(
+    subgoal_visualizer_cmd = Node(
         package='nav2_soloco_controller',
-        executable='global_nav2_client.py',
-        name='global_nav2_client',
-        output='screen',
-        parameters=[soloco_config_file],
-    )
-
-    subgoal_publisher_cmd = Node(
-        package='nav2_soloco_controller',
-        executable='subgoal_publisher',
-        name='subgoal_publisher',
+        executable='subgoal_visualizer',
+        name='subgoal_visualizer',
         output='screen',
         parameters=[soloco_config_file],
     )
 
     ld = LaunchDescription()
     ld.add_action(declare_cmd_vel_topic_cmd)
-    ld.add_action(global_nav2_client_cmd)
-    ld.add_action(subgoal_publisher_cmd)
+    ld.add_action(subgoal_visualizer_cmd)
     ld.add_action(nav2_soloco_controller_cmd)
 
     return ld

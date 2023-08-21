@@ -9,4 +9,5 @@ soloco_perception:
       max_history_length: 7
       interp_interval: 0.4
       delay_tolerance: 0.1 # currently not used
+      robot_radius: 0.175 # locobot: 35cm diameter
     

@@ -17,6 +17,7 @@ def generate_launch_description():
     robot_name = LaunchConfiguration('robot_name')
     use_pedsim = LaunchConfiguration('use_pedsim')
     use_gazebo_gui = LaunchConfiguration('use_gazebo_gui')
+    launch_remote_view = LaunchConfiguration('launch_remote_view')
     use_soloco_controller = LaunchConfiguration('use_soloco_controller')
     run_human_tf = LaunchConfiguration('run_human_tf')
     world_file = LaunchConfiguration('world_file')
@@ -27,6 +28,8 @@ def generate_launch_description():
     pedsim_config_file = LaunchConfiguration('pedsim_config_file')
     spawn_x_pos = LaunchConfiguration('spawn_x_pos')
     spawn_y_pos = LaunchConfiguration('spawn_y_pos')
+    rvizconfig = LaunchConfiguration('rvizconfig')
+    rviz_frame = LaunchConfiguration('rviz_frame')
 
     # Get the launch directory
     bringup_dir = get_package_share_directory('soloco_launch')
@@ -34,6 +37,7 @@ def generate_launch_description():
     nav2_soloco_controller_dir = get_package_share_directory('nav2_soloco_controller')
     pedsim_dir = get_package_share_directory('pedsim_simulator')
     relay_dir = get_package_share_directory('pedsim_relay')
+    fake_tf2_dir = get_package_share_directory('fake_tf2_publisher')
 
     scene = 'tb3_house_demo_crowd'
     default_world_path = os.path.join(bringup_dir, 'worlds', scene + '.world')
@@ -61,6 +65,11 @@ def generate_launch_description():
     declare_use_gazebo_gui_cmd = DeclareLaunchArgument(
         'use_gazebo_gui',
         default_value='false',
+        description='Whether to use lidar in simulator')
+
+    declare_launch_remote_view_cmd = DeclareLaunchArgument(
+        'launch_remote_view',
+        default_value='true',
         description='Whether to use lidar in simulator')
 
     declare_world_file_cmd = DeclareLaunchArgument(
@@ -133,6 +142,23 @@ def generate_launch_description():
         'spawn_y_pos',
         default_value='0.0')
 
+    declare_rvizconfig_cmd = DeclareLaunchArgument(
+        'rvizconfig',
+        default_value=PathJoinSubstitution([
+            FindPackageShare('soloco_launch'),
+            'rviz',
+            'remote_view.rviz',
+        ]),
+        description='file path to the config file RViz should load.')
+
+    declare_rviz_frame_cmd =  DeclareLaunchArgument(
+            'rviz_frame',
+            default_value=(LaunchConfiguration('robot_name'), '/odom'),
+            description=(
+                'fixed frame in RViz; this should be changed to `map` or `odom` if '
+                'mapping or using local odometry respectively.'
+            ))
+    
     simulator_launch_cmd = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(os.path.join(
           interbotix_sim_dir, 'launch', 'xslocobot_gz_classic.launch.py')),
@@ -156,6 +182,7 @@ def generate_launch_description():
             launch_arguments={
             'cmd_vel_topic': cmd_vel_topic,
             'use_sim_time': 'true',
+            'namespace': '',
             # 'map': map_file,
             'nav2_params_file': nav2_params_file,
             'default_nav_to_pose_bt_xml': default_nav_to_pose_bt_xml,
@@ -179,7 +206,7 @@ def generate_launch_description():
         launch_arguments={
           'scene_file': pedsim_scene_file,
           'config_file': pedsim_config_file,
-          'namespace': namespace,
+          'namespace': '',
         }.items(),
         condition=IfCondition(use_pedsim))
         ])
@@ -196,6 +223,17 @@ def generate_launch_description():
           relay_dir, 'launch', 'pedsim_tracker.launch.py')),
         condition=IfCondition(use_pedsim))
 
+    fake_tf2_publisher_cmd = TimerAction(
+        period=3.0, # wait
+        actions=[
+            IncludeLaunchDescription(
+                PythonLaunchDescriptionSource(os.path.join(
+                    fake_tf2_dir, 'launch', 'fake_tf2_publisher.launch.py')),
+                launch_arguments={
+                    'namespace': 'locobot',
+            }.items())
+        ])
+
     robot_tracker_cmd = Node(
         package='soloco_perception',
         executable='robot_track.py',
@@ -210,6 +248,20 @@ def generate_launch_description():
           'cmd_vel_topic': cmd_vel_topic,
         }.items(),
         condition=IfCondition(use_soloco_controller))
+
+    remote_view_launch_cmd = TimerAction(
+        period=15.0, # wait before launching rviz2
+        actions=[
+            IncludeLaunchDescription(
+                PythonLaunchDescriptionSource(os.path.join(
+                    bringup_dir, 'launch', 'remote_view.launch.py')),
+            launch_arguments={
+                'robot_name': robot_name,
+                'rvizconfig': rvizconfig,
+                'rviz_frame': rviz_frame
+            }.items(),
+            condition=IfCondition(launch_remote_view))
+        ])
 
     multi_track_visualizer_cmd = Node(
         package='soloco_perception',
@@ -226,6 +278,7 @@ def generate_launch_description():
     ld.add_action(declare_robot_name_cmd)
     ld.add_action(declare_use_pedsim_cmd)
     ld.add_action(declare_use_gazebo_gui_cmd)
+    ld.add_action(declare_launch_remote_view_cmd)
     ld.add_action(declare_world_file_cmd)
     ld.add_action(declare_map_file_cmd)
     ld.add_action(declare_nav2_params_file_cmd)
@@ -238,6 +291,8 @@ def generate_launch_description():
     ld.add_action(declare_use_soloco_controller_cmd)
     ld.add_action(declare_spawn_x_pos_cmd)
     ld.add_action(declare_spawn_y_pos_cmd)
+    ld.add_action(declare_rvizconfig_cmd)
+    ld.add_action(declare_rviz_frame_cmd)
     # Add the actions to launch all of the nodes
     ld.add_action(simulator_launch_cmd)
     ld.add_action(slam_toolbox_launch_cmd)
@@ -248,5 +303,7 @@ def generate_launch_description():
     ld.add_action(soloco_controller_launch_cmd)
     ld.add_action(multi_track_visualizer_cmd)
     ld.add_action(robot_tracker_cmd)
+    ld.add_action(fake_tf2_publisher_cmd)
+    ld.add_action(remote_view_launch_cmd)
 
     return ld

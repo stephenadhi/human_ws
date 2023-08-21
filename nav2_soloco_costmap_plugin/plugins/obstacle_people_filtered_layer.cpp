@@ -343,12 +343,17 @@ ObstaclePeopleFilteredLayer::agentsCallback(
     if (clear_track_costmap_){
         // Append the agent track to agent states for clearing costmap
         for (unsigned int i=0; i<person.track.poses.size(); ++i){
-            agent_states_.push_back(person.track.poses.rbegin()[i]);
+          geometry_msgs::msg::PoseStamped track_pose = person.track.poses.rbegin()[i];
+          agent_states_.push_back(track_pose);
+          double dist = calculateRobotAgentDistance(track_pose.pose);
+          agent_distances_.push_back(dist);
         }
     }
-    agent_states_.push_back(person.current_pose);
-    double dist = calculateRobotAgentDistance(person.current_pose.pose);
-    agent_distances_.push_back(dist);
+    else {
+      agent_states_.push_back(person.current_pose);
+      double dist = calculateRobotAgentDistance(person.current_pose.pose);
+      agent_distances_.push_back(dist);
+    }
   }
 }
 

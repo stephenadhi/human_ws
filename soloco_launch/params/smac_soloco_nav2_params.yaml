@@ -131,9 +131,17 @@ controller_server:
       xy_goal_tolerance: 0.25
       # Tolerance to meet goal completion criteria (rad). (default: 0.25)
       yaw_goal_tolerance: 0.1
-    # MPPI parameters
+    # Follow path parameters
     FollowPath:
-      plugin: "nav2_soloco_controller::SolocoController"
+      # Shim controller parameters
+      plugin: "nav2_rotation_shim_controller::RotationShimController"
+      primary_controller: "nav2_soloco_controller::SolocoController"
+      angular_dist_threshold: 0.785
+      forward_sampling_distance: 0.5
+      rotate_to_heading_angular_vel: 1.8
+      max_angular_accel: 3.2
+      simulate_ahead_time: 1.0
+      # Subgoal parameters
       max_speed: 0.5
       max_lookahead_dist: 2.4
       min_lookahead_dist: 0.4
@@ -150,7 +158,7 @@ local_costmap:
       always_send_full_costmap: True
       # Costmap update frequency. (default 5.0)
       update_frequency: 10.0
-      # Frequency to publish costmap to topic. (default 1.0)
+      # Frequency to publish costmap to topic. (default 2.0)
       publish_frequency: 10.0
       # Reference frame. (default: odom)
       global_frame: locobot/odom
@@ -159,13 +167,13 @@ local_costmap:
       # Whether costmap should roll with robot base frame. (default: False)
       rolling_window: True
       # Height of costmap (m). (default: 5)
-      width: 8
+      width: 5
       # Width of costmap (m). (default: 5)
-      height: 8
+      height: 5
       # Resolution of 1 pixel of the costmap, in meters. (default: 0.1)
       resolution: 0.05
       # Robot radius to use, if footprint coordinates not provided. (default: 0.1)
-      robot_radius: 0.175
+      robot_radius: 0.2
       # List of mapped plugin names for parameter namespaces and names. Note: Each plugin namespace
       # defined in this list needs to have a plugin parameter defining the type of plugin to be
       # loaded in the namespace.
@@ -211,8 +219,8 @@ local_costmap:
           # Data type of input, LaserScan or PointCloud2. (default: LaserScan)
           data_type: "LaserScan"
           # Minimum height to add return to occupancy grid. (default: 0.0)
-          min_obstacle_height: 0.2
-          # Maximum height to add return to occupancy grid. (default: 0.0)
+          min_obstacle_height: 0.0
+          # Maximum height to add return to occupancy grid. (default: 2.0)
           max_obstacle_height: 2.0
           # Are infinite returns from laser scanners valid measurements to raycast. (default:
           # False)
@@ -222,11 +230,11 @@ local_costmap:
           # Whether source should raytrace clear in costmap. (default: False)
           clearing: True
           # Maximum range to mark obstacles in costmap. (default: 2.5)
-          obstacle_max_range: 4.0
+          obstacle_max_range: 2.5
           # Minimum range to mark obstacles in costmap. (default: 0.0)
-          obstacle_min_range: 0.05
+          obstacle_min_range: 0.0
           # Maximum range to raytrace clear obstacles from costmap. (default: 3.0)
-          raytrace_max_range: 6.0
+          raytrace_max_range: 3.0
           # Minimum range to raytrace clear obstacles from costmap. (default: 0.0)
           raytrace_min_range: 0.0
 
@@ -336,8 +344,8 @@ global_costmap:
           # Data type of input, LaserScan or PointCloud2. (default: LaserScan)
           data_type: "LaserScan"
           # Minimum height to add return to occupancy grid. (default: 0.0)
-          min_obstacle_height: 0.2
-          # Maximum height to add return to occupancy grid. (default: 0.0)
+          min_obstacle_height: 0.0
+          # Maximum height to add return to occupancy grid. (default: 2.0)
           max_obstacle_height: 2.0
           # Are infinite returns from laser scanners valid measurements to raycast. (default:
           # False)
@@ -347,11 +355,11 @@ global_costmap:
           # Whether source should raytrace clear in costmap. (default: False)
           clearing: True
           # Maximum range to mark obstacles in costmap. (default: 2.5)
-          obstacle_max_range: 6.0
+          obstacle_max_range: 2.5
           # Minimum range to mark obstacles in costmap. (default: 0.0)
-          obstacle_min_range: 0.05
+          obstacle_min_range: 0.0
           # Maximum range to raytrace clear obstacles from costmap. (default: 3.0)
-          raytrace_max_range: 10.0
+          raytrace_max_range: 3.0
           # Minimum range to raytrace clear obstacles from costmap. (default: 0.0)
           raytrace_min_range: 0.0
 

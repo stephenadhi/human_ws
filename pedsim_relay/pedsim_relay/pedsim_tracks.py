@@ -31,6 +31,7 @@ class PedsimTrackPublisher(Node):
         self.declare_parameter('max_num_agents', 10)
         self.declare_parameter('track_timeout', 0.15)
         self.declare_parameter('publish_rate', 15.0)
+        self.declare_parameter('agent_radius', 0.2)
 
         # Get parameter values
         detected_agents_topic = self.get_parameter('detected_agents_topic').get_parameter_value().string_value
@@ -42,6 +43,8 @@ class PedsimTrackPublisher(Node):
         self.max_num_agents = self.get_parameter('max_num_agents').get_parameter_value().integer_value
         self.track_timeout = self.get_parameter('track_timeout').get_parameter_value().double_value
         self.publish_rate = self.get_parameter('publish_rate').get_parameter_value().double_value
+        self.agent_radius = self.get_parameter('agent_radius').get_parameter_value().double_value
+
         # Create subscriber
         self.pedsim_sub = self.create_subscription(TrackedAgents, detected_agents_topic, self.det_agents_callback, qos)
         # Create publisher
@@ -108,6 +111,7 @@ class PedsimTrackPublisher(Node):
                     tracked_person.tracking_state = 1
                     tracked_person.track_id = obj_id
                     tracked_person.current_pose = curr_pose_pub_frame
+                    tracked_person.radius = self.agent_radius
                     self.people.tracks.append(tracked_person)
                     self.get_logger().info(f'New person detected! ID: {obj_id}, idx: {self.idx}')
                     self.interpolated_tracklets.append(

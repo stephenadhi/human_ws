@@ -12,9 +12,9 @@ from rclpy.node import Node
 from rclpy.duration import Duration
 
 from nav_msgs.msg import OccupancyGrid, Odometry
-from geometry_msgs.msg import Point, PointStamped, Twist, PoseStamped
+from geometry_msgs.msg import Point, Twist, Pose, PoseStamped
 from visualization_msgs.msg import Marker, MarkerArray
-from soloco_interfaces.msg import TrackedPersons, EgoTrajectory
+from soloco_interfaces.msg import TrackedPersons, EgoTrajectory, AgentFuture, AgentFutures
 from soloco_interfaces.action import NavigateToXYGoal
 
 from nav2_soloco_controller.models.DWA import DWA
@@ -56,8 +56,9 @@ class NeuralMotionPlanner(Node):
         self.declare_parameter('costmap_topic', 'local_costmap/costmap')
         self.declare_parameter('cmd_vel_topic', 'locobot/commands/vedlocity')
         self.declare_parameter('human_track_topic', 'human/interpolated_history')
-        self.declare_parameter('robot_track_topic', 'robot/ego_trajectory')      
-        self.declare_parameter('future_topic', 'visualization/predicted_future')
+        self.declare_parameter('robot_track_topic', 'robot/ego_trajectory')
+        self.declare_parameter('future_topic', 'soloco/predicted_future')
+        self.declare_parameter('future_marker_topic', 'visualization/predicted_future')
         self.declare_parameter('pub_frame_id', 'locobot/odom')
         # Device to use: 'gpu' or 'cpu'
         self.declare_parameter('device', 'cpu') 
@@ -85,8 +86,12 @@ class NeuralMotionPlanner(Node):
         self.declare_parameter('sample_batch', 200) # [maximum history length]
         self.declare_parameter('interp_interval', 0.4) # [interpolation interval]
         self.declare_parameter('controller_frequency', 20.0) # [controller frequency]
+        self.declare_parameter('agent_radius', 0.25)   
+        self.declare_parameter('visualize_future', True)
         self.declare_parameter('debug_log', False)
         
+        self.agent_radius = self.get_parameter('agent_radius').get_parameter_value().double_value
+        self.visualize_future = self.get_parameter('visualize_future').get_parameter_value().bool_value
         self.debug_log = self.get_parameter('debug_log').get_parameter_value().bool_value
 
     def initialize_node(self):
@@ -155,10 +160,12 @@ class NeuralMotionPlanner(Node):
         human_track_topic = self.get_parameter('human_track_topic').get_parameter_value().string_value
         robot_track_topic = self.get_parameter('robot_track_topic').get_parameter_value().string_value
         future_topic = self.get_parameter('future_topic').get_parameter_value().string_value
+        future_marker_topic = self.get_parameter('future_marker_topic').get_parameter_value().string_value
         self.pub_frame_id = self.get_parameter("pub_frame_id").get_parameter_value().string_value
         # Publishers
         self.cmd_vel_publisher = self.create_publisher(Twist, cmd_vel_topic, self.pose_qos)
-        self.agent_future_publisher = self.create_publisher(MarkerArray, future_topic, self.pose_qos)
+        self.agent_future_publisher = self.create_publisher(AgentFutures, future_topic, self.pose_qos)
+        self.future_marker_publisher = self.create_publisher(MarkerArray, future_marker_topic, self.pose_qos)
         # Subscribers
         self.global_goal_sub = self.create_subscription(PoseStamped, global_goal_topic, self.goal_callback, self.pose_qos) 
         self.subgoal_sub = self.create_subscription(PoseStamped, subgoal_topic, self.subgoal_callback, self.pose_qos) 
@@ -238,13 +245,13 @@ class NeuralMotionPlanner(Node):
             distance_to_goal = hypot((self.r_pos_xy[0]-self.global_goal[0]), 
                                  (self.r_pos_xy[1]-self.global_goal[1]))
 
-            # Concatenate information about people track, robot state, and goal
-            x = np.concatenate([self.ped_pos_xy_cem.flatten(), self.neigh_matrix.flatten(), self.r_state, self.subgoal_pose[:2]])
-            # Get command from neural model forward pass, given costmap object
-            u, current_future = self.model.predict(x, costmap_obj=self.ogm)
-            
-            # Publish resulting twist to cmd_vel topic
             if distance_to_goal > self.goal_tolerance:
+                # Concatenate information about people track, robot state, and goal
+                x = np.concatenate([self.ped_pos_xy_cem.flatten(), self.neigh_matrix.flatten(), self.r_state, self.subgoal_pose[:2]])
+                # Get command from neural model forward pass, given costmap object
+                u, current_future = self.model.predict(x, costmap_obj=self.ogm)
+                
+                # Publish resulting twist to cmd_vel topic
                 cmd_vel.linear.x = float(u[0])
                 cmd_vel.angular.z = float(u[1])
                 self.cmd_vel_publisher.publish(cmd_vel)
@@ -258,7 +265,7 @@ class NeuralMotionPlanner(Node):
                 self.get_logger().info(f'Distance to goal: {distance_to_goal} Goal pose achieved.')
                 self.global_goal = None
 
-            self.visualize_future(current_future)
+            self.publish_future(current_future)
         
         goal_handle.succeed()
         
@@ -267,48 +274,61 @@ class NeuralMotionPlanner(Node):
 
         return result
 
-    def visualize_future(self, current_future):
+    def publish_future(self, current_future):
         agent_marker = MarkerArray()
+        agent_futures = AgentFutures()
         for i, track in enumerate(current_future):
-            # Create a Marker message
-            marker = Marker()
-            marker.id = i + 100
-            marker.header.frame_id = self.pub_frame_id
-            marker.header.stamp = self.get_clock().now().to_msg()
-            marker.type = marker.LINE_STRIP
-            marker.action = marker.ADD
-            marker.lifetime = Duration(seconds=0.05).to_msg()
-            marker.scale.x = 0.05
-            if i == 0:
-                marker.color.r = 0.0
-                marker.color.g = 1.0
-                marker.color.b = 0.0
-                marker.color.a = 1.0
-            else:
-                marker.color.r = 1.0
-                marker.color.g = 0.5
-                marker.color.b = 0.0
-                marker.color.a = 1.0
-            # Set the pose of the Marker message
-            marker.pose.orientation.w = 1.0
-
-            # Get the last observed position for the current agent
-            last_observed_pos = self.ped_pos_xy_cem[-1, i]
-            last_point = Point()
-            last_point.x = float(last_observed_pos[0])
-            last_point.y = float(last_observed_pos[1])
-            track_points = [last_point]
-            
-            # Append future
+            future = AgentFuture()
+            future.agent_id = i
+            future.radius = self.agent_radius
+            pose = PoseStamped()
             for point in track:
-                p = Point()
-                p.x = float(point[0])
-                p.y = float(point[1])
-                track_points.append(p)
-            marker.points = track_points
-            agent_marker.markers.append(marker)
+                pose.pose.position.x = float(point[0])
+                pose.pose.position.y = float(point[1])
+                future.track.poses.append(pose)
+            agent_futures.futures.append(future)
+            if self.visualize_future:
+                # Create a Marker message
+                marker = Marker()
+                marker.id = i + 100
+                marker.header.frame_id = self.pub_frame_id
+                marker.header.stamp = self.get_clock().now().to_msg()
+                marker.type = marker.LINE_STRIP
+                marker.action = marker.ADD
+                marker.lifetime = Duration(seconds=0.05).to_msg()
+                marker.scale.x = 0.05
+                if i == 0:
+                    marker.color.r = 0.0
+                    marker.color.g = 1.0
+                    marker.color.b = 0.0
+                    marker.color.a = 1.0
+                else:
+                    marker.color.r = 1.0
+                    marker.color.g = 0.5
+                    marker.color.b = 0.0
+                    marker.color.a = 1.0
+                # Set the pose of the Marker message
+                marker.pose.orientation.w = 1.0
 
-        self.agent_future_publisher.publish(agent_marker) 
+                # Get the last observed position for the current agent
+                last_observed_pos = self.ped_pos_xy_cem[-1, i]
+                last_point = Point()
+                last_point.x = float(last_observed_pos[0])
+                last_point.y = float(last_observed_pos[1])
+                track_points = [last_point]
+                
+                # Append future
+                for point in track:
+                    p = Point()
+                    p.x = float(point[0])
+                    p.y = float(point[1])
+                    track_points.append(p)
+                marker.points = track_points
+                agent_marker.markers.append(marker)
+
+        self.agent_future_publisher.publish(agent_futures)
+        if self.visualize_future:
+            self.future_marker_publisher.publish(agent_marker) 
 
 
 def main(args=None):
