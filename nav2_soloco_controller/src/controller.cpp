@@ -98,6 +98,10 @@ geometry_msgs::msg::TwistStamped SolocoController::computeVelocityCommands(
   double lookahead_dist = max_lookahead_dist_;
   lookahead_dist = fabs(robot_speed.linear.x) / max_speed_ * max_lookahead_dist_;
 
+  if (lookahead_dist < min_lookahead_dist_) {
+    lookahead_dist = min_lookahead_dist_;
+  }
+  
   // Find the first pose which is at a distance greater than the lookahead distance
   auto goal_pose_it = std::find_if(
     transformed_plan.poses.begin(), transformed_plan.poses.end(), [&](const auto & ps) {
