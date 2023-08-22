@@ -70,7 +70,7 @@ class HumanTrackPublisher(Node):
         curr_time_ = self.get_clock().now()
         curr_objects = self.object_tracker.objects
         # Loop through all detected objects, only consider valid tracking
-        for obj in range(len(curr_objects)):
+        for obj in range(curr_objects):
             if (obj.tracking_state == 1 and obj.label == "Person"):
                 # Get object ID
                 obj_id = obj.label_id
