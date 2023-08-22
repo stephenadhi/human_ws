@@ -71,13 +71,13 @@ class HumanTrackPublisher(Node):
         curr_objects = self.object_tracker.objects
         # Loop through all detected objects, only consider valid tracking
         for obj in range(len(curr_objects)):
-            if (curr_objects[obj].tracking_state == 1 and curr_objects[obj].label == "Person"):
+            if (obj.tracking_state == 1 and obj.label == "Person"):
                 # Get object ID
-                obj_id = curr_objects.objects[obj].label_id
+                obj_id = obj.label_id
                 # Position in camera frame, saved in poseStamped message format
                 curr_pose_cam = Pose()
-                curr_pose_cam.position.x = float(curr_objects[obj].position[0])
-                curr_pose_cam.position.y = float(curr_objects[obj].position[1])
+                curr_pose_cam.position.x = float(obj.position[0])
+                curr_pose_cam.position.y = float(obj.position[1])
                 curr_pose_cam.position.z = 0.0
                 curr_pose_cam.orientation = Quaternion(x=0.0, y=0.0, z=0.0, w=1.0)
                 # Convert pose to poseStamped in publishing frame (default: 'odom')
