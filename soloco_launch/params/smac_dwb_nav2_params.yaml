@@ -231,9 +231,9 @@ local_costmap:
         # Robot odometry topic 
         odom_topic: "/locobot/odom"
         # People filter radius. (default: 0.32)
-        filter_radius: 0.4
+        filter_radius: 0.3
         # Minimum agent distance from robot, if zero all people are filtered (default: 0.0)
-        filter_min_distance: 0.7
+        filter_min_distance: 0.2
         # Clear any occupied cells under robot footprint.
         footprint_clearing_enabled: True
         # Maximum height to add return to occupancy grid. (default: 2.0)
