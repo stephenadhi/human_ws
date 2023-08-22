@@ -4,6 +4,7 @@ from ament_index_python.packages import get_package_share_directory
 
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
+from launch_ros.actions import Node
 from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
@@ -30,6 +31,13 @@ def generate_launch_description():
                 PythonLaunchDescriptionSource(os.path.join(launch_dir, 'multi_tracker.launch.py')),
     )
 
+    rosbag_cmd = Node(
+        package='soloco_perception',
+        executable='rosbag_node.py', 
+        name='rosbag_node',
+        output='screen',
+    )
+    
     # Create the launch description and populate
     ld = LaunchDescription()
     # Declare the launch options
@@ -38,5 +46,6 @@ def generate_launch_description():
     # Add the actions to launch all of the navigation nodes
     ld.add_action(camera_launch_cmd)
     ld.add_action(tracker_launch_cmd)
+    ld.add_action(rosbag_cmd)
 
     return ld

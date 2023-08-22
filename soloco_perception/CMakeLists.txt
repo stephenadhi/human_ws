@@ -63,6 +63,11 @@ install(PROGRAMS
         DESTINATION lib/${PROJECT_NAME}
         )
 
+install(PROGRAMS
+        ${PROJECT_NAME}/rosbag_node.py
+        DESTINATION lib/${PROJECT_NAME}
+        )
+
 # Install launch files and directories.
 install(DIRECTORY
         src launch include config rviz ${PROJECT_NAME}
