@@ -23,7 +23,7 @@ def generate_launch_description():
     run_human_tf = LaunchConfiguration('run_human_tf')
     map_file = LaunchConfiguration('map_file')
     namespace = LaunchConfiguration('namespace')
-    nav2_param_file = LaunchConfiguration('nav2_param_file')
+    nav2_params_file = LaunchConfiguration('nav2_params_file')
     robot_model = LaunchConfiguration('robot_model')
     robot_name = LaunchConfiguration('robot_name')
 
@@ -36,7 +36,7 @@ def generate_launch_description():
     default_map_path = os.path.join(bringup_dir, 'maps', 'tb3_house_demo_crowd.yaml')
     # get config file path and loading it
     neural_config_file_path = os.path.join(
-        bringup_dir, 'config', 'neural_motion_planner.yaml')
+        nav2_soloco_controller_dir, 'config', 'neural_motion_planner.yaml')
     with open(neural_config_file_path, 'r') as file:
         planner_config = yaml.safe_load(file)['nav2_soloco_controller']['ros__parameters']
 
@@ -66,25 +66,33 @@ def generate_launch_description():
         'map_file',
         default_value=default_map_path)
 
-    declare_nav2_param_filename_cmd = DeclareLaunchArgument(
-        'nav2_param_filename',
-        default_value='')
+    declare_nav2_params_filename_cmd = DeclareLaunchArgument(
+        'nav2_params_filename',
+        default_value='smac_mppi_nav2_params.yaml')
 
-    declare_nav2_param_file_cmd = DeclareLaunchArgument(
-        'nav2_param_file',
+    declare_nav2_params_file_cmd = DeclareLaunchArgument(
+        'nav2_params_file',
         default_value=PathJoinSubstitution([
             FindPackageShare("soloco_launch"),
             'params',
-            LaunchConfiguration('nav2_param_filename')]))
+            LaunchConfiguration('nav2_params_filename')]))
 
     declare_namespace_cmd = DeclareLaunchArgument(
         'namespace',
         default_value='',
         description='Top-level namespace')
 
+    robot_track_publisher_cmd = Node(
+        package='soloco_perception',
+        executable='robot_track.py', 
+        name='robot_track_publisher',
+        output='screen',
+        condition=IfCondition(use_soloco_controller)
+    )
+
     multi_track_visualizer_cmd = Node(
         package='soloco_perception',
-        executable='multi_track_visualizer.py', # 'robot_track_publisher'
+        executable='multi_track_visualizer.py', 
         name='multi_track_visualizer',
         output='screen',
         condition=IfCondition(use_soloco_controller)
@@ -92,7 +100,7 @@ def generate_launch_description():
 
     human_tf2_publisher_cmd = Node(
         package='soloco_perception',
-        executable='human_tf2_publisher', # 'human_track_publisher',
+        executable='human_tf2_publisher',
         name='human_tf2_publisher',
         output='screen',
         condition=IfCondition(run_human_tf))
@@ -104,7 +112,7 @@ def generate_launch_description():
           'cmd_vel_topic': '/locobot/commands/velocity',
           'launch_driver': 'true',
           # 'map': map_file,
-          'nav2_params_file': nav2_param_file,
+          'nav2_params_file': nav2_params_file,
           'robot_model':robot_model,
           'robot_name':robot_name,
           'slam_toolbox_mode': 'online_async',
@@ -159,12 +167,13 @@ def generate_launch_description():
     ld.add_action(declare_run_human_tf_cmd)
     ld.add_action(declare_map_file_cmd)
     ld.add_action(declare_namespace_cmd)
-    ld.add_action(declare_nav2_param_filename_cmd)
-    ld.add_action(declare_nav2_param_file_cmd)
+    ld.add_action(declare_nav2_params_filename_cmd)
+    ld.add_action(declare_nav2_params_file_cmd)
     ld.add_action(declare_robot_model_cmd)
     ld.add_action(declare_robot_name_cmd)
 
     # Add the actions to launch all of the nodes
+    ld.add_action(robot_track_publisher_cmd)
     ld.add_action(multi_track_visualizer_cmd)
     ld.add_action(human_tf2_publisher_cmd)
     ld.add_action(xslocobot_control_launch_cmd)

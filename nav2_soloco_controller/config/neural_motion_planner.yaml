@@ -4,9 +4,9 @@ nav2_soloco_controller:
     # Neural model
     model_name: 'MPPI'      # Choice: 'MPPI' or 'CEM_IAR'
     use_robot_model: True   # Flag for robot param constrains usage
-    device: 'cuda'           # Options: 'cuda' or 'cpu'
+    device: 'cpu'           # Options: 'cuda' or 'cpu'
     # Goal tolerance
-    goal_tolerance: 0.1
+    goal_tolerance: 0.2
     use_velocity_scaled_lookahead_dist: True # max_lookahead_dist scaled by speed / max_speed
     min_lookahead_dist: 0.4 # Minimum distance to subgoal pose if robot is at very low speed
     max_lookahead_dist: 2.4 # At least max_speed * interp_interval * prediction_steps, must be less than costmap size / 2
