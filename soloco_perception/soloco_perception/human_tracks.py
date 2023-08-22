@@ -68,9 +68,9 @@ class HumanTrackPublisher(Node):
 
     def timer_callback(self):
         curr_time_ = self.get_clock().now()
-        curr_objects = self.object_tracker.objects
+        curr_objects = self.object_tracker
         # Loop through all detected objects, only consider valid tracking
-        for obj in curr_objects:
+        for obj in curr_objects.objects:
             if (obj.tracking_state == 1 and obj.label == "Person"):
                 # Get object ID
                 obj_id = obj.label_id
