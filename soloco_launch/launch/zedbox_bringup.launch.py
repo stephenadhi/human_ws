@@ -21,7 +21,6 @@ def generate_launch_description():
     # Get the launch directory
     bringup_dir = get_package_share_directory('soloco_launch')
     soloco_perception_dir = get_package_share_directory('soloco_perception')
-    nav2_soloco_controller_dir = get_package_share_directory('nav2_soloco_controller')
 
     default_map_path = os.path.join(bringup_dir, 'maps', 'tb3_house_demo_crowd.yaml')
     
