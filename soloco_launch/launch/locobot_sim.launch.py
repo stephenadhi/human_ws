@@ -60,7 +60,7 @@ def generate_launch_description():
 
     declare_slam_mode_cmd = DeclareLaunchArgument(
         'slam_mode',
-        default_value='localization',
+        default_value='mapping',
         choices=(
             'mapping',
             'localization',
