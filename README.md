@@ -91,6 +91,12 @@ Launch Locobot in Gazebo, optionally with GUI, pedestrian simulator, and RViZ. O
     ros2 launch soloco_launch locobot_sim.launch.py use_gazebo_gui:=false use_pedsim:=true use_soloco_controller:=true launch_remote_view_cmd=false
 
 ## Rosbag Example
-To record data, launch RViZ and run the following command
+To record only robot data, run the following command
+    ros2 bag record /locobot/commands/velocity /locobot/odom /map /local_costmap/costmap /global_costmap/costmap /tf /tf_static /plan /visualization/predicted_future /human/interpolated_history /robot/ego_trajectory /goal_pose /locobot/robot_description /zed2/zed_node/left_raw/image_raw_color
 
-    ros2 bag record /locobot/commands/velocity /locobot/odom /map /local_costmap/costmap /global_costmap/costmap /tf /tf_static /plan /visualization/predicted_future /visualization/human_tracks /visualization/robot_track /visualization/subgoal /visualization/human_bounding_boxes /goal_pose /locobot/robot_description /zed2/zed_node/left_raw/image_raw_color -o my_experiment
+To record data for visualization purposes, run the following command
+
+    ros2 bag record /locobot/commands/velocity /locobot/odom /map /local_costmap/costmap /global_costmap/costmap /tf /tf_static /plan /visualization/predicted_future /visualization/human_tracks /visualization/robot_track /visualization/subgoal /visualization/human_bounding_boxes /goal_pose /locobot/robot_description /zed2/zed_node/left_raw/image_raw_color
+
+To record simulation data, run the following command
+    ros2 bag record /locobot/diffdrive_controller/cmd_vel_unstamped /locobot/odom /map /local_costmap/costmap /global_costmap/costmap /tf /tf_static /plan /human/simulated_agents /human/predicted_future /human/interpolated_history /robot/ego_trajectory /goal_pose /locobot/robot_description
