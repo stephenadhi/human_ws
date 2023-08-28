@@ -15,13 +15,14 @@ def generate_launch_description():
     namespace = LaunchConfiguration('namespace')
     robot_model = LaunchConfiguration('robot_model')
     robot_name = LaunchConfiguration('robot_name')
+    slam_mode =  LaunchConfiguration('slam_mode')
     use_pedsim = LaunchConfiguration('use_pedsim')
     use_gazebo_gui = LaunchConfiguration('use_gazebo_gui')
     launch_remote_view = LaunchConfiguration('launch_remote_view')
     use_soloco_controller = LaunchConfiguration('use_soloco_controller')
     run_human_tf = LaunchConfiguration('run_human_tf')
     world_file = LaunchConfiguration('world_file')
-    map_file = LaunchConfiguration('map_file')
+    map_yaml_file = LaunchConfiguration('map_yaml_file')
     nav2_params_file = LaunchConfiguration('nav2_params_file')
     cmd_vel_topic = LaunchConfiguration('cmd_vel_topic')
     pedsim_scene_file = LaunchConfiguration('pedsim_scene_file')
@@ -41,7 +42,7 @@ def generate_launch_description():
 
     scene = 'tb3_house_demo_crowd'
     default_world_path = os.path.join(bringup_dir, 'worlds', scene + '.world')
-    default_map_path = os.path.join(pedsim_dir, 'maps', scene + '.yaml')
+    default_map_path = os.path.join(bringup_dir, 'maps', scene + '.yaml')
     default_nav_to_pose_bt_xml = LaunchConfiguration('default_nav_to_pose_bt_xml')
     default_nav_through_poses_bt_xml = LaunchConfiguration('default_nav_through_poses_bt_xml')
     default_pedsim_scene_path = os.path.join(pedsim_dir, 'scenarios', scene + '.xml')
@@ -56,6 +57,18 @@ def generate_launch_description():
         'robot_name',
         default_value='locobot',
         description=('name of the robot (could be anything but defaults to `locobot`).'))
+
+    declare_slam_mode_cmd = DeclareLaunchArgument(
+        'slam_mode',
+        default_value='localization',
+        choices=(
+            'mapping',
+            'localization',
+        ),
+        description=(
+            "Whether to run nav2 in mapping or localization mode"
+        ),
+    )
 
     declare_use_pedsim_cmd = DeclareLaunchArgument(
         'use_pedsim',
@@ -76,8 +89,8 @@ def generate_launch_description():
         'world_file',
         default_value=default_world_path)
 
-    declare_map_file_cmd = DeclareLaunchArgument(
-        'map_file',
+    declare_map_yaml_file_cmd = DeclareLaunchArgument(
+        'map_yaml_file',
         default_value=default_map_path)
 
     declare_nav2_params_file_cmd = DeclareLaunchArgument(
@@ -183,7 +196,8 @@ def generate_launch_description():
             'cmd_vel_topic': cmd_vel_topic,
             'use_sim_time': 'true',
             'namespace': '',
-            # 'map': map_file,
+            'map': map_yaml_file,
+            'slam_mode': slam_mode,
             'nav2_params_file': nav2_params_file,
             'default_nav_to_pose_bt_xml': default_nav_to_pose_bt_xml,
             'default_nav_through_poses_bt_xml':default_nav_through_poses_bt_xml
@@ -276,11 +290,12 @@ def generate_launch_description():
     ld.add_action(declare_namespace_cmd)
     ld.add_action(declare_robot_model_cmd)
     ld.add_action(declare_robot_name_cmd)
+    ld.add_action(declare_slam_mode_cmd)
     ld.add_action(declare_use_pedsim_cmd)
     ld.add_action(declare_use_gazebo_gui_cmd)
     ld.add_action(declare_launch_remote_view_cmd)
     ld.add_action(declare_world_file_cmd)
-    ld.add_action(declare_map_file_cmd)
+    ld.add_action(declare_map_yaml_file_cmd)
     ld.add_action(declare_nav2_params_file_cmd)
     ld.add_action(declare_nav_to_pose_bt_xml)
     ld.add_action(declare_nav_through_poses_bt_xml)

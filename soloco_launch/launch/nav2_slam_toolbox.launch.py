@@ -70,7 +70,7 @@ def launch_setup(context, *args, **kwargs):
     slam_toolbox_params_file_launch_arg = LaunchConfiguration('slam_toolbox_params_file')
     use_slam_toolbox_launch_arg = LaunchConfiguration('use_slam_toolbox')
     cmd_vel_topic_launch_arg = LaunchConfiguration('cmd_vel_topic')
-    map_yaml_file_launch_arg = LaunchConfiguration('map')
+    map_yaml_file_launch_arg = LaunchConfiguration('map_yaml_file')
     default_nav_to_pose_bt_xml_launch_arg = LaunchConfiguration('default_nav_to_pose_bt_xml')
     default_nav_through_poses_bt_xml_launch_arg = LaunchConfiguration('default_nav_through_poses_bt_xml')
     # Set env var to print messages to stdout immediately
@@ -89,7 +89,7 @@ def launch_setup(context, *args, **kwargs):
     ]
 
     lifecycle_nodes_localization = [
-        'map_server'
+        'map_server',
         'amcl'
     ]
 
@@ -229,7 +229,7 @@ def launch_setup(context, *args, **kwargs):
         output='screen'
     )
 
-    slam_toolbox_nav2_nodes = GroupAction(
+    nav2_nodes = GroupAction(
         condition=IfCondition(use_slam_toolbox_launch_arg),
         actions=[
             SetParameter('use_sim_time', use_sim_time_launch_arg),
@@ -243,7 +243,7 @@ def launch_setup(context, *args, **kwargs):
                 remappings=tf_remappings,
                 output='screen'),
             Node(
-                condition=LaunchConfigurationNotEquals('slam_toolbox_mode', 'localization'),
+                condition=LaunchConfigurationEquals('slam_mode', 'mapping'),
                 package='nav2_map_server',
                 executable='map_saver_server',
                 output='screen',
@@ -257,7 +257,7 @@ def launch_setup(context, *args, **kwargs):
                 ],
             ),
             Node(
-                condition=LaunchConfigurationEquals('slam_toolbox_mode', 'localization'),
+                condition=LaunchConfigurationEquals('slam_mode', 'localization'),
                 package='nav2_map_server',
                 executable='map_server',
                 name='map_server',
@@ -274,7 +274,7 @@ def launch_setup(context, *args, **kwargs):
                 remappings=tf_remappings
             ),
             Node(
-                condition=LaunchConfigurationEquals('slam_toolbox_mode', 'localization'),
+                condition=LaunchConfigurationEquals('slam_mode', 'localization'),
                 package='nav2_amcl',
                 executable='amcl',
                 name='amcl',
@@ -286,7 +286,7 @@ def launch_setup(context, *args, **kwargs):
                 remappings=tf_remappings
             ),
             Node(
-                condition=LaunchConfigurationNotEquals('slam_toolbox_mode', 'localization'),
+                condition=LaunchConfigurationNotEquals('slam_mode', 'localization'),
                 package='nav2_lifecycle_manager',
                 executable='lifecycle_manager',
                 name='lifecycle_manager_slam',
@@ -300,7 +300,7 @@ def launch_setup(context, *args, **kwargs):
                 ]
             ),
             Node(
-                condition=LaunchConfigurationEquals('slam_toolbox_mode', 'localization'),
+                condition=LaunchConfigurationEquals('slam_mode', 'localization'),
                 package='nav2_lifecycle_manager',
                 executable='lifecycle_manager',
                 name='lifecycle_manager_localization',
@@ -327,7 +327,7 @@ def launch_setup(context, *args, **kwargs):
         slam_toolbox_online_sync_slam_node,
         slam_toolbox_online_async_slam_node,
         slam_toolbox_localization_slam_node,
-        slam_toolbox_nav2_nodes,
+        nav2_nodes,
     ]
 
 def generate_launch_description():
@@ -405,6 +405,19 @@ def generate_launch_description():
     )
     declared_arguments.append(
         DeclareLaunchArgument(
+            'slam_mode',
+            default_value='mapping',
+            choices=(
+                'mapping',
+                'localization',
+            ),
+            description=(
+                "Whether to run nav2 in mapping or localization mode"
+            ),
+        )
+    )
+    declared_arguments.append(
+        DeclareLaunchArgument(
             'slam_toolbox_mode',
             default_value='online_async',
             choices=(
@@ -451,7 +464,7 @@ def generate_launch_description():
     )
     declared_arguments.append(
         DeclareLaunchArgument(
-            'map',
+            'map_yaml_file',
             default_value='',
             description='Full path to map yaml file to load if using localization mode'
         )
