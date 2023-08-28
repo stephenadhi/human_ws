@@ -57,7 +57,7 @@ class NeuralMotionPlanner(Node):
         self.declare_parameter('cmd_vel_topic', 'locobot/commands/vedlocity')
         self.declare_parameter('human_track_topic', 'human/interpolated_history')
         self.declare_parameter('robot_track_topic', 'robot/ego_trajectory')
-        self.declare_parameter('future_topic', 'soloco/predicted_future')
+        self.declare_parameter('future_topic', 'human/predicted_future')
         self.declare_parameter('future_marker_topic', 'visualization/predicted_future')
         self.declare_parameter('pub_frame_id', 'locobot/odom')
         # Device to use: 'gpu' or 'cpu'
