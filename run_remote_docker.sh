@@ -1,0 +1,1 @@
+sudo docker run --runtime nvidia -it --rm --network host --ipc=host -e DISPLAY=$DISPLAY -e XAUTHORITY=/tmp/.Xauthority --privileged -v /dev:/dev -v ~/.Xauthority:/tmp/.Xauthority -v $HOME/stephen/human_ws:/workspaces/locobot -v /tmp/.X11-unix:/tmp/.X11-unix stephenadhi/ros2:soloco-humble-simulation
