@@ -78,12 +78,12 @@ def generate_launch_description():
     declare_use_gazebo_gui_cmd = DeclareLaunchArgument(
         'use_gazebo_gui',
         default_value='false',
-        description='Whether to use lidar in simulator')
+        description='Whether to use gazebo GUI for visualization')
 
     declare_launch_remote_view_cmd = DeclareLaunchArgument(
         'launch_remote_view',
         default_value='true',
-        description='Whether to use lidar in simulator')
+        description='Whether to launch RViZ for visualization')
 
     declare_world_file_cmd = DeclareLaunchArgument(
         'world_file',

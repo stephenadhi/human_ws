@@ -88,7 +88,7 @@ Launch RViZ:
 ## Simulation Example with Pedsim
 Launch Locobot in Gazebo, optionally with GUI, pedestrian simulator, and RViZ. Odometry is based on ground truth with gaussian noise=0.001. The default launch is the following command:
 
-    ros2 launch soloco_launch locobot_sim.launch.py use_gazebo_gui:=false use_pedsim:=true use_soloco_controller:=true launch_remote_view_cmd=false
+    ros2 launch soloco_launch locobot_sim.launch.py use_gazebo_gui:=false use_pedsim:=true use_soloco_controller:=true launch_remote_view:=true
 
 ## Rosbag Example
 To record only robot data, run the following command
