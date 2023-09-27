@@ -149,11 +149,11 @@ def generate_launch_description():
 
     declare_spawn_x_pos_cmd = DeclareLaunchArgument(
         'spawn_x_pos',
-        default_value='0.0')
+        default_value='-1.0')
 
     declare_spawn_y_pos_cmd = DeclareLaunchArgument(
         'spawn_y_pos',
-        default_value='0.0')
+        default_value='-1.0')
 
     declare_rvizconfig_cmd = DeclareLaunchArgument(
         'rvizconfig',
